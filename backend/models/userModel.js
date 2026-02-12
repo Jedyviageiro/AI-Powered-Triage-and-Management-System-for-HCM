@@ -57,20 +57,21 @@ const listUsers = async () => {
 // UPDATE USER (dados)
 // ========================
 const updateUser = async (id, { username, full_name, role, is_active }) => {
-    const result = await pool.query(
-        `UPDATE users
-         SET username = $1,
-             full_name = $2,
-             role = $3,
-             is_active = $4,
-             updated_at = NOW()
-         WHERE id = $5
-         RETURNING id, username, full_name, role, is_active, created_at, updated_at, last_login_at`,
-        [username, full_name, role, is_active, id]
-    );
+  const result = await pool.query(
+    `UPDATE users
+     SET username   = COALESCE($1, username),
+         full_name  = COALESCE($2, full_name),
+         role       = COALESCE($3, role),
+         is_active  = COALESCE($4, is_active),
+         updated_at = NOW()
+     WHERE id = $5
+     RETURNING id, username, full_name, role, is_active, created_at, updated_at, last_login_at`,
+    [username ?? null, full_name ?? null, role ?? null, is_active ?? null, id]
+  );
 
-    return result.rows[0];
+  return result.rows[0];
 };
+
 
 // ========================
 // UPDATE PASSWORD (admin reset)
