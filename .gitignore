@@ -6,3 +6,9 @@ coverage
 .vscode
 .DS_Store
 scripts/
+frontend/node_modules
+frontend/.env
+
+backend/node_modules
+backend/.env
+backend/prompts/

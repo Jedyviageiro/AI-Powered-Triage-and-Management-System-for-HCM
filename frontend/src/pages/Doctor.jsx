@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../lib/api";
 import { clearAuth, getUser } from "../lib/auth";
-import { useNavigate } from "react-router-dom";
 
 const formatWait = (m) => {
   if (m == null) return "-";
@@ -12,6 +11,7 @@ const formatWait = (m) => {
 
 const formatStatus = (s) => {
   if (s === "WAITING") return "Aguardando Triagem";
+  if (s === "IN_TRIAGE") return "Em Triagem";
   if (s === "WAITING_DOCTOR") return "Aguardando Médico";
   if (s === "IN_CONSULTATION") return "Em Consulta";
   if (s === "FINISHED") return "Finalizado";
@@ -19,7 +19,6 @@ const formatStatus = (s) => {
 };
 
 export default function Doctor() {
-  const nav = useNavigate();
   const me = getUser();
 
   const [queue, setQueue] = useState([]);
@@ -30,78 +29,240 @@ export default function Doctor() {
   const [triage, setTriage] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
 
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiResult, setAiResult] = useState(null);
+
+  // polling + heartbeat + mount guards
+  const intervalRef = useRef(null);
+  const heartbeatRef = useRef(null);
+  const mountedRef = useRef(true);
+
+  const stopIntervals = () => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    if (heartbeatRef.current) {
+      clearInterval(heartbeatRef.current);
+      heartbeatRef.current = null;
+    }
+  };
+
+  const safeSet = (fn) => {
+    if (mountedRef.current) fn();
+  };
+
+  // (opcional) filtra o que o médico deve ver na fila
+  const filteredQueue = useMemo(() => {
+    // médico só deveria focar em "WAITING_DOCTOR" e "IN_CONSULTATION"
+    return (Array.isArray(queue) ? queue : []).filter(
+      (v) => v.status === "WAITING_DOCTOR" || v.status === "IN_CONSULTATION"
+    );
+  }, [queue]);
+
+  // ✅ IA só pode ser usada DEPOIS que a consulta começou
+  const aiEnabled = useMemo(() => {
+    return (
+      !!selectedVisit?.id &&
+      selectedVisit.status === "IN_CONSULTATION" &&
+      !!triage?.chief_complaint
+    );
+  }, [selectedVisit?.id, selectedVisit?.status, triage?.chief_complaint]);
+
   const loadQueue = async () => {
-    setErr("");
-    setLoadingQueue(true);
-    try {
-      const data = await api.getQueue();
-      setQueue(data);
-    } catch (e) {
-      setErr(e.message);
-    } finally {
-      setLoadingQueue(false);
+    if (!mountedRef.current) {
+      // nada
+    } else {
+      safeSet(() => {
+        setErr("");
+        setLoadingQueue(true);
+      });
+
+      try {
+        const data = await api.getQueue();
+        safeSet(() => setQueue(Array.isArray(data) ? data : []));
+      } catch (e) {
+        safeSet(() => setErr(e.message));
+      } finally {
+        safeSet(() => setLoadingQueue(false));
+      }
     }
   };
 
   const openVisit = async (visitId) => {
-    setErr("");
-    setLoadingDetails(true);
-    setSelectedVisit(null);
-    setTriage(null);
-
-    try {
-      const v = await api.getVisitById(visitId);
-      setSelectedVisit(v);
-
-      // triage pode não existir ainda
-      try {
-        const t = await api.getTriageByVisitId(visitId);
-        setTriage(t);
-      } catch {
+    if (!mountedRef.current) {
+      // nada
+    } else {
+      safeSet(() => {
+        setErr("");
+        setLoadingDetails(true);
+        setSelectedVisit(null);
         setTriage(null);
+        setAiResult(null);
+      });
+
+      try {
+        const v = await api.getVisitById(visitId);
+        safeSet(() => setSelectedVisit(v));
+
+        try {
+          const t = await api.getTriageByVisitId(visitId);
+          safeSet(() => setTriage(t));
+        } catch {
+          safeSet(() => setTriage(null));
+        }
+      } catch (e) {
+        safeSet(() => setErr(e.message));
+      } finally {
+        safeSet(() => setLoadingDetails(false));
       }
-    } catch (e) {
-      setErr(e.message);
-    } finally {
-      setLoadingDetails(false);
     }
   };
 
+  // ✅ Check-in + heartbeat + polling
   useEffect(() => {
-    loadQueue();
-    const interval = setInterval(loadQueue, 5000);
-    return () => clearInterval(interval);
+    mountedRef.current = true;
+
+    const boot = async () => {
+      try {
+        // médico “entra online e disponível”
+        await api.doctorCheckin?.();
+      } catch (e) {
+        // se falhar, não bloqueia a UI, mas avisa
+        safeSet(() => setErr(e.message));
+      }
+
+      await loadQueue();
+
+      intervalRef.current = setInterval(() => {
+        loadQueue();
+      }, 5000);
+
+      heartbeatRef.current = setInterval(async () => {
+        try {
+          await api.doctorHeartbeat?.();
+        } catch {
+          // ignora falhas temporárias de heartbeat
+        }
+      }, 30000);
+    };
+
+    boot();
+
+    return () => {
+      mountedRef.current = false;
+      stopIntervals();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const logout = () => {
+  const logout = async () => {
+    stopIntervals();
+
+    try {
+      await api.doctorCheckout?.();
+    } catch {
+      // se falhar, segue logout na mesma
+    }
+
     clearAuth();
-    nav("/login");
+    window.location.replace("/login");
   };
 
   const startConsultation = async () => {
     if (!selectedVisit?.id) return;
-    setErr("");
+
+    // ✅ bloqueio extra (UI já bloqueia, mas reforça)
+    if (selectedVisit.status !== "WAITING_DOCTOR") {
+      safeSet(() => setErr("O paciente precisa estar em 'Aguardando Médico'."));
+      return;
+    }
+    if (!triage) {
+      safeSet(() => setErr("Não pode iniciar consulta sem triagem registrada."));
+      return;
+    }
+
+    safeSet(() => setErr(""));
+
     try {
-      await api.setVisitStatus(selectedVisit.id, "IN_CONSULTATION");
+      await api.startConsultation(selectedVisit.id);
       await openVisit(selectedVisit.id);
       await loadQueue();
     } catch (e) {
-      setErr(e.message);
+      safeSet(() => setErr(e.message));
     }
   };
 
   const finishConsultation = async () => {
     if (!selectedVisit?.id) return;
-    setErr("");
+
+    safeSet(() => setErr(""));
+
     try {
       await api.finishVisit(selectedVisit.id);
-      setSelectedVisit(null);
-      setTriage(null);
+
+      safeSet(() => {
+        setSelectedVisit(null);
+        setTriage(null);
+        setAiResult(null);
+      });
+
       await loadQueue();
     } catch (e) {
-      setErr(e.message);
+      safeSet(() => setErr(e.message));
     }
   };
+
+  const askDoctorAI = async () => {
+    if (!selectedVisit?.id) return;
+
+    // ✅ IA só depois de iniciar consulta
+    if (selectedVisit.status !== "IN_CONSULTATION") {
+      safeSet(() => setErr("Inicie a consulta antes de usar a IA."));
+      return;
+    }
+
+    if (!triage?.chief_complaint) {
+      safeSet(() =>
+        setErr("Não há dados de triagem suficientes para pedir sugestão da IA.")
+      );
+      return;
+    }
+
+    safeSet(() => {
+      setErr("");
+      setAiLoading(true);
+      setAiResult(null);
+    });
+
+    try {
+      const res = await api.aiDoctorSuggest({
+        age_years: null,
+        chief_complaint: triage?.chief_complaint || "",
+        clinical_notes: triage?.clinical_notes || "",
+        temperature: triage?.temperature ?? null,
+        heart_rate: triage?.heart_rate ?? null,
+        respiratory_rate: triage?.respiratory_rate ?? null,
+        oxygen_saturation: triage?.oxygen_saturation ?? null,
+        weight: triage?.weight ?? null,
+        priority: selectedVisit?.priority ?? null,
+      });
+
+      safeSet(() => setAiResult(res));
+    } catch (e) {
+      safeSet(() => setErr(e.message));
+    } finally {
+      safeSet(() => setAiLoading(false));
+    }
+  };
+
+  const canStart =
+    !!selectedVisit?.id &&
+    selectedVisit.status === "WAITING_DOCTOR" &&
+    !!triage;
+
+  const canFinish =
+    !!selectedVisit?.id && selectedVisit.status === "IN_CONSULTATION";
 
   return (
     <div className="min-h-screen bg-slate-50 p-4">
@@ -142,7 +303,9 @@ export default function Doctor() {
           <div className="bg-white rounded-2xl shadow overflow-hidden">
             <div className="p-4 border-b flex items-center justify-between">
               <h2 className="font-semibold text-lg">Fila</h2>
-              <span className="text-xs text-slate-500">Total: {queue.length}</span>
+              <span className="text-xs text-slate-500">
+                Total: {filteredQueue.length}
+              </span>
             </div>
 
             <div className="grid grid-cols-6 gap-2 p-3 bg-slate-100 text-xs font-semibold">
@@ -155,10 +318,12 @@ export default function Doctor() {
 
             {loadingQueue ? (
               <div className="p-4 text-slate-600">Carregando...</div>
-            ) : queue.length === 0 ? (
-              <div className="p-4 text-slate-600">Fila vazia</div>
+            ) : filteredQueue.length === 0 ? (
+              <div className="p-4 text-slate-600">
+                Nenhum paciente aguardando médico.
+              </div>
             ) : (
-              queue.map((v) => (
+              filteredQueue.map((v) => (
                 <div
                   key={v.id}
                   className={`grid grid-cols-6 gap-2 p-3 border-t text-sm items-center ${
@@ -215,11 +380,21 @@ export default function Doctor() {
                     </div>
                   ) : (
                     <div className="text-sm grid grid-cols-2 gap-2">
-                      <div><b>Temp:</b> {triage.temperature ?? "-"} °C</div>
-                      <div><b>SpO2:</b> {triage.oxygen_saturation ?? "-"} %</div>
-                      <div><b>FC:</b> {triage.heart_rate ?? "-"} bpm</div>
-                      <div><b>FR:</b> {triage.respiratory_rate ?? "-"} rpm</div>
-                      <div><b>Peso:</b> {triage.weight ?? "-"} kg</div>
+                      <div>
+                        <b>Temp:</b> {triage.temperature ?? "-"} °C
+                      </div>
+                      <div>
+                        <b>SpO2:</b> {triage.oxygen_saturation ?? "-"} %
+                      </div>
+                      <div>
+                        <b>FC:</b> {triage.heart_rate ?? "-"} bpm
+                      </div>
+                      <div>
+                        <b>FR:</b> {triage.respiratory_rate ?? "-"} rpm
+                      </div>
+                      <div>
+                        <b>Peso:</b> {triage.weight ?? "-"} kg
+                      </div>
                       <div className="col-span-2">
                         <b>Queixa:</b> {triage.chief_complaint}
                       </div>
@@ -232,25 +407,95 @@ export default function Doctor() {
                   )}
                 </div>
 
+                {/* ✅ IA do Médico: só depois de IN_CONSULTATION */}
+                <button
+                  type="button"
+                  onClick={askDoctorAI}
+                  disabled={aiLoading || !aiEnabled}
+                  className="w-full border bg-white p-2 rounded-lg text-sm disabled:opacity-60"
+                  title={
+                    !aiEnabled
+                      ? !selectedVisit?.id
+                        ? "Selecione uma visita"
+                        : selectedVisit.status !== "IN_CONSULTATION"
+                        ? "Inicie a consulta para usar a IA"
+                        : !triage?.chief_complaint
+                        ? "Precisa de triagem antes"
+                        : ""
+                      : ""
+                  }
+                >
+                  {aiLoading
+                    ? "A IA está analisando..."
+                    : "IA: sugerir diagnóstico e prescrição (validar)"}
+                </button>
+
+                {aiResult && (
+                  <div className="border rounded-lg p-3 bg-slate-50">
+                    <div className="text-xs text-slate-500 mb-2">
+                      {aiResult.disclaimer ||
+                        "Sugestão gerada por IA. Validar por protocolo local."}
+                    </div>
+
+                    {aiResult.red_flag && (
+                      <div className="mb-2 text-sm font-semibold text-red-700">
+                        ⚠️ Alerta: possível risco elevado — seguir protocolo do serviço.
+                      </div>
+                    )}
+
+                    {aiResult.summary && (
+                      <div className="text-sm mb-2">
+                        <b>Resumo:</b> {aiResult.summary}
+                      </div>
+                    )}
+
+                    {Array.isArray(aiResult.differential_diagnoses) &&
+                      aiResult.differential_diagnoses.length > 0 && (
+                        <div className="mt-2">
+                          <div className="text-xs font-semibold mb-1">
+                            Diagnósticos diferenciais
+                          </div>
+                          <ul className="text-xs text-slate-700 list-disc pl-5 space-y-1">
+                            {aiResult.differential_diagnoses
+                              .slice(0, 6)
+                              .map((d, idx) => (
+                                <li key={idx}>
+                                  <b>{d.name}:</b> {d.why}
+                                </li>
+                              ))}
+                          </ul>
+                        </div>
+                      )}
+                  </div>
+                )}
+
                 <div className="flex gap-2">
                   <button
                     onClick={startConsultation}
-                    disabled={selectedVisit.status === "IN_CONSULTATION"}
+                    disabled={!canStart}
                     className="flex-1 px-3 py-2 rounded-lg bg-slate-900 text-white text-sm disabled:opacity-50"
+                    title={
+                      !triage
+                        ? "Precisa de triagem antes de iniciar consulta"
+                        : selectedVisit.status !== "WAITING_DOCTOR"
+                        ? "O paciente precisa estar em 'Aguardando Médico'"
+                        : ""
+                    }
                   >
                     Iniciar Consulta
                   </button>
 
                   <button
                     onClick={finishConsultation}
-                    className="flex-1 px-3 py-2 rounded-lg bg-green-600 text-white text-sm"
+                    disabled={!canFinish}
+                    className="flex-1 px-3 py-2 rounded-lg bg-green-600 text-white text-sm disabled:opacity-50"
                   >
                     Finalizar
                   </button>
                 </div>
 
                 <p className="text-xs text-slate-500">
-                  O médico apenas altera status/atendimento. A triagem é feita pelo enfermeiro.
+                  A IA apenas sugere. O médico valida/ignora. A triagem é feita pelo enfermeiro.
                 </p>
               </div>
             )}

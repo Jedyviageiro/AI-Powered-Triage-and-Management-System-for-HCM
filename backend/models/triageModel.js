@@ -15,7 +15,7 @@ const createTriage = async ({
     clinical_notes
 }) => {
     const result = await pool.query(
-        `INSERT INTO triages
+        `INSERT INTO triage
         (visit_id, nurse_id, temperature, heart_rate, respiratory_rate, oxygen_saturation, weight, chief_complaint, clinical_notes)
         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
         RETURNING *`,
@@ -46,7 +46,7 @@ const createTriage = async ({
 // ========================
 const getTriageById = async (id) => {
     const result = await pool.query(
-        `SELECT * FROM triages WHERE id = $1`,
+        `SELECT * FROM triage WHERE id = $1`,
         [id]
     );
     return result.rows[0];
@@ -57,7 +57,7 @@ const getTriageById = async (id) => {
 // ========================
 const getTriageByVisitId = async (visit_id) => {
     const result = await pool.query(
-        `SELECT * FROM triages WHERE visit_id = $1`,
+        `SELECT * FROM triage WHERE visit_id = $1`,
         [visit_id]
     );
     return result.rows[0];
@@ -76,7 +76,7 @@ const updateTriage = async (id, {
     clinical_notes
 }) => {
     const result = await pool.query(
-        `UPDATE triages
+        `UPDATE triage
          SET temperature = $1,
              heart_rate = $2,
              respiratory_rate = $3,
@@ -107,7 +107,7 @@ const updateTriage = async (id, {
 // ========================
 const deleteTriage = async (id) => {
     const result = await pool.query(
-        `DELETE FROM triages WHERE id = $1 RETURNING *`,
+        `DELETE FROM triage WHERE id = $1 RETURNING *`,
         [id]
     );
     return result.rows[0];

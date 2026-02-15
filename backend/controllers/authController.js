@@ -32,7 +32,15 @@ const login = async (req, res) => {
       user
     });
   } catch (err) {
-    return res.status(500).json({ error: "Erro no login" });
+      console.error("LOGIN ERROR:", err);
+  return res.status(500).json({
+    error: "Erro no login",
+    debug: {
+      message: err.message,
+      code: err.code,
+      detail: err.detail,
+    },
+  });
   }
 };
 

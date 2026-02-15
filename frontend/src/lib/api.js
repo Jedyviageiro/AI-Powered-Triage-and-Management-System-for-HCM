@@ -1,4 +1,4 @@
-import { getToken } from "./auth";
+import { getToken, clearAuth } from "./auth";
 
 const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
@@ -16,6 +16,13 @@ async function request(path, options = {}) {
 
   const data = await res.json().catch(() => ({}));
 
+  // 🔐 sessão expirada
+  if (res.status === 401) {
+    clearAuth();
+    window.location.replace("/login");
+    throw new Error(data?.error || "Sessão expirada");
+  }
+
   if (!res.ok) {
     throw new Error(data?.error || "Erro na API");
   }
@@ -24,17 +31,17 @@ async function request(path, options = {}) {
 }
 
 export const api = {
-  // AUTH
+  // ================= AUTH =================
   login: (username, password) =>
     request("/auth/login", {
       method: "POST",
       body: { username, password },
     }),
 
-  // QUEUE
+  // ================= QUEUE =================
   getQueue: () => request("/queue"),
 
-  // USERS (ADMIN)
+  // ================= USERS =================
   listUsers: () => request("/users"),
 
   createUser: ({ username, password, full_name, role }) =>
@@ -60,33 +67,99 @@ export const api = {
       method: "DELETE",
     }),
 
-      // PATIENTS
-  searchPatients: (name) => request(`/patients/search?name=${encodeURIComponent(name)}`),
-  getPatientByCode: (code) => request(`/patients/code/${encodeURIComponent(code)}`),
+  // ================= PATIENTS =================
+  searchPatients: (name) =>
+    request(`/patients/search?name=${encodeURIComponent(name)}`),
+
+  getPatientByCode: (code) =>
+    request(`/patients/code/${encodeURIComponent(code)}`),
+
   createPatient: (payload) =>
     request("/patients", { method: "POST", body: payload }),
 
-  // VISITS
+  // ================= VISITS =================
   createVisit: (patient_id) =>
     request("/visits", { method: "POST", body: { patient_id } }),
 
-  // TRIAGE
-  createTriage: (payload) =>
-    request("/triages", { method: "POST", body: payload }),
-
-  // SET PRIORITY
-  setVisitPriority: (visitId, payload) =>
-    request(`/visits/${visitId}/priority`, { method: "PATCH", body: payload }),
-
-    // VISIT (DOCTOR)
   getVisitById: (id) => request(`/visits/${id}`),
-  setVisitStatus: (id, status) =>
-    request(`/visits/${id}/status`, { method: "PATCH", body: { status } }),
-  finishVisit: (id) =>
-    request(`/visits/${id}/finish`, { method: "PATCH" }),
 
-  // TRIAGE (ver triagem por visita)
+  // prioridade definida pelo enfermeiro
+  setVisitPriority: (visitId, payload) =>
+    request(`/visits/${visitId}/priority`, {
+      method: "PATCH",
+      body: payload,
+    }),
+
+  // ⚠️ status genérico (evitar para iniciar consulta)
+  setVisitStatus: (id, status) =>
+    request(`/visits/${id}/status`, {
+      method: "PATCH",
+      body: { status },
+    }),
+
+  // 🔥 INICIAR CONSULTA (fluxo correto)
+  startConsultation: (visitId) =>
+    request(`/visits/${visitId}/start-consultation`, {
+      method: "PATCH",
+    }),
+
+  // finalizar consulta
+  finishVisit: (id) => request(`/visits/${id}/finish`, { method: "PATCH" }),
+
+  // atribuir médico
+  assignDoctorToVisit: (visitId, doctorId) =>
+    request(`/visits/${visitId}/assign-doctor`, {
+      method: "PATCH",
+      body: { doctor_id: doctorId },
+    }),
+
+  // ================= TRIAGE =================
+  createTriage: (payload) => request("/triages", { method: "POST", body: payload }),
+
   getTriageByVisitId: (visitId) => request(`/triages/visit/${visitId}`),
 
+  // ================= AI =================
+  aiTriageSuggest: (payload) => request("/ai/triage", { method: "POST", body: payload }),
+
+  aiDoctorSuggest: (payload) => request("/ai/doctor", { method: "POST", body: payload }),
+
+  // ================= DOCTORS =================
+  listDoctorsAvailability: async () => {
+    const data = await request("/doctors/availability");
+
+    // normalização universal
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(data?.doctors)) return data.doctors;
+    if (Array.isArray(data?.data)) return data.data;
+    return [];
+  },
+
+  // ✅ Doctor online / disponibilidade (NOVO)
+  doctorCheckin: () => request("/doctors/checkin", { method: "PATCH" }),
+  doctorCheckout: () => request("/doctors/checkout", { method: "PATCH" }),
+  doctorHeartbeat: () => request("/doctors/heartbeat", { method: "PATCH" }),
+  doctorSetAvailability: (is_available) =>
+    request("/doctors/availability", {
+      method: "PATCH",
+      body: { is_available: !!is_available },
+    }),
+
+  // aliases usados na UI
+  listDoctors: () => api.listDoctorsAvailability(),
+  assignDoctor: (visitId, doctorId) => api.assignDoctorToVisit(visitId, doctorId),
+
+  cancelVisit: (visitId, reason) =>
+  request(`/visits/${visitId}/cancel`, {
+    method: "PATCH",
+    body: { reason },
+  }),
+
+editVisitPriority: (visitId, payload) =>
+  request(`/visits/${visitId}/edit-priority`, {
+    method: "PATCH",
+    body: payload, // { priority, max_wait_minutes }
+  }),
 
 };
+
+

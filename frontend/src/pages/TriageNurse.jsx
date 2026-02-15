@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { api } from "../lib/api";
 import { clearAuth, getUser } from "../lib/auth";
 import { useNavigate } from "react-router-dom";
@@ -8,6 +8,30 @@ const PRIORITIES = [
   { value: "LESS_URGENT", label: "Pouco Urgente", maxWait: 120 },
   { value: "NON_URGENT", label: "Não Urgente", maxWait: 240 },
 ];
+
+function normalizeDoctorsResponse(resp) {
+  if (Array.isArray(resp)) return resp;
+  if (resp && Array.isArray(resp.doctors)) return resp.doctors;
+  if (resp && Array.isArray(resp.data)) return resp.data;
+  return [];
+}
+
+const statusLabel = (s) => {
+  if (s === "WAITING") return "Aguardando Triagem";
+  if (s === "IN_TRIAGE") return "Em Triagem";
+  if (s === "WAITING_DOCTOR") return "Aguardando Médico";
+  if (s === "IN_CONSULTATION") return "Em Consulta";
+  if (s === "FINISHED") return "Finalizado";
+  if (s === "CANCELLED") return "Cancelado";
+  return s || "-";
+};
+
+// helper: validar número
+const isValidNumber = (v, { min = -Infinity, max = Infinity } = {}) => {
+  if (v === "" || v == null) return false;
+  const n = Number(v);
+  return Number.isFinite(n) && n >= min && n <= max;
+};
 
 export default function TriageNurse() {
   const nav = useNavigate();
@@ -55,14 +79,66 @@ export default function TriageNurse() {
   const [customMaxWait, setCustomMaxWait] = useState(""); // opcional
   const [savingTriage, setSavingTriage] = useState(false);
 
+  // =============================
+  // AI Suggestion
+  // =============================
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiSuggestion, setAiSuggestion] = useState(null);
+
+  // =============================
+  // Doctors (Disponíveis / Ocupados) + Assign
+  // =============================
+  const [doctors, setDoctors] = useState([]);
+  const [loadingDoctors, setLoadingDoctors] = useState(false);
+  const [selectedDoctorId, setSelectedDoctorId] = useState("");
+  const [assigning, setAssigning] = useState(false);
+
+  // =============================
+  // 4) Fila (enfermeiro gerir: cancelar/editar)
+  // =============================
+  const [queue, setQueue] = useState([]);
+  const [loadingQueue, setLoadingQueue] = useState(false);
+  const [queueErr, setQueueErr] = useState("");
+
+  const [editingVisit, setEditingVisit] = useState(null);
+  const [editPriority, setEditPriority] = useState("URGENT");
+  const [editMaxWait, setEditMaxWait] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  const [cancellingId, setCancellingId] = useState(null);
+
   const selectedPriority = useMemo(
     () => PRIORITIES.find((p) => p.value === priority),
     [priority]
   );
 
+  // ✅ disponibilidade baseada no teu backend atual:
+  // doctorModel retorna is_busy (boolean). AVAILABLE = !is_busy
+  const availableDoctors = useMemo(() => {
+    return doctors.filter((d) => d?.is_busy === false);
+  }, [doctors]);
+
+  const busyDoctors = useMemo(() => {
+    return doctors.filter((d) => d?.is_busy === true);
+  }, [doctors]);
+
+  // ✅ REGRA: IA do enfermeiro só ativa quando TODOS campos essenciais preenchidos (com números válidos)
+  const triageFieldsOk = useMemo(() => {
+    const hasChief = chiefComplaint.trim().length > 0;
+
+    // ranges razoáveis (ajusta se quiser)
+    const okTemp = isValidNumber(temperature, { min: 25, max: 45 });
+    const okSpo2 = isValidNumber(spo2, { min: 1, max: 100 });
+    const okHR = isValidNumber(heartRate, { min: 20, max: 260 });
+    const okRR = isValidNumber(respRate, { min: 5, max: 120 });
+    const okWeight = isValidNumber(weight, { min: 0.5, max: 300 });
+
+    return hasChief && okTemp && okSpo2 && okHR && okRR && okWeight;
+  }, [chiefComplaint, temperature, spo2, heartRate, respRate, weight]);
+
   const logout = () => {
     clearAuth();
-    nav("/login");
+    window.location.replace("/login");
   };
 
   const resetAll = () => {
@@ -90,7 +166,127 @@ export default function TriageNurse() {
     setClinicalNotes("");
     setPriority("URGENT");
     setCustomMaxWait("");
+
+    setAiSuggestion(null);
+
+    // NOTA: não vou limpar doctors nem fila aqui (mantém visível)
+    setSelectedDoctorId("");
   };
+
+  // =============================
+  // Doctors: carregar lista (sempre)
+  // =============================
+  const loadDoctors = async (signal) => {
+    setErr("");
+    setLoadingDoctors(true);
+
+    try {
+      const resp = await api.listDoctors();
+      if (signal?.aborted) return;
+
+      const list = normalizeDoctorsResponse(resp);
+      setDoctors(list);
+    } catch (e) {
+      if (signal?.aborted) return;
+      setDoctors([]);
+      setErr(e.message);
+    } finally {
+      if (!signal?.aborted) setLoadingDoctors(false);
+    }
+  };
+
+  // =============================
+  // Queue: carregar fila (sempre)
+  // =============================
+  const loadQueue = async () => {
+    setQueueErr("");
+    setLoadingQueue(true);
+    try {
+      const data = await api.getQueue();
+      setQueue(Array.isArray(data) ? data : []);
+    } catch (e) {
+      setQueueErr(e.message);
+    } finally {
+      setLoadingQueue(false);
+    }
+  };
+
+  const openEdit = (v) => {
+    setEditingVisit(v);
+    setEditPriority(v.priority || "URGENT");
+    setEditMaxWait(v.max_wait_minutes != null ? String(v.max_wait_minutes) : "");
+  };
+
+  const saveEdit = async () => {
+    if (!editingVisit?.id) return;
+
+    const defaultMax =
+      PRIORITIES.find((p) => p.value === editPriority)?.maxWait ?? 60;
+
+    const maxWait = editMaxWait !== "" ? Number(editMaxWait) : defaultMax;
+
+    if (!Number.isFinite(maxWait) || maxWait <= 0) {
+      setQueueErr("Tempo máx. inválido.");
+      return;
+    }
+
+    setSavingEdit(true);
+    setQueueErr("");
+    try {
+      await api.setVisitPriority(editingVisit.id, {
+        priority: editPriority,
+        max_wait_minutes: maxWait,
+      });
+      setEditingVisit(null);
+      await loadQueue();
+      alert("Atualizado!");
+    } catch (e) {
+      setQueueErr(e.message);
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const cancelOne = async (visitId) => {
+    const reason = prompt("Motivo do cancelamento? (opcional)") || "";
+    setCancellingId(visitId);
+    setQueueErr("");
+    try {
+      // ⚠️ precisa existir no api.js: api.cancelVisit(visitId, reason)
+      await api.cancelVisit(visitId, reason.trim() || null);
+      await loadQueue();
+      alert("Visita cancelada.");
+    } catch (e) {
+      setQueueErr(e.message);
+    } finally {
+      setCancellingId(null);
+    }
+  };
+
+  // Carrega doctors ao entrar na página + auto refresh
+  useEffect(() => {
+    const controller = new AbortController();
+    loadDoctors(controller.signal);
+
+    const interval = setInterval(() => {
+      const ctrl = new AbortController();
+      loadDoctors(ctrl.signal);
+    }, 8000);
+
+    return () => {
+      controller.abort();
+      clearInterval(interval);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Carrega fila ao entrar + auto refresh
+  useEffect(() => {
+    loadQueue();
+    const interval = setInterval(loadQueue, 6000);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // =============================
   // Buscar paciente
@@ -100,6 +296,10 @@ export default function TriageNurse() {
     setSearchLoading(true);
     setSearchResults([]);
     setPatient(null);
+    setVisit(null);
+    setAiSuggestion(null);
+    setSelectedDoctorId("");
+
     try {
       if (searchMode === "CODE") {
         if (!code.trim()) {
@@ -114,7 +314,7 @@ export default function TriageNurse() {
           return;
         }
         const data = await api.searchPatients(nameQuery.trim());
-        setSearchResults(data);
+        setSearchResults(Array.isArray(data) ? data : []);
       }
     } catch (e) {
       setErr(e.message);
@@ -130,6 +330,7 @@ export default function TriageNurse() {
     e.preventDefault();
     setErr("");
     setCreatingPatient(true);
+
     try {
       const created = await api.createPatient({
         clinical_code: pClinicalCode.trim(),
@@ -139,8 +340,12 @@ export default function TriageNurse() {
         guardian_name: pGuardianName.trim(),
         guardian_phone: pGuardianPhone.trim(),
       });
+
       setPatient(created);
       setSearchResults([]);
+      setAiSuggestion(null);
+      setVisit(null);
+      setSelectedDoctorId("");
     } catch (e2) {
       setErr(e2.message);
     } finally {
@@ -153,11 +358,14 @@ export default function TriageNurse() {
   // =============================
   const createVisit = async () => {
     if (!patient?.id) return;
+
     setErr("");
     setCreatingVisit(true);
+
     try {
       const v = await api.createVisit(patient.id);
       setVisit(v);
+      await loadQueue(); // aparece na fila já
     } catch (e) {
       setErr(e.message);
     } finally {
@@ -166,10 +374,87 @@ export default function TriageNurse() {
   };
 
   // =============================
+  // Chamar IA (sugestão)
+  // =============================
+  const askAI = async () => {
+    // ✅ bloqueio TOTAL: só roda se triageFieldsOk
+    if (!triageFieldsOk) {
+      setErr(
+        "Para usar IA, preencha TODOS os dados: Temperatura, SpO2, FC, FR, Peso e Queixa principal."
+      );
+      return;
+    }
+
+    setErr("");
+    setAiLoading(true);
+    setAiSuggestion(null);
+
+    try {
+      let age_years = null;
+      if (patient?.birth_date) {
+        const bd = new Date(patient.birth_date);
+        const now = new Date();
+        const hadBirthdayThisYear =
+          now >= new Date(now.getFullYear(), bd.getMonth(), bd.getDate());
+        age_years = Math.max(
+          0,
+          now.getFullYear() - bd.getFullYear() - (hadBirthdayThisYear ? 0 : 1)
+        );
+      }
+
+      const res = await api.aiTriageSuggest({
+        age_years,
+        chief_complaint: chiefComplaint.trim(),
+        clinical_notes: clinicalNotes.trim() || null,
+        temperature: Number(temperature),
+        heart_rate: Number(heartRate),
+        respiratory_rate: Number(respRate),
+        oxygen_saturation: Number(spo2),
+        weight: Number(weight),
+      });
+
+      setAiSuggestion(res);
+    } catch (e) {
+      setErr(e.message);
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  // =============================
+  // Assign doctor to visit
+  // =============================
+  const assignDoctor = async () => {
+    if (!visit?.id) {
+      setErr("Crie a visita antes de atribuir médico.");
+      return;
+    }
+    if (!selectedDoctorId) {
+      setErr("Selecione um médico disponível.");
+      return;
+    }
+
+    setErr("");
+    setAssigning(true);
+
+    try {
+      await api.assignDoctor(visit.id, Number(selectedDoctorId));
+      alert("Paciente atribuído ao médico com sucesso!");
+      await loadDoctors();
+      await loadQueue();
+    } catch (e) {
+      setErr(e.message);
+    } finally {
+      setAssigning(false);
+    }
+  };
+
+  // =============================
   // Salvar triagem + prioridade
   // =============================
   const saveTriage = async (e) => {
     e.preventDefault();
+
     if (!visit?.id) {
       setErr("Crie a visita (chegada) antes de registrar a triagem.");
       return;
@@ -181,8 +466,8 @@ export default function TriageNurse() {
 
     setErr("");
     setSavingTriage(true);
+
     try {
-      // 1) cria triagem
       await api.createTriage({
         visit_id: visit.id,
         temperature: temperature === "" ? null : Number(temperature),
@@ -194,11 +479,8 @@ export default function TriageNurse() {
         clinical_notes: clinicalNotes.trim() || null,
       });
 
-      // 2) define prioridade + max wait
       const maxWait =
-        customMaxWait !== ""
-          ? Number(customMaxWait)
-          : selectedPriority?.maxWait;
+        customMaxWait !== "" ? Number(customMaxWait) : selectedPriority?.maxWait;
 
       await api.setVisitPriority(visit.id, {
         priority,
@@ -207,6 +489,7 @@ export default function TriageNurse() {
 
       alert("Triagem registrada com sucesso!");
       resetAll();
+      await loadQueue();
       nav("/queue");
     } catch (e2) {
       setErr(e2.message);
@@ -232,7 +515,7 @@ export default function TriageNurse() {
               onClick={() => nav("/queue")}
               className="px-3 py-2 rounded-lg border bg-white text-sm"
             >
-              Ver Fila
+              Ver Fila (Doctor)
             </button>
             <button
               onClick={logout}
@@ -250,12 +533,13 @@ export default function TriageNurse() {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Buscar / Selecionar Paciente */}
+          {/* 1) Paciente */}
           <div className="bg-white rounded-2xl shadow p-4">
             <h2 className="font-semibold text-lg mb-3">1) Paciente</h2>
 
             <div className="flex gap-2 mb-3">
               <button
+                type="button"
                 onClick={() => setSearchMode("CODE")}
                 className={`px-3 py-2 rounded-lg text-sm border ${
                   searchMode === "CODE" ? "bg-slate-900 text-white" : "bg-white"
@@ -264,6 +548,7 @@ export default function TriageNurse() {
                 Por Código
               </button>
               <button
+                type="button"
                 onClick={() => setSearchMode("NAME")}
                 className={`px-3 py-2 rounded-lg text-sm border ${
                   searchMode === "NAME" ? "bg-slate-900 text-white" : "bg-white"
@@ -296,6 +581,7 @@ export default function TriageNurse() {
             )}
 
             <button
+              type="button"
               onClick={searchPatient}
               disabled={searchLoading}
               className="w-full mt-3 bg-slate-900 text-white p-2 rounded-lg disabled:opacity-60"
@@ -303,18 +589,26 @@ export default function TriageNurse() {
               {searchLoading ? "Procurando..." : "Procurar"}
             </button>
 
-            {/* Resultados por nome */}
             {searchMode === "NAME" && searchResults.length > 0 && (
               <div className="mt-3 space-y-2">
                 <p className="text-xs text-slate-500">Resultados:</p>
                 {searchResults.map((p) => (
                   <button
                     key={p.id}
-                    onClick={() => setPatient(p)}
+                    type="button"
+                    onClick={() => {
+                      setPatient(p);
+                      setAiSuggestion(null);
+                      setVisit(null);
+                      setSelectedDoctorId("");
+                    }}
                     className="w-full text-left border rounded-lg p-2 hover:bg-slate-50"
                   >
                     <div className="font-medium">
-                      {p.full_name} <span className="text-slate-500">({p.clinical_code})</span>
+                      {p.full_name}{" "}
+                      <span className="text-slate-500">
+                        ({p.clinical_code})
+                      </span>
                     </div>
                     <div className="text-xs text-slate-500">
                       Encarregado: {p.guardian_name} • {p.guardian_phone}
@@ -324,7 +618,6 @@ export default function TriageNurse() {
               </div>
             )}
 
-            {/* Paciente selecionado */}
             {patient && (
               <div className="mt-4 border rounded-lg p-3 bg-slate-50">
                 <div className="font-semibold">
@@ -334,23 +627,31 @@ export default function TriageNurse() {
                   Sexo: {patient.sex} • Nascimento: {patient.birth_date}
                 </div>
                 <div className="text-xs text-slate-500">
-                  Encarregado: {patient.guardian_name} • {patient.guardian_phone}
+                  Encarregado: {patient.guardian_name} •{" "}
+                  {patient.guardian_phone}
                 </div>
 
                 <button
+                  type="button"
                   onClick={createVisit}
                   disabled={creatingVisit || !!visit}
                   className="w-full mt-3 bg-white border p-2 rounded-lg text-sm disabled:opacity-60"
                 >
-                  {visit ? `Visita criada (#${visit.id})` : creatingVisit ? "Criando visita..." : "Registrar Chegada (Criar Visita)"}
+                  {visit
+                    ? `Visita criada (#${visit.id})`
+                    : creatingVisit
+                    ? "Criando visita..."
+                    : "Registrar Chegada (Criar Visita)"}
                 </button>
               </div>
             )}
           </div>
 
-          {/* Criar Paciente */}
+          {/* 2) Criar Paciente */}
           <div className="bg-white rounded-2xl shadow p-4">
-            <h2 className="font-semibold text-lg mb-3">2) Criar Paciente (se não existir)</h2>
+            <h2 className="font-semibold text-lg mb-3">
+              2) Criar Paciente (se não existir)
+            </h2>
 
             <form onSubmit={createPatient} className="space-y-3">
               <div>
@@ -430,14 +731,105 @@ export default function TriageNurse() {
             </form>
           </div>
 
-          {/* Triagem */}
+          {/* 3) Triagem */}
           <div className="bg-white rounded-2xl shadow p-4">
             <h2 className="font-semibold text-lg mb-3">3) Triagem</h2>
 
             <form onSubmit={saveTriage} className="space-y-3">
+              {/* Médicos (sempre visível) */}
+              <div className="border rounded-lg p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="font-semibold text-sm">Médicos</div>
+                  <button
+                    type="button"
+                    onClick={() => loadDoctors()}
+                    disabled={loadingDoctors}
+                    className="px-2 py-1 rounded-lg border bg-white text-xs disabled:opacity-50"
+                  >
+                    {loadingDoctors ? "Atualizando..." : "Atualizar"}
+                  </button>
+                </div>
+
+                {doctors.length === 0 ? (
+                  <div className="text-xs text-slate-600">
+                    {loadingDoctors
+                      ? "Carregando médicos..."
+                      : "Nenhum médico retornado pela API. Confirma se /doctors/availability está OK."}
+                  </div>
+                ) : (
+                  <>
+                    <div className="text-xs text-slate-600 mb-2">
+                      Disponíveis: {availableDoctors.length} • Ocupados:{" "}
+                      {busyDoctors.length}
+                    </div>
+
+                    {/* Atribuição só com visita */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium">
+                        Atribuir a um médico (precisa visita)
+                      </label>
+
+                      <select
+                        className="w-full border rounded-lg p-2 text-sm"
+                        value={selectedDoctorId}
+                        onChange={(e) => setSelectedDoctorId(e.target.value)}
+                        disabled={!visit?.id || availableDoctors.length === 0}
+                        title={!visit?.id ? "Crie a visita primeiro" : ""}
+                      >
+                        <option value="">
+                          {visit?.id
+                            ? "-- selecionar médico --"
+                            : "-- crie a visita para atribuir --"}
+                        </option>
+                        {availableDoctors.map((d) => (
+                          <option key={d.id} value={d.id}>
+                            {d.full_name || d.username || `Médico #${d.id}`}
+                          </option>
+                        ))}
+                      </select>
+
+                      <button
+                        type="button"
+                        onClick={assignDoctor}
+                        disabled={!visit?.id || assigning || !selectedDoctorId}
+                        className="w-full bg-slate-900 text-white p-2 rounded-lg text-sm disabled:opacity-60"
+                      >
+                        {assigning
+                          ? "Atribuindo..."
+                          : "Enviar paciente ao médico"}
+                      </button>
+                    </div>
+
+                    {busyDoctors.length > 0 && (
+                      <div className="mt-3">
+                        <div className="text-xs font-semibold mb-1">
+                          Ocupados
+                        </div>
+                        <ul className="text-xs text-slate-700 list-disc pl-5 space-y-1">
+                          {busyDoctors.slice(0, 8).map((d) => (
+                            <li key={d.id}>
+                              {d.full_name || d.username || `Médico #${d.id}`}
+                              {d.current_visit_id ? (
+                                <span className="text-slate-500">
+                                  {" "}
+                                  • em consulta #{d.current_visit_id}
+                                </span>
+                              ) : null}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+
+              {/* Dados de triagem */}
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-sm font-medium">Temperatura (°C)</label>
+                  <label className="text-sm font-medium">
+                    Temperatura (°C) *
+                  </label>
                   <input
                     className="w-full border rounded-lg p-2 mt-1"
                     value={temperature}
@@ -446,7 +838,7 @@ export default function TriageNurse() {
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium">Saturação (%)</label>
+                  <label className="text-sm font-medium">Saturação (%) *</label>
                   <input
                     className="w-full border rounded-lg p-2 mt-1"
                     value={spo2}
@@ -458,7 +850,7 @@ export default function TriageNurse() {
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-sm font-medium">FC (bpm)</label>
+                  <label className="text-sm font-medium">FC (bpm) *</label>
                   <input
                     className="w-full border rounded-lg p-2 mt-1"
                     value={heartRate}
@@ -467,7 +859,7 @@ export default function TriageNurse() {
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium">FR (rpm)</label>
+                  <label className="text-sm font-medium">FR (rpm) *</label>
                   <input
                     className="w-full border rounded-lg p-2 mt-1"
                     value={respRate}
@@ -478,7 +870,7 @@ export default function TriageNurse() {
               </div>
 
               <div>
-                <label className="text-sm font-medium">Peso (kg)</label>
+                <label className="text-sm font-medium">Peso (kg) *</label>
                 <input
                   className="w-full border rounded-lg p-2 mt-1"
                   value={weight}
@@ -536,10 +928,71 @@ export default function TriageNurse() {
                     placeholder={`${selectedPriority?.maxWait ?? ""}`}
                   />
                   <p className="text-xs text-slate-500 mt-1">
-                    Deixe vazio para usar padrão ({selectedPriority?.maxWait} min).
+                    Deixe vazio para usar padrão ({selectedPriority?.maxWait}{" "}
+                    min).
                   </p>
                 </div>
               </div>
+
+              {/* IA */}
+              <button
+                type="button"
+                onClick={askAI}
+                disabled={aiLoading || !triageFieldsOk}
+                className="w-full border bg-white p-2 rounded-lg text-sm disabled:opacity-60"
+                title={
+                  !triageFieldsOk
+                    ? "Preencha Temperatura, SpO2, FC, FR, Peso e Queixa principal para usar IA."
+                    : ""
+                }
+              >
+                {aiLoading
+                  ? "A IA está avaliando..."
+                  : "Avaliar com IA (sugestão)"}
+              </button>
+
+              {!triageFieldsOk && (
+                <p className="text-xs text-slate-500">
+                  IA bloqueada até preencher: Temperatura, SpO2, FC, FR, Peso e
+                  Queixa principal (valores numéricos válidos).
+                </p>
+              )}
+
+              {aiSuggestion && (
+                <div className="border rounded-lg p-3 bg-slate-50">
+                  <div className="text-xs text-slate-500 mb-2">
+                    {aiSuggestion.disclaimer ||
+                      "Sugestão gerada por IA. Não substitui decisão clínica."}
+                  </div>
+
+                  {aiSuggestion.red_flag && (
+                    <div className="mb-2 text-sm font-semibold text-red-700">
+                      ⚠️ Alerta: sinais de risco — considerar avaliação imediata
+                      fora do sistema.
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <div className="text-sm font-semibold">
+                        Sugestão: {aiSuggestion.suggested_priority}
+                      </div>
+                      <div className="text-xs text-slate-600">
+                        Confiança:{" "}
+                        {Math.round((aiSuggestion.confidence || 0) * 100)}%
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setPriority(aiSuggestion.suggested_priority)}
+                      className="px-3 py-2 rounded-lg bg-slate-900 text-white text-xs"
+                    >
+                      Aplicar prioridade
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <button
                 disabled={savingTriage}
@@ -549,9 +1002,175 @@ export default function TriageNurse() {
               </button>
 
               <p className="text-xs text-slate-500">
-                Regra: primeiro selecione/crie paciente → crie visita → registre triagem → defina prioridade.
+                Regra: selecione/crie paciente → crie visita → registre triagem →
+                defina prioridade.
               </p>
             </form>
+          </div>
+
+          {/* 4) Fila (Gerir) - Cancelar / Editar */}
+          <div className="bg-white rounded-2xl shadow p-4 lg:col-span-3">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-semibold text-lg">4) Fila (Gerir)</h2>
+              <button
+                type="button"
+                onClick={loadQueue}
+                disabled={loadingQueue}
+                className="px-3 py-2 rounded-lg border bg-white text-sm disabled:opacity-60"
+              >
+                {loadingQueue ? "Atualizando..." : "Atualizar"}
+              </button>
+            </div>
+
+            {queueErr && (
+              <div className="bg-red-100 text-red-700 p-2 rounded-lg mb-3 text-sm">
+                {queueErr}
+              </div>
+            )}
+
+            {queue.length === 0 ? (
+              <div className="text-sm text-slate-600">Fila vazia.</div>
+            ) : (
+              <div className="border rounded-lg overflow-hidden">
+                <div className="grid grid-cols-8 gap-2 p-2 bg-slate-100 text-xs font-semibold">
+                  <div>ID</div>
+                  <div className="col-span-2">Paciente</div>
+                  <div>Prioridade</div>
+                  <div>Status</div>
+                  <div>Espera</div>
+                  <div>Alerta</div>
+                  <div className="text-right">Ações</div>
+                </div>
+
+                {queue.map((v) => {
+                  const wait = v.wait_minutes ?? null;
+
+                  const isCritical3h = wait != null && wait >= 180;
+                  const isInsane24h = wait != null && wait >= 1440;
+
+                  // ✅ deixa a linha vermelha depois de 3h
+                  const rowDanger =
+                    isInsane24h || isCritical3h
+                      ? "bg-red-50"
+                      : "";
+
+                  return (
+                    <div
+                      key={v.id}
+                      className={`grid grid-cols-8 gap-2 p-2 border-t text-sm items-center ${rowDanger}`}
+                    >
+                      <div>#{v.id}</div>
+
+                      <div className="col-span-2">
+                        {v.full_name}{" "}
+                        <span className="text-slate-500">
+                          ({v.clinical_code})
+                        </span>
+                      </div>
+
+                      <div>{v.priority || "-"}</div>
+                      <div className="font-medium">{statusLabel(v.status)}</div>
+
+                      <div>{wait != null ? `${wait}m` : "-"}</div>
+
+                      <div>
+                        {isInsane24h ? (
+                          <span className="text-xs font-semibold text-red-800">
+                            🚫 +24h (irreal)
+                          </span>
+                        ) : isCritical3h ? (
+                          <span className="text-xs font-semibold text-red-700">
+                            🔴 CRÍTICO (+3h)
+                          </span>
+                        ) : (
+                          <span className="text-xs text-slate-500">—</span>
+                        )}
+                      </div>
+
+                      <div className="text-right flex justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => openEdit(v)}
+                          className="px-2 py-1 rounded-lg border bg-white text-xs"
+                        >
+                          Editar
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => cancelOne(v.id)}
+                          disabled={cancellingId === v.id}
+                          className="px-2 py-1 rounded-lg bg-red-600 text-white text-xs disabled:opacity-60"
+                        >
+                          {cancellingId === v.id ? "Cancelando..." : "Cancelar"}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {editingVisit && (
+              <div className="mt-4 border rounded-lg p-3 bg-slate-50">
+                <div className="flex items-center justify-between">
+                  <div className="font-semibold">
+                    Editar Visita #{editingVisit.id} — {editingVisit.full_name}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEditingVisit(null)}
+                    className="text-xs underline"
+                  >
+                    Fechar
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 mt-3">
+                  <div>
+                    <label className="text-sm font-medium">Prioridade</label>
+                    <select
+                      className="w-full border rounded-lg p-2 mt-1"
+                      value={editPriority}
+                      onChange={(e) => setEditPriority(e.target.value)}
+                    >
+                      {PRIORITIES.map((p) => (
+                        <option key={p.value} value={p.value}>
+                          {p.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium">
+                      Tempo máx. (min)
+                    </label>
+                    <input
+                      className="w-full border rounded-lg p-2 mt-1"
+                      value={editMaxWait}
+                      onChange={(e) => setEditMaxWait(e.target.value)}
+                      placeholder={`Padrão: ${
+                        PRIORITIES.find((p) => p.value === editPriority)
+                          ?.maxWait ?? ""
+                      }`}
+                    />
+                    <p className="text-xs text-slate-500 mt-1">
+                      Dica: {editMaxWait === "" ? "vai usar padrão" : "customizado"}.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={saveEdit}
+                  disabled={savingEdit}
+                  className="mt-3 w-full bg-slate-900 text-white p-2 rounded-lg text-sm disabled:opacity-60"
+                >
+                  {savingEdit ? "Salvando..." : "Salvar alterações"}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>

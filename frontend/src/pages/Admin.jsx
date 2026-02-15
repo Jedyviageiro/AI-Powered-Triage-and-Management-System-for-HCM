@@ -1,10 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../lib/api";
 import { clearAuth, getUser } from "../lib/auth";
-import { useNavigate } from "react-router-dom";
 
 export default function Admin() {
-  const nav = useNavigate();
   const me = getUser();
   const myId = me?.id;
 
@@ -37,8 +35,8 @@ export default function Admin() {
   }, []);
 
   const logout = () => {
+    // clearAuth já deve fazer replace("/login") (como você implementou)
     clearAuth();
-    nav("/login");
   };
 
   const createUser = async (e) => {
@@ -77,13 +75,13 @@ export default function Admin() {
 
   const resetPassword = async (u) => {
     if (u.id === myId) return; // segurança extra
-    const newPassword = prompt(`Nova password para ${u.username}:`);
+    const newPassword = window.prompt(`Nova password para ${u.username}:`);
     if (!newPassword) return;
 
     setErr("");
     try {
       await api.resetUserPassword(u.id, newPassword);
-      alert("Password redefinida com sucesso");
+      window.alert("Password redefinida com sucesso");
     } catch (e) {
       setErr(e.message);
     }
@@ -91,7 +89,7 @@ export default function Admin() {
 
   const deleteUser = async (u) => {
     if (u.id === myId) return; // segurança extra
-    if (!confirm(`Apagar utilizador ${u.username}?`)) return;
+    if (!window.confirm(`Apagar utilizador ${u.username}?`)) return;
 
     setErr("");
     try {
@@ -102,7 +100,7 @@ export default function Admin() {
     }
   };
 
-  // ✅ remove o próprio admin logado da lista
+  // remove o próprio admin logado da lista
   const visibleUsers = useMemo(() => {
     return users.filter((u) => u.id !== myId);
   }, [users, myId]);
@@ -202,8 +200,8 @@ export default function Admin() {
               </button>
 
               <p className="text-xs text-slate-500">
-                Apenas o administrador pode criar contas. Se alguém esquecer a password, deve
-                contactar o administrador.
+                Apenas o administrador pode criar contas. Se alguém esquecer a
+                password, deve contactar o administrador.
               </p>
             </form>
           </div>
@@ -252,24 +250,21 @@ export default function Admin() {
                   <div className="col-span-2 flex justify-end gap-2">
                     <button
                       onClick={() => toggleActive(u)}
-                      disabled={u.id === myId}
-                      className="px-2 py-1 rounded-lg border bg-white text-xs disabled:opacity-50"
+                      className="px-2 py-1 rounded-lg border bg-white text-xs"
                     >
                       {u.is_active ? "Desativar" : "Ativar"}
                     </button>
 
                     <button
                       onClick={() => resetPassword(u)}
-                      disabled={u.id === myId}
-                      className="px-2 py-1 rounded-lg border bg-white text-xs disabled:opacity-50"
+                      className="px-2 py-1 rounded-lg border bg-white text-xs"
                     >
                       Reset PW
                     </button>
 
                     <button
                       onClick={() => deleteUser(u)}
-                      disabled={u.id === myId}
-                      className="px-2 py-1 rounded-lg bg-red-600 text-white text-xs disabled:opacity-50"
+                      className="px-2 py-1 rounded-lg bg-red-600 text-white text-xs"
                     >
                       Apagar
                     </button>

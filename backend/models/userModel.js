@@ -35,11 +35,13 @@ const getUserById = async (id) => {
 // GET USER BY USERNAME (login)
 // ========================
 const getUserByUsername = async (username) => {
-    const result = await pool.query(
-        `SELECT * FROM users WHERE username = $1`,
-        [username]
-    );
-    return result.rows[0];
+  const result = await pool.query(
+    `SELECT id, username, password_hash, full_name, role, is_active, created_at, updated_at, last_login_at
+     FROM users
+     WHERE username = $1`,
+    [username]
+  );
+  return result.rows[0];
 };
 
 // ========================

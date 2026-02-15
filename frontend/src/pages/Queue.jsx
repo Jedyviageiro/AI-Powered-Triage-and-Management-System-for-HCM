@@ -61,7 +61,8 @@ export default function Queue() {
 
   const logout = () => {
     clearAuth();
-    navigate("/login");
+    // full navigation to login and replace current history entry to avoid back-navigation
+    window.location.replace('/login');
   };
 
   return (
