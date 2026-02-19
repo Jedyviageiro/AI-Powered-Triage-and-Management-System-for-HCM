@@ -44,10 +44,10 @@ export const api = {
   // ================= USERS =================
   listUsers: () => request("/users"),
 
-  createUser: ({ username, password, full_name, role }) =>
+  createUser: ({ username, password, full_name, role, specialization }) =>
     request("/users", {
       method: "POST",
-      body: { username, password, full_name, role },
+      body: { username, password, full_name, role, specialization },
     }),
 
   updateUser: (id, payload) =>
@@ -74,6 +74,9 @@ export const api = {
   getPatientByCode: (code) =>
     request(`/patients/code/${encodeURIComponent(code)}`),
 
+  getPatientById: (id) => request(`/patients/${id}`),
+  getPatientHistory: (id) => request(`/patients/${id}/history`),
+
   createPatient: (payload) =>
     request("/patients", { method: "POST", body: payload }),
 
@@ -82,6 +85,7 @@ export const api = {
     request("/visits", { method: "POST", body: { patient_id } }),
 
   getVisitById: (id) => request(`/visits/${id}`),
+  listPastVisits: (limit = 200) => request(`/visits/history?limit=${encodeURIComponent(limit)}`),
 
   // prioridade definida pelo enfermeiro
   setVisitPriority: (visitId, payload) =>
@@ -105,6 +109,12 @@ export const api = {
 
   // finalizar consulta
   finishVisit: (id) => request(`/visits/${id}/finish`, { method: "PATCH" }),
+
+  saveVisitMedicalPlan: (visitId, payload) =>
+    request(`/visits/${visitId}/medical-plan`, {
+      method: "PATCH",
+      body: payload,
+    }),
 
   // atribuir médico
   assignDoctorToVisit: (visitId, doctorId) =>

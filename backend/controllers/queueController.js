@@ -14,7 +14,10 @@ const minutesSince = (dateValue) => {
 // ========================
 const getQueue = async (req, res) => {
   try {
-    const visits = await visitModel.listActiveVisits();
+    const isDoctor = req.user?.role === "DOCTOR";
+    const visits = isDoctor
+      ? await visitModel.listActiveVisitsByDoctor(req.user.id)
+      : await visitModel.listActiveVisits();
 
     // Enriquecer com "wait_minutes" e "is_overdue"
     const queue = visits.map((v) => {
@@ -47,7 +50,10 @@ const getQueue = async (req, res) => {
 // ========================
 const getOverdueQueue = async (req, res) => {
   try {
-    const visits = await visitModel.listActiveVisits();
+    const isDoctor = req.user?.role === "DOCTOR";
+    const visits = isDoctor
+      ? await visitModel.listActiveVisitsByDoctor(req.user.id)
+      : await visitModel.listActiveVisits();
 
     const overdue = visits
       .map((v) => {
@@ -82,7 +88,10 @@ const getOverdueQueue = async (req, res) => {
 // ========================
 const getQueueSummary = async (req, res) => {
   try {
-    const visits = await visitModel.listActiveVisits();
+    const isDoctor = req.user?.role === "DOCTOR";
+    const visits = isDoctor
+      ? await visitModel.listActiveVisitsByDoctor(req.user.id)
+      : await visitModel.listActiveVisits();
 
     const summary = {
       total: visits.length,

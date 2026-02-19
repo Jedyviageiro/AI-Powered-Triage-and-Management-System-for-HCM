@@ -36,10 +36,35 @@ CREATE TABLE IF NOT EXISTS visits (
     CHECK (status IN ('WAITING','WAITING_DOCTOR','IN_CONSULTATION','FINISHED')),
   priority VARCHAR(30) NULL CHECK (priority IN ('URGENT','LESS_URGENT','NON_URGENT')),
   max_wait_minutes INTEGER NULL CHECK (max_wait_minutes IS NULL OR max_wait_minutes > 0),
+  likely_diagnosis TEXT NULL,
+  clinical_reasoning TEXT NULL,
+  prescription_text TEXT NULL,
+  disposition_plan VARCHAR(30) NULL,
+  disposition_reason TEXT NULL,
+  follow_up_when TEXT NULL,
+  follow_up_instructions TEXT NULL,
+  follow_up_return_if TEXT NULL,
+  no_charge_chronic BOOLEAN NOT NULL DEFAULT FALSE,
+  no_charge_reason TEXT NULL,
+  plan_accepted_at TIMESTAMP NULL,
+  plan_accepted_by INTEGER NULL REFERENCES users(id) ON DELETE SET NULL,
   created_at TIMESTAMP NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
   finished_at TIMESTAMP NULL
 );
+
+ALTER TABLE visits ADD COLUMN IF NOT EXISTS likely_diagnosis TEXT NULL;
+ALTER TABLE visits ADD COLUMN IF NOT EXISTS clinical_reasoning TEXT NULL;
+ALTER TABLE visits ADD COLUMN IF NOT EXISTS prescription_text TEXT NULL;
+ALTER TABLE visits ADD COLUMN IF NOT EXISTS disposition_plan VARCHAR(30) NULL;
+ALTER TABLE visits ADD COLUMN IF NOT EXISTS disposition_reason TEXT NULL;
+ALTER TABLE visits ADD COLUMN IF NOT EXISTS follow_up_when TEXT NULL;
+ALTER TABLE visits ADD COLUMN IF NOT EXISTS follow_up_instructions TEXT NULL;
+ALTER TABLE visits ADD COLUMN IF NOT EXISTS follow_up_return_if TEXT NULL;
+ALTER TABLE visits ADD COLUMN IF NOT EXISTS no_charge_chronic BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE visits ADD COLUMN IF NOT EXISTS no_charge_reason TEXT NULL;
+ALTER TABLE visits ADD COLUMN IF NOT EXISTS plan_accepted_at TIMESTAMP NULL;
+ALTER TABLE visits ADD COLUMN IF NOT EXISTS plan_accepted_by INTEGER NULL REFERENCES users(id) ON DELETE SET NULL;
 
 -- TRIAGE (1 por visita)
 CREATE TABLE IF NOT EXISTS triage (

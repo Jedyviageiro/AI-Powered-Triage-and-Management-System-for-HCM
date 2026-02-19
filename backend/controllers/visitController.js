@@ -13,6 +13,14 @@ const createVisit = async (req, res) => {
       return res.status(400).json({ error: "patient_id é obrigatório" });
     }
 
+    const openVisit = await visitModel.findOpenVisitByPatientId(patient_id);
+    if (openVisit) {
+      return res.status(409).json({
+        error: "Este paciente ja possui uma visita em aberto.",
+        visit: openVisit,
+      });
+    }
+
     const visit = await visitModel.createVisit(patient_id);
     return res.status(201).json(visit);
   } catch (err) {
@@ -31,6 +39,9 @@ const getVisitById = async (req, res) => {
 
     const visit = await visitModel.getVisitById(id);
     if (!visit) return res.status(404).json({ error: "Visita não encontrada" });
+    if (req.user?.role === "DOCTOR" && visit.doctor_id !== req.user.id) {
+      return res.status(403).json({ error: "Sem permissao para esta visita" });
+    }
 
     return res.json(visit);
   } catch (err) {
@@ -234,11 +245,89 @@ const editVisitPriority = async (req, res) => {
   }
 };
 
+const listPastVisits = async (req, res) => {
+  try {
+    const limit = Number(req.query.limit || 200);
+    const rows = await visitModel.listPastVisits(
+      Number.isFinite(limit) && limit > 0 && limit <= 1000 ? limit : 200
+    );
+    return res.json(Array.isArray(rows) ? rows : []);
+  } catch (err) {
+    console.error("LIST PAST VISITS ERROR:", err);
+    return res.status(500).json({ error: "Erro ao listar visitas antigas" });
+  }
+};
+
+const saveMedicalPlan = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      likely_diagnosis,
+      clinical_reasoning,
+      prescription_text,
+      disposition_plan,
+      disposition_reason,
+      follow_up_when,
+      follow_up_instructions,
+      follow_up_return_if,
+      no_charge_chronic,
+      no_charge_reason,
+      return_visit_date,
+      return_visit_reason,
+      lab_requested,
+      lab_tests,
+      lab_sample_collected_at,
+      accepted,
+    } = req.body || {};
+
+    const allowedDisposition = ["", "BED_REST", "HOME", "RETURN_VISIT", "ADMIT_URGENT"];
+    const disposition = disposition_plan || "";
+    if (!allowedDisposition.includes(disposition)) {
+      return res.status(400).json({ error: "disposition_plan invÃ¡lido" });
+    }
+
+    const updated = await visitModel.saveMedicalPlan(
+      id,
+      {
+        likely_diagnosis,
+        clinical_reasoning,
+        prescription_text,
+        disposition_plan: disposition || null,
+        disposition_reason,
+        follow_up_when,
+        follow_up_instructions,
+        follow_up_return_if,
+        no_charge_chronic: !!no_charge_chronic,
+        no_charge_reason,
+        return_visit_date,
+        return_visit_reason,
+        lab_requested: !!lab_requested,
+        lab_tests,
+        lab_sample_collected_at,
+        accepted: !!accepted,
+      },
+      { actorId: req.user?.id || null, isAdmin: req.user?.role === "ADMIN" }
+    );
+
+    if (!updated) {
+      return res.status(404).json({
+        error: "Visita nÃ£o encontrada, finalizada/cancelada, ou sem permissÃ£o para salvar plano",
+      });
+    }
+
+    return res.json(updated);
+  } catch (err) {
+    console.error("SAVE MEDICAL PLAN ERROR:", err);
+    return res.status(500).json({ error: "Erro ao salvar plano mÃ©dico" });
+  }
+};
+
 
 module.exports = {
   createVisit,
   getVisitById,
   listActiveVisits,
+  listPastVisits,
   setTriagePriority,
   updateVisitStatus,
   finishVisit,
@@ -246,4 +335,6 @@ module.exports = {
   startConsultation,
   cancelVisit,
   editVisitPriority,
+  saveMedicalPlan,
 };
+

@@ -41,6 +41,23 @@ const createTriage = async ({
     return result.rows[0];
 };
 
+const getLastRecordedWeightForVisitPatient = async (visit_id) => {
+    const result = await pool.query(
+        `SELECT t.weight
+         FROM visits current_visit
+         JOIN visits past_visit
+           ON past_visit.patient_id = current_visit.patient_id
+          AND past_visit.id <> current_visit.id
+         JOIN triage t ON t.visit_id = past_visit.id
+         WHERE current_visit.id = $1
+           AND t.weight IS NOT NULL
+         ORDER BY t.created_at DESC
+         LIMIT 1`,
+        [visit_id]
+    );
+    return result.rows[0] || null;
+};
+
 // ========================
 // GET TRIAGE BY ID
 // ========================
@@ -115,6 +132,7 @@ const deleteTriage = async (id) => {
 
 module.exports = {
     createTriage,
+    getLastRecordedWeightForVisitPatient,
     getTriageById,
     getTriageByVisitId,
     updateTriage,

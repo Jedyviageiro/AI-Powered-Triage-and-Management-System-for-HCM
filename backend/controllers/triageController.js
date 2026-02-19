@@ -1,9 +1,5 @@
 const triageModel = require("../models/triageModel");
 
-// ========================
-// CREATE TRIAGE
-// POST /triages
-// ========================
 const createTriage = async (req, res) => {
   try {
     const {
@@ -17,11 +13,25 @@ const createTriage = async (req, res) => {
       clinical_notes,
     } = req.body;
 
-    // nurse_id vem do utilizador autenticado (vamos ligar isso depois no middleware)
     const nurse_id = req.user?.id || null;
 
     if (!visit_id || !chief_complaint) {
-      return res.status(400).json({ error: "visit_id e chief_complaint são obrigatórios" });
+      return res.status(400).json({ error: "visit_id e chief_complaint sao obrigatorios" });
+    }
+
+    const currentWeight = weight == null || weight === "" ? null : Number(weight);
+    if (currentWeight != null && Number.isFinite(currentWeight)) {
+      const lastWeightRow = await triageModel.getLastRecordedWeightForVisitPatient(visit_id);
+      const lastWeight = lastWeightRow?.weight != null ? Number(lastWeightRow.weight) : null;
+
+      if (lastWeight != null && Number.isFinite(lastWeight) && lastWeight > 0) {
+        const ratio = currentWeight / lastWeight;
+        if (ratio < 0.7 || ratio > 1.5) {
+          return res.status(400).json({
+            error: `Peso inconsistente com historico recente (${lastWeight} kg). Revise antes de salvar triagem.`,
+          });
+        }
+      }
     }
 
     const triage = await triageModel.createTriage({
@@ -38,24 +48,19 @@ const createTriage = async (req, res) => {
 
     return res.status(201).json(triage);
   } catch (err) {
-    // Unique constraint (visit_id único) -> já existe triagem para esta visita
     if (err.code === "23505") {
-      return res.status(400).json({ error: "Já existe triagem para esta visita" });
+      return res.status(400).json({ error: "Ja existe triagem para esta visita" });
     }
     return res.status(500).json({ error: "Erro ao criar triagem" });
   }
 };
 
-// ========================
-// GET TRIAGE BY ID
-// GET /triages/:id
-// ========================
 const getTriageById = async (req, res) => {
   try {
     const { id } = req.params;
 
     const triage = await triageModel.getTriageById(id);
-    if (!triage) return res.status(404).json({ error: "Triagem não encontrada" });
+    if (!triage) return res.status(404).json({ error: "Triagem nao encontrada" });
 
     return res.json(triage);
   } catch (err) {
@@ -63,16 +68,12 @@ const getTriageById = async (req, res) => {
   }
 };
 
-// ========================
-// GET TRIAGE BY VISIT
-// GET /triages/visit/:visit_id
-// ========================
 const getTriageByVisitId = async (req, res) => {
   try {
     const { visit_id } = req.params;
 
     const triage = await triageModel.getTriageByVisitId(visit_id);
-    if (!triage) return res.status(404).json({ error: "Triagem não encontrada para esta visita" });
+    if (!triage) return res.status(404).json({ error: "Triagem nao encontrada para esta visita" });
 
     return res.json(triage);
   } catch (err) {
@@ -80,16 +81,12 @@ const getTriageByVisitId = async (req, res) => {
   }
 };
 
-// ========================
-// UPDATE TRIAGE
-// PATCH /triages/:id
-// ========================
 const updateTriage = async (req, res) => {
   try {
     const { id } = req.params;
 
     const updated = await triageModel.updateTriage(id, req.body);
-    if (!updated) return res.status(404).json({ error: "Triagem não encontrada" });
+    if (!updated) return res.status(404).json({ error: "Triagem nao encontrada" });
 
     return res.json(updated);
   } catch (err) {
@@ -97,16 +94,12 @@ const updateTriage = async (req, res) => {
   }
 };
 
-// ========================
-// DELETE TRIAGE
-// DELETE /triages/:id
-// ========================
 const deleteTriage = async (req, res) => {
   try {
     const { id } = req.params;
 
     const deleted = await triageModel.deleteTriage(id);
-    if (!deleted) return res.status(404).json({ error: "Triagem não encontrada" });
+    if (!deleted) return res.status(404).json({ error: "Triagem nao encontrada" });
 
     return res.json({ message: "Triagem removida com sucesso" });
   } catch (err) {

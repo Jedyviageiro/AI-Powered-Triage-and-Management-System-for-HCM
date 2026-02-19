@@ -15,6 +15,7 @@ export default function Admin() {
   const [fPassword, setFPassword] = useState("");
   const [fFullName, setFFullName] = useState("");
   const [fRole, setFRole] = useState("DOCTOR");
+  const [fSpecialization, setFSpecialization] = useState("");
   const [creating, setCreating] = useState(false);
 
   const loadUsers = async () => {
@@ -49,11 +50,13 @@ export default function Admin() {
         password: fPassword,
         full_name: fFullName.trim(),
         role: fRole,
+        specialization: fRole === "DOCTOR" ? fSpecialization.trim() || null : null,
       });
       setFUsername("");
       setFPassword("");
       setFFullName("");
       setFRole("DOCTOR");
+      setFSpecialization("");
       await loadUsers();
     } catch (e2) {
       setErr(e2.message);
@@ -191,6 +194,18 @@ export default function Admin() {
                   <option value="ADMIN">ADMIN</option>
                 </select>
               </div>
+
+              {fRole === "DOCTOR" && (
+                <div>
+                  <label className="text-sm font-medium">Especializacao</label>
+                  <input
+                    className="w-full border rounded-lg p-2 mt-1"
+                    value={fSpecialization}
+                    onChange={(e) => setFSpecialization(e.target.value)}
+                    placeholder="Ex: Pediatria geral"
+                  />
+                </div>
+              )}
 
               <button
                 disabled={creating}

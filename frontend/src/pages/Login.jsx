@@ -26,7 +26,7 @@ export default function Login() {
         navigate("/doctor");
       } else {
         // NURSE
-        navigate("/queue");
+        navigate("/triage");
       }
 
     } catch (err) {

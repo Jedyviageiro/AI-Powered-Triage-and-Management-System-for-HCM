@@ -125,6 +125,16 @@ const deletePatient = async (req, res) => {
   }
 };
 
+const getPatientHistory = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const history = await patientModel.getPatientHistory(id);
+    return res.json(Array.isArray(history) ? history : []);
+  } catch (err) {
+    return res.status(500).json({ error: "Erro ao buscar historico do paciente" });
+  }
+};
+
 module.exports = {
   createPatient,
   getPatientById,
@@ -132,4 +142,5 @@ module.exports = {
   searchPatients,
   updatePatient,
   deletePatient,
+  getPatientHistory,
 };

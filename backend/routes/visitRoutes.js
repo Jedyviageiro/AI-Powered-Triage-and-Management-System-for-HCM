@@ -11,6 +11,7 @@ router.use(requireAuth, requireRole("ADMIN", "DOCTOR", "NURSE"));
 // CRUD básico
 router.post("/", visitController.createVisit);
 router.get("/active", visitController.listActiveVisits);
+router.get("/history", visitController.listPastVisits);
 router.get("/:id", visitController.getVisitById);
 
 // Prioridade definida pelo enfermeiro/admin (triagem)
@@ -54,6 +55,13 @@ router.patch("/:id/cancel", requireRole("NURSE", "ADMIN"), visitController.cance
 
 // editar prioridade depois (NURSE e ADMIN)
 router.patch("/:id/edit-priority", requireRole("NURSE", "ADMIN"), visitController.editVisitPriority);
+
+// salvar plano mÃ©dico (DOCTOR e ADMIN)
+router.patch(
+  "/:id/medical-plan",
+  requireRole("DOCTOR", "ADMIN"),
+  visitController.saveMedicalPlan
+);
 
 
 module.exports = router;

@@ -5,13 +5,13 @@ const userModel = require("../models/userModel");
 // ========================
 const createUser = async (req, res) => {
     try {
-        const { username, password, full_name, role } = req.body;
+        const { username, password, full_name, role, specialization } = req.body;
 
         if (!username || !password || !full_name || !role) {
             return res.status(400).json({ error: "Preencha todos os campos" });
         }
 
-        const user = await userModel.createUser({ username, password, full_name, role });
+        const user = await userModel.createUser({ username, password, full_name, role, specialization: specialization || null });
 
         res.status(201).json(user);
     } catch (err) {

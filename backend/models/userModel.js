@@ -6,14 +6,14 @@ const SALT_ROUNDS = 10;
 // ========================
 // CREATE USER
 // ========================
-const createUser = async ({ username, password, full_name, role }) => {
+const createUser = async ({ username, password, full_name, role, specialization = null }) => {
     const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
 
     const result = await pool.query(
-        `INSERT INTO users (username, password_hash, full_name, role)
-         VALUES ($1, $2, $3, $4)
-         RETURNING id, username, full_name, role, is_active, created_at, updated_at, last_login_at`,
-        [username, passwordHash, full_name, role]
+        `INSERT INTO users (username, password_hash, full_name, role, specialization)
+         VALUES ($1, $2, $3, $4, $5)
+         RETURNING id, username, full_name, specialization, role, is_active, created_at, updated_at, last_login_at`,
+        [username, passwordHash, full_name, role, specialization]
     );
 
     return result.rows[0];
@@ -24,7 +24,7 @@ const createUser = async ({ username, password, full_name, role }) => {
 // ========================
 const getUserById = async (id) => {
     const result = await pool.query(
-        `SELECT id, username, full_name, role, is_active, created_at, updated_at, last_login_at
+        `SELECT id, username, full_name, specialization, role, is_active, created_at, updated_at, last_login_at
          FROM users WHERE id = $1`,
         [id]
     );
@@ -36,7 +36,7 @@ const getUserById = async (id) => {
 // ========================
 const getUserByUsername = async (username) => {
   const result = await pool.query(
-    `SELECT id, username, password_hash, full_name, role, is_active, created_at, updated_at, last_login_at
+    `SELECT id, username, password_hash, full_name, specialization, role, is_active, created_at, updated_at, last_login_at
      FROM users
      WHERE username = $1`,
     [username]
@@ -49,7 +49,7 @@ const getUserByUsername = async (username) => {
 // ========================
 const listUsers = async () => {
     const result = await pool.query(
-        `SELECT id, username, full_name, role, is_active, created_at, updated_at, last_login_at
+        `SELECT id, username, full_name, specialization, role, is_active, created_at, updated_at, last_login_at
          FROM users ORDER BY id ASC`
     );
     return result.rows;
@@ -58,17 +58,18 @@ const listUsers = async () => {
 // ========================
 // UPDATE USER (dados)
 // ========================
-const updateUser = async (id, { username, full_name, role, is_active }) => {
+const updateUser = async (id, { username, full_name, role, is_active, specialization }) => {
   const result = await pool.query(
     `UPDATE users
      SET username   = COALESCE($1, username),
          full_name  = COALESCE($2, full_name),
          role       = COALESCE($3, role),
          is_active  = COALESCE($4, is_active),
+         specialization = COALESCE($5, specialization),
          updated_at = NOW()
-     WHERE id = $5
-     RETURNING id, username, full_name, role, is_active, created_at, updated_at, last_login_at`,
-    [username ?? null, full_name ?? null, role ?? null, is_active ?? null, id]
+     WHERE id = $6
+     RETURNING id, username, full_name, specialization, role, is_active, created_at, updated_at, last_login_at`,
+    [username ?? null, full_name ?? null, role ?? null, is_active ?? null, specialization ?? null, id]
   );
 
   return result.rows[0];
@@ -85,7 +86,7 @@ const updatePassword = async (id, newPassword) => {
         `UPDATE users
          SET password_hash = $1, updated_at = NOW()
          WHERE id = $2
-         RETURNING id, username, full_name, role, is_active`,
+         RETURNING id, username, full_name, specialization, role, is_active`,
         [passwordHash, id]
     );
 

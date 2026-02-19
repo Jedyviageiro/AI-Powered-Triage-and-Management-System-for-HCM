@@ -96,6 +96,37 @@ const deletePatient = async (id) => {
     return result.rows[0];
 };
 
+const getPatientHistory = async (patientId) => {
+    const result = await pool.query(
+        `SELECT
+            v.id AS visit_id,
+            v.arrival_time,
+            v.status,
+            v.priority,
+            v.likely_diagnosis,
+            v.prescription_text,
+            v.disposition_plan,
+            v.disposition_reason,
+            v.return_visit_date,
+            v.return_visit_reason,
+            v.lab_requested,
+            v.lab_tests,
+            t.temperature,
+            t.heart_rate,
+            t.respiratory_rate,
+            t.oxygen_saturation,
+            t.weight,
+            t.chief_complaint,
+            t.clinical_notes
+         FROM visits v
+         LEFT JOIN triage t ON t.visit_id = v.id
+         WHERE v.patient_id = $1
+         ORDER BY v.arrival_time DESC`,
+        [patientId]
+    );
+    return result.rows;
+};
+
 // ========================
 module.exports = {
     createPatient,
@@ -103,5 +134,6 @@ module.exports = {
     getPatientByCode,
     searchPatients,
     updatePatient,
-    deletePatient
+    deletePatient,
+    getPatientHistory
 };

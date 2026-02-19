@@ -11,6 +11,8 @@ const listDoctorsWithAvailability = async () => {
       u.id,
       u.username,
       u.full_name,
+      COALESCE(u.specialization, '') AS specialization,
+      u.is_available,
       u.is_active,
 
       EXISTS (

@@ -61,7 +61,6 @@ export default function Queue() {
 
   const logout = () => {
     clearAuth();
-    // full navigation to login and replace current history entry to avoid back-navigation
     window.location.replace('/login');
   };
 
@@ -112,10 +111,11 @@ export default function Queue() {
 
         {/* Tabela */}
         <div className="bg-white rounded-2xl shadow overflow-hidden">
-          <div className="grid grid-cols-6 gap-2 p-3 bg-slate-100 text-xs font-semibold">
+          <div className="grid grid-cols-7 gap-2 p-3 bg-slate-100 text-xs font-semibold">
             <div>Código</div>
             <div className="col-span-2">Paciente</div>
             <div>Prioridade</div>
+            <div>Médico</div>
             <div>Espera</div>
             <div>Status</div>
           </div>
@@ -128,7 +128,7 @@ export default function Queue() {
             queue.map((v) => (
               <div
                 key={v.id}
-                className={`grid grid-cols-6 gap-2 p-3 border-t text-sm ${rowBlink(
+                className={`grid grid-cols-7 gap-2 p-3 border-t text-sm ${rowBlink(
                   v.is_overdue
                 )}`}
               >
@@ -147,6 +147,10 @@ export default function Queue() {
                   ) : (
                     "-"
                   )}
+                </div>
+
+                <div className="text-slate-700">
+                  {v.doctor_full_name || v.doctor_username || "-"}
                 </div>
 
                 <div>
