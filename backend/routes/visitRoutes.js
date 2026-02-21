@@ -1,4 +1,4 @@
-const express = require("express");
+﻿const express = require("express");
 const router = express.Router();
 
 const visitController = require("../controllers/visitController");
@@ -12,6 +12,7 @@ router.use(requireAuth, requireRole("ADMIN", "DOCTOR", "NURSE"));
 router.post("/", visitController.createVisit);
 router.get("/active", visitController.listActiveVisits);
 router.get("/history", visitController.listPastVisits);
+router.get("/my-agenda", requireRole("DOCTOR", "ADMIN"), visitController.getMyAgenda);
 router.get("/:id", visitController.getVisitById);
 
 // Prioridade definida pelo enfermeiro/admin (triagem)
@@ -56,12 +57,20 @@ router.patch("/:id/cancel", requireRole("NURSE", "ADMIN"), visitController.cance
 // editar prioridade depois (NURSE e ADMIN)
 router.patch("/:id/edit-priority", requireRole("NURSE", "ADMIN"), visitController.editVisitPriority);
 
-// salvar plano mÃ©dico (DOCTOR e ADMIN)
+// salvar plano médico (DOCTOR e ADMIN)
 router.patch(
   "/:id/medical-plan",
   requireRole("DOCTOR", "ADMIN"),
   visitController.saveMedicalPlan
 );
 
+router.patch(
+  "/:id/return-schedule",
+  requireRole("DOCTOR", "ADMIN"),
+  visitController.scheduleVisitReturn
+);
+
 
 module.exports = router;
+
+

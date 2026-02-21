@@ -1,4 +1,4 @@
-const visitModel = require("../models/visitModel");
+﻿const visitModel = require("../models/visitModel");
 
 // ========================
 // CREATE VISIT (chegada)
@@ -36,8 +36,13 @@ const createVisit = async (req, res) => {
 const getVisitById = async (req, res) => {
   try {
     const { id } = req.params;
+    const visitId = Number(id);
 
-    const visit = await visitModel.getVisitById(id);
+    if (!Number.isInteger(visitId) || visitId <= 0) {
+      return res.status(400).json({ error: "id invalido" });
+    }
+
+    const visit = await visitModel.getVisitById(visitId);
     if (!visit) return res.status(404).json({ error: "Visita não encontrada" });
     if (req.user?.role === "DOCTOR" && visit.doctor_id !== req.user.id) {
       return res.status(403).json({ error: "Sem permissao para esta visita" });
@@ -150,7 +155,12 @@ const finishVisit = async (req, res) => {
     const { id } = req.params;
 
     const finished = await visitModel.finishVisit(id);
-    if (!finished) return res.status(404).json({ error: "Visita não encontrada" });
+    if (!finished) {
+      return res.status(400).json({
+        error:
+          "Não é possível finalizar: preencha e salve questionário clínico, diagnóstico, raciocínio clínico, prescrição e destino do paciente.",
+      });
+    }
 
     return res.json(finished);
   } catch (err) {
@@ -258,6 +268,27 @@ const listPastVisits = async (req, res) => {
   }
 };
 
+const getMyAgenda = async (req, res) => {
+  try {
+    const doctorId =
+      req.user?.role === "ADMIN"
+        ? Number(req.query.doctor_id || req.user?.id)
+        : Number(req.user?.id);
+
+    if (!Number.isFinite(doctorId) || doctorId <= 0) {
+      return res.status(400).json({ error: "doctor_id invalido" });
+    }
+
+    const agenda = await visitModel.listDoctorAgenda(doctorId);
+    return res.json(
+      agenda || { assigned_today: [], returns_today: [] }
+    );
+  } catch (err) {
+    console.error("GET MY AGENDA ERROR:", err);
+    return res.status(500).json({ error: "Erro ao buscar agenda do medico" });
+  }
+};
+
 const saveMedicalPlan = async (req, res) => {
   try {
     const { id } = req.params;
@@ -275,15 +306,20 @@ const saveMedicalPlan = async (req, res) => {
       return_visit_date,
       return_visit_reason,
       lab_requested,
+      lab_exam_type,
       lab_tests,
       lab_sample_collected_at,
+      lab_result_text,
+      lab_result_status,
+      lab_result_ready_at,
+      doctor_questionnaire_json,
       accepted,
     } = req.body || {};
 
     const allowedDisposition = ["", "BED_REST", "HOME", "RETURN_VISIT", "ADMIT_URGENT"];
     const disposition = disposition_plan || "";
     if (!allowedDisposition.includes(disposition)) {
-      return res.status(400).json({ error: "disposition_plan invÃ¡lido" });
+      return res.status(400).json({ error: "disposition_plan inválido" });
     }
 
     const updated = await visitModel.saveMedicalPlan(
@@ -302,8 +338,13 @@ const saveMedicalPlan = async (req, res) => {
         return_visit_date,
         return_visit_reason,
         lab_requested: !!lab_requested,
+        lab_exam_type,
         lab_tests,
         lab_sample_collected_at,
+        lab_result_text,
+        lab_result_status,
+        lab_result_ready_at,
+        doctor_questionnaire_json,
         accepted: !!accepted,
       },
       { actorId: req.user?.id || null, isAdmin: req.user?.role === "ADMIN" }
@@ -311,14 +352,57 @@ const saveMedicalPlan = async (req, res) => {
 
     if (!updated) {
       return res.status(404).json({
-        error: "Visita nÃ£o encontrada, finalizada/cancelada, ou sem permissÃ£o para salvar plano",
+        error: "Visita não encontrada, finalizada/cancelada, ou sem permissão para salvar plano",
       });
     }
 
     return res.json(updated);
   } catch (err) {
     console.error("SAVE MEDICAL PLAN ERROR:", err);
-    return res.status(500).json({ error: "Erro ao salvar plano mÃ©dico" });
+    return res.status(500).json({ error: "Erro ao salvar plano médico" });
+  }
+};
+
+const scheduleVisitReturn = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { return_visit_date, return_visit_reason } = req.body || {};
+
+    if (!return_visit_date) {
+      return res.status(400).json({ error: "return_visit_date e obrigatorio" });
+    }
+
+    const parsedReturnDate = new Date(`${return_visit_date}T00:00:00`);
+    if (Number.isNaN(parsedReturnDate.getTime())) {
+      return res.status(400).json({ error: "return_visit_date invalida" });
+    }
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (parsedReturnDate.getTime() <= today.getTime()) {
+      return res.status(400).json({
+        error: "Nao e permitido agendar retorno para hoje. Escolha amanha ou data futura.",
+      });
+    }
+
+    const updated = await visitModel.scheduleReturn(
+      id,
+      {
+        return_visit_date,
+        return_visit_reason: return_visit_reason || null,
+      },
+      { actorId: req.user?.id || null, isAdmin: req.user?.role === "ADMIN" }
+    );
+
+    if (!updated) {
+      return res.status(404).json({
+        error: "Visita nao encontrada, finalizada/cancelada, ou sem permissao para agendar retorno",
+      });
+    }
+
+    return res.json(updated);
+  } catch (err) {
+    console.error("SCHEDULE RETURN ERROR:", err);
+    return res.status(500).json({ error: "Erro ao agendar retorno" });
   }
 };
 
@@ -328,6 +412,7 @@ module.exports = {
   getVisitById,
   listActiveVisits,
   listPastVisits,
+  getMyAgenda,
   setTriagePriority,
   updateVisitStatus,
   finishVisit,
@@ -336,5 +421,8 @@ module.exports = {
   cancelVisit,
   editVisitPriority,
   saveMedicalPlan,
+  scheduleVisitReturn,
 };
+
+
 

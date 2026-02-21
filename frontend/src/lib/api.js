@@ -1,22 +1,40 @@
-import { getToken, clearAuth } from "./auth";
+﻿import { getToken, clearAuth } from "./auth";
 
 const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 async function request(path, options = {}) {
   const token = getToken();
+  const controller = new AbortController();
+  const timeoutMs = Number(options.timeoutMs || 0);
+  const timeoutId =
+    Number.isFinite(timeoutMs) && timeoutMs > 0
+      ? setTimeout(() => controller.abort(), timeoutMs)
+      : null;
 
-  const res = await fetch(`${BASE_URL}${path}`, {
-    method: options.method || "GET",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: options.body ? JSON.stringify(options.body) : undefined,
-  });
+  let res;
+  let data = {};
+  try {
+    res = await fetch(`${BASE_URL}${path}`, {
+      method: options.method || "GET",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: options.body ? JSON.stringify(options.body) : undefined,
+      signal: controller.signal,
+    });
 
-  const data = await res.json().catch(() => ({}));
+    data = await res.json().catch(() => ({}));
+  } catch (e) {
+    if (timeoutId) clearTimeout(timeoutId);
+    if (e?.name === "AbortError") {
+      throw new Error("A operação demorou demasiado tempo. Tente novamente.");
+    }
+    throw e;
+  }
+  if (timeoutId) clearTimeout(timeoutId);
 
-  // 🔐 sessão expirada
+  // sessão expirada
   if (res.status === 401) {
     clearAuth();
     window.location.replace("/login");
@@ -86,6 +104,7 @@ export const api = {
 
   getVisitById: (id) => request(`/visits/${id}`),
   listPastVisits: (limit = 200) => request(`/visits/history?limit=${encodeURIComponent(limit)}`),
+  getMyAgenda: () => request("/visits/my-agenda"),
 
   // prioridade definida pelo enfermeiro
   setVisitPriority: (visitId, payload) =>
@@ -94,14 +113,14 @@ export const api = {
       body: payload,
     }),
 
-  // ⚠️ status genérico (evitar para iniciar consulta)
+  // status genérico (evitar para iniciar consulta)
   setVisitStatus: (id, status) =>
     request(`/visits/${id}/status`, {
       method: "PATCH",
       body: { status },
     }),
 
-  // 🔥 INICIAR CONSULTA (fluxo correto)
+  // iniciar consulta (fluxo correto)
   startConsultation: (visitId) =>
     request(`/visits/${visitId}/start-consultation`, {
       method: "PATCH",
@@ -112,6 +131,12 @@ export const api = {
 
   saveVisitMedicalPlan: (visitId, payload) =>
     request(`/visits/${visitId}/medical-plan`, {
+      method: "PATCH",
+      body: payload,
+    }),
+
+  scheduleVisitReturn: (visitId, payload) =>
+    request(`/visits/${visitId}/return-schedule`, {
       method: "PATCH",
       body: payload,
     }),
@@ -131,7 +156,8 @@ export const api = {
   // ================= AI =================
   aiTriageSuggest: (payload) => request("/ai/triage", { method: "POST", body: payload }),
 
-  aiDoctorSuggest: (payload) => request("/ai/doctor", { method: "POST", body: payload }),
+  aiDoctorSuggest: (payload) =>
+    request("/ai/doctor", { method: "POST", body: payload, timeoutMs: 60000 }),
 
   // ================= DOCTORS =================
   listDoctorsAvailability: async () => {
@@ -144,7 +170,7 @@ export const api = {
     return [];
   },
 
-  // ✅ Doctor online / disponibilidade (NOVO)
+  // Doctor online / disponibilidade
   doctorCheckin: () => request("/doctors/checkin", { method: "PATCH" }),
   doctorCheckout: () => request("/doctors/checkout", { method: "PATCH" }),
   doctorHeartbeat: () => request("/doctors/heartbeat", { method: "PATCH" }),
@@ -171,5 +197,6 @@ editVisitPriority: (visitId, payload) =>
   }),
 
 };
+
 
 

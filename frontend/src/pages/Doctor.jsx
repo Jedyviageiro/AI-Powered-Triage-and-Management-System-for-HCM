@@ -1,13 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+﻿import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../lib/api";
 import { clearAuth, getUser } from "../lib/auth";
-
-const formatWait = (m) => {
-  if (m == null) return "-";
-  if (m === 0) return "<1 min";
-  if (m === 1) return "1 min";
-  return `${m} min`;
-};
+import AgendaView from "../components/AgendaView";
+import DoctorQueuePanel from "../components/DoctorQueuePanel";
 
 const formatStatus = (s) => {
   if (s === "WAITING") return "Aguardando Triagem";
@@ -28,18 +23,22 @@ const calculateAgeYears = (birthDate) => {
   return Math.max(0, now.getFullYear() - bd.getFullYear() - (hadBirthdayThisYear ? 0 : 1));
 };
 
-const roleLabel = (role) => {
-  if (role === "DOCTOR") return "Medico";
-  if (role === "NURSE") return "Enfermeiro";
-  if (role === "ADMIN") return "Administrador";
-  return role || "-";
-};
 const DISPOSITION_OPTIONS = [
   { value: "", label: "Selecionar destino" },
   { value: "BED_REST", label: "Repouso (bed rest)" },
   { value: "HOME", label: "Alta para casa" },
   { value: "RETURN_VISIT", label: "Retorno agendado" },
-  { value: "ADMIT_URGENT", label: "Internar / urgencia" },
+  { value: "ADMIT_URGENT", label: "Internar / urgência" },
+];
+
+const LAB_EXAM_OPTIONS = [
+  { value: "", label: "Selecionar exame" },
+  { value: "HEMOGRAMA", label: "Hemograma" },
+  { value: "MALARIA", label: "Teste de malária" },
+  { value: "RAIO_X", label: "Raio-X" },
+  { value: "URINA", label: "Urina tipo 1" },
+  { value: "BIOQUIMICA", label: "Bioquímica" },
+  { value: "OUTRO", label: "Outro" },
 ];
 
 const makeEmptyPlanDraft = () => ({
@@ -56,53 +55,13 @@ const makeEmptyPlanDraft = () => ({
   return_visit_date: "",
   return_visit_reason: "",
   lab_requested: false,
+  lab_exam_type: "",
   lab_tests: "",
   lab_sample_collected_at: "",
+  lab_result_text: "",
+  lab_result_status: "",
+  lab_result_ready_at: "",
 });
-
-const planFromAI = (ai) => {
-  const prescriptionLines = Array.isArray(ai?.prescription_plan)
-    ? ai.prescription_plan.map((p) =>
-        [
-          p?.medication || "",
-          p?.dosage || "",
-          p?.route || "",
-          p?.frequency || "",
-          p?.duration || "",
-          p?.instructions || "",
-        ]
-          .filter(Boolean)
-          .join(" | ")
-      )
-    : [];
-
-  const legacyPrescriptionLines = Array.isArray(ai?.prescription_suggestions)
-    ? ai.prescription_suggestions.map((p) => `${p?.item || ""} | ${p?.note || ""}`)
-    : [];
-
-  return {
-    likely_diagnosis: ai?.likely_diagnosis || ai?.summary || "",
-    clinical_reasoning:
-      ai?.clinical_reasoning ||
-      (Array.isArray(ai?.differential_diagnoses)
-        ? ai.differential_diagnoses
-            .slice(0, 3)
-            .map((d) => `${d?.name || ""}: ${d?.why || ""}`.trim())
-            .filter(Boolean)
-            .join("\n")
-        : ""),
-    prescription_text: [...prescriptionLines, ...legacyPrescriptionLines]
-      .filter(Boolean)
-      .join("\n"),
-    disposition_plan: ai?.disposition?.plan || "",
-    disposition_reason: ai?.disposition?.reason || "",
-    follow_up_when: ai?.follow_up?.when || "",
-    follow_up_instructions: ai?.follow_up?.instructions || "",
-    follow_up_return_if: ai?.follow_up?.return_if || "",
-    no_charge_chronic: !!ai?.chronic_no_charge?.suggested,
-    no_charge_reason: ai?.chronic_no_charge?.reason || "",
-  };
-};
 
 const planFromVisit = (visit) => ({
   likely_diagnosis: visit?.likely_diagnosis || "",
@@ -118,35 +77,109 @@ const planFromVisit = (visit) => ({
   return_visit_date: visit?.return_visit_date || "",
   return_visit_reason: visit?.return_visit_reason || "",
   lab_requested: !!visit?.lab_requested,
+  lab_exam_type: visit?.lab_exam_type || "",
   lab_tests: visit?.lab_tests || "",
   lab_sample_collected_at: visit?.lab_sample_collected_at || "",
+  lab_result_text: visit?.lab_result_text || "",
+  lab_result_status: visit?.lab_result_status || "",
+  lab_result_ready_at: visit?.lab_result_ready_at || "",
 });
+
+const fallbackComplaintQuestions = (chiefComplaint = "") => {
+  const c = String(chiefComplaint || "").toLowerCase();
+  const base = [
+    "O que está a sentir?",
+    "Quando os sintomas começaram?",
+    "Tem dor? Onde dói?",
+    "A dor é forte ou fraca?",
+    "Tem febre? Há quantos dias?",
+  ];
+  if (/(tosse|falta de ar|respira)/.test(c)) {
+    return [...base, "Tem dificuldade para respirar?", "A tosse tem catarro ou sangue?"];
+  }
+  if (/(vomit|diarre|abdom|barriga)/.test(c)) {
+    return [...base, "Teve vômitos ou diarreia?", "Consegue beber líquidos normalmente?"];
+  }
+  if (/(dor de cabeça|cefale|convuls)/.test(c)) {
+    return [...base, "A dor de cabeça piora com luz/ruído?", "Teve desmaio ou convulsão?"];
+  }
+  return [...base, "Tem outro sintoma importante que queira relatar?"];
+};
+
+const normalizeQuestions = (value) =>
+  (Array.isArray(value) ? value : [])
+    .map((q) => String(q || "").trim())
+    .filter(Boolean)
+    .slice(0, 8);
+
+const stripQuestionnaireBlock = (text = "") =>
+  String(text || "").replace(/^Questionário clínico:\n[\s\S]*?(?:\n\n|$)/i, "").trim();
+
+const isSameLocalDay = (value, refDate = new Date()) => {
+  if (!value) return false;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return false;
+  return (
+    d.getFullYear() === refDate.getFullYear() &&
+    d.getMonth() === refDate.getMonth() &&
+    d.getDate() === refDate.getDate()
+  );
+};
 
 export default function Doctor() {
   const me = getUser();
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [activeView, setActiveView] = useState("queue");
+  const [activeView, setActiveView] = useState("dashboard");
+  const [topNavSearch, setTopNavSearch] = useState("");
+  const [topSearchFocus, setTopSearchFocus] = useState(false);
 
   const [queue, setQueue] = useState([]);
   const [loadingQueue, setLoadingQueue] = useState(true);
+  const [agenda, setAgenda] = useState({ assigned_today: [], returns_today: [] });
+  const [loadingAgenda, setLoadingAgenda] = useState(true);
   const [err, setErr] = useState("");
 
   const [selectedVisit, setSelectedVisit] = useState(null);
   const [triage, setTriage] = useState(null);
   const [patientDetails, setPatientDetails] = useState(null);
-  const [patientHistory, setPatientHistory] = useState([]);
+  const [_patientHistory, setPatientHistory] = useState([]);
   const [loadingDetails, setLoadingDetails] = useState(false);
 
   const [aiLoading, setAiLoading] = useState(false);
   const [aiResult, setAiResult] = useState(null);
+  const [aiSuggestionOpen, setAiSuggestionOpen] = useState(false);
   const [planDraft, setPlanDraft] = useState(makeEmptyPlanDraft());
   const [planAccepted, setPlanAccepted] = useState(false);
   const [savingPlan, setSavingPlan] = useState(false);
+  const [popup, setPopup] = useState({
+    open: false,
+    type: "warning",
+    title: "",
+    message: "",
+  });
+  const [questionnaireLoading, setQuestionnaireLoading] = useState(false);
+  const [useAIQuestionnaire, setUseAIQuestionnaire] = useState(false);
+  const [questionnaireQuestions, setQuestionnaireQuestions] = useState([]);
+  const [questionnaireAnswers, setQuestionnaireAnswers] = useState({});
+  const [questionnaireExtraNote, setQuestionnaireExtraNote] = useState("");
+  const [labResultDrafts, setLabResultDrafts] = useState({});
+  const [labResultReadyDrafts, setLabResultReadyDrafts] = useState({});
+  const [savingLabResultId, setSavingLabResultId] = useState(null);
+  const [historyQuery, setHistoryQuery] = useState("");
+  const [historySearchLoading, setHistorySearchLoading] = useState(false);
+  const [historySearchResults, setHistorySearchResults] = useState([]);
+  const [historyModal, setHistoryModal] = useState({
+    open: false,
+    patient: null,
+    visits: [],
+    loading: false,
+  });
 
   const intervalRef = useRef(null);
   const heartbeatRef = useRef(null);
   const mountedRef = useRef(true);
+  const detailsPanelRef = useRef(null);
 
   const stopIntervals = () => {
     if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
@@ -154,6 +187,15 @@ export default function Doctor() {
   };
 
   const safeSet = (fn) => { if (mountedRef.current) fn(); };
+  const showPopup = (type, title, message) => {
+    safeSet(() => setPopup({ open: true, type, title, message }));
+  };
+  const closePopup = () => {
+    safeSet(() => {
+      setPopup({ open: false, type: "warning", title: "", message: "" });
+      setErr("");
+    });
+  };
 
   const filteredQueue = useMemo(() => {
     return (Array.isArray(queue) ? queue : []).filter(
@@ -172,6 +214,37 @@ export default function Doctor() {
     );
   }, [selectedVisit?.id, selectedVisit?.status, triage?.chief_complaint]);
 
+  const complaintQuestions = useMemo(() => {
+    if (questionnaireQuestions.length > 0) return questionnaireQuestions;
+    if (selectedVisit?.status === "IN_CONSULTATION") return [];
+    return fallbackComplaintQuestions(triage?.chief_complaint || "");
+  }, [questionnaireQuestions, triage?.chief_complaint, selectedVisit?.status]);
+
+  const pendingLabVisits = useMemo(() => {
+    const rows = Array.isArray(queue) ? queue : [];
+    return rows.filter((v) => {
+      const isMine = Number(v?.doctor_id) === Number(me?.id);
+      const hasResult = !!String(v?.lab_result_text || "").trim();
+      const statusReady = String(v?.lab_result_status || "").toUpperCase() === "READY";
+      const pendingResult = !!v?.lab_requested && !hasResult && !statusReady;
+      return isMine && pendingResult;
+    });
+  }, [queue, me?.id]);
+
+  const agendaAssignedTodayCount = useMemo(() => {
+    const rows = Array.isArray(agenda?.assigned_today) ? agenda.assigned_today : [];
+    const today = new Date();
+    return rows.filter((v) => isSameLocalDay(v?.arrival_time, today)).length;
+  }, [agenda?.assigned_today]);
+
+  const agendaReturnsTodayCount = useMemo(() => {
+    const rows = Array.isArray(agenda?.returns_today) ? agenda.returns_today : [];
+    const today = new Date();
+    return rows.filter((v) => isSameLocalDay(v?.return_visit_date, today)).length;
+  }, [agenda?.returns_today]);
+
+  const agendaTodayCount = agendaAssignedTodayCount + agendaReturnsTodayCount;
+
   const loadQueue = async () => {
     if (!mountedRef.current) return;
     safeSet(() => { setErr(""); setLoadingQueue(true); });
@@ -185,18 +258,23 @@ export default function Doctor() {
     }
   };
 
-  const openVisit = async (visitId) => {
+  const openVisit = async (visitId, previewVisit = null) => {
     if (!mountedRef.current) return;
     safeSet(() => {
       setErr("");
       setLoadingDetails(true);
-      setSelectedVisit(null);
+      setSelectedVisit(previewVisit || null);
       setTriage(null);
       setPatientDetails(null);
       setPatientHistory([]);
       setAiResult(null);
+      setAiSuggestionOpen(false);
       setPlanDraft(makeEmptyPlanDraft());
       setPlanAccepted(false);
+      setQuestionnaireQuestions([]);
+      setQuestionnaireAnswers({});
+      setQuestionnaireExtraNote("");
+      setUseAIQuestionnaire(false);
     });
     try {
       const v = await api.getVisitById(visitId);
@@ -204,6 +282,21 @@ export default function Doctor() {
         setSelectedVisit(v);
         setPlanDraft(planFromVisit(v));
         setPlanAccepted(!!v?.plan_accepted_at);
+        setQuestionnaireQuestions(
+          normalizeQuestions(v?.doctor_questionnaire_json?.questions)
+        );
+        const hasExistingQuestions =
+          normalizeQuestions(v?.doctor_questionnaire_json?.questions).length > 0;
+        setUseAIQuestionnaire(hasExistingQuestions);
+        setQuestionnaireAnswers(
+          v?.doctor_questionnaire_json?.answers &&
+            typeof v.doctor_questionnaire_json.answers === "object"
+            ? v.doctor_questionnaire_json.answers
+            : v?.doctor_questionnaire_json && typeof v.doctor_questionnaire_json === "object"
+              ? v.doctor_questionnaire_json
+            : {}
+        );
+        setQuestionnaireExtraNote(String(v?.doctor_questionnaire_json?.extra_note || ""));
       });
       try {
         const [p, h] = await Promise.all([
@@ -238,7 +331,11 @@ export default function Doctor() {
     const boot = async () => {
       try { await api.doctorCheckin?.(); } catch (e) { safeSet(() => setErr(e.message)); }
       await loadQueue();
-      intervalRef.current = setInterval(() => { loadQueue(); }, 30 * 60 * 1000);
+      await loadAgenda();
+      intervalRef.current = setInterval(() => {
+        loadQueue();
+        loadAgenda();
+      }, 30 * 60 * 1000);
       heartbeatRef.current = setInterval(async () => {
         try { await api.doctorHeartbeat?.(); } catch { /* ignore */ }
       }, 30000);
@@ -247,6 +344,18 @@ export default function Doctor() {
     return () => { mountedRef.current = false; stopIntervals(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (activeView === "agenda") {
+      loadAgenda();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeView]);
+
+  useEffect(() => {
+    if (err) showPopup("warning", "Atenção", err);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [err]);
 
   const logout = async () => {
     stopIntervals();
@@ -275,10 +384,74 @@ export default function Doctor() {
     }
   };
 
-  const finishConsultation = async () => {
-    if (!selectedVisit?.id) return;
+  const searchFromTopNav = async () => {
+    const q = topNavSearch.trim();
+    if (!q) {
+      safeSet(() => setErr("Escreva um nome para pesquisar."));
+      return;
+    }
     safeSet(() => setErr(""));
     try {
+      const patients = await api.searchPatients(q);
+      const list = Array.isArray(patients) ? patients : [];
+      if (list.length === 0) {
+        safeSet(() => setErr("Nenhum paciente encontrado com esse nome."));
+        return;
+      }
+      const first = list[0];
+      const row = (Array.isArray(queue) ? queue : []).find((v) => Number(v?.patient_id) === Number(first?.id));
+      if (!row?.id) {
+        safeSet(() => setErr("Paciente encontrado, mas sem visita ativa na fila."));
+        return;
+      }
+      safeSet(() => setActiveView("queue"));
+      await openVisit(row.id, row);
+      setTimeout(() => {
+        detailsPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 0);
+    } catch (e) {
+      safeSet(() => setErr(e.message));
+    }
+  };
+
+  const finishConsultation = async () => {
+    if (!selectedVisit?.id) return;
+
+    if (finishMissingFields.length > 0) {
+      safeSet(() =>
+        setErr(`Não é possível finalizar a consulta. Falta: ${finishMissingFields.join(", ")}.`)
+      );
+      return;
+    }
+
+    safeSet(() => setErr(""));
+    try {
+      const questionnaireText = complaintQuestions
+        .map((q) => {
+          const a = (questionnaireAnswers[q] || "").trim();
+          return a ? `- ${q}\n  Resposta: ${a}` : null;
+        })
+        .filter(Boolean)
+        .join("\n");
+      const baseReasoning = stripQuestionnaireBlock(planDraft.clinical_reasoning);
+      const mergedReasoning = useAIQuestionnaire && questionnaireText
+        ? [`Questionário clínico:\n${questionnaireText}`, baseReasoning].filter(Boolean).join("\n\n")
+        : baseReasoning;
+
+      await api.saveVisitMedicalPlan(selectedVisit.id, {
+        ...planDraft,
+        clinical_reasoning: mergedReasoning,
+        doctor_questionnaire_json: {
+          locale: "pt-MZ",
+          source: "ai",
+          chief_complaint: triage?.chief_complaint || "",
+          questions: complaintQuestions,
+          answers: questionnaireAnswers,
+          extra_note: String(questionnaireExtraNote || "").trim(),
+          generated_at: new Date().toISOString(),
+        },
+        accepted: !!planAccepted,
+      });
       await api.finishVisit(selectedVisit.id);
       safeSet(() => {
         setSelectedVisit(null);
@@ -286,8 +459,12 @@ export default function Doctor() {
         setPatientDetails(null);
         setPatientHistory([]);
         setAiResult(null);
+        setAiSuggestionOpen(false);
         setPlanDraft(makeEmptyPlanDraft());
         setPlanAccepted(false);
+        setQuestionnaireQuestions([]);
+        setQuestionnaireAnswers({});
+        setQuestionnaireExtraNote("");
       });
       await loadQueue();
     } catch (e) {
@@ -305,7 +482,17 @@ export default function Doctor() {
       safeSet(() => setErr("Não há dados de triagem suficientes para pedir sugestão da IA."));
       return;
     }
-    safeSet(() => { setErr(""); setAiLoading(true); setAiResult(null); });
+    const answeredCount = complaintQuestions.filter((q) => String(questionnaireAnswers[q] || "").trim()).length;
+    if (useAIQuestionnaire && answeredCount === 0 && !String(questionnaireExtraNote || "").trim()) {
+      safeSet(() => setErr("Responda o questionário (ou adicione informação extra) antes de pedir sugestão da IA."));
+      return;
+    }
+    safeSet(() => {
+      setErr("");
+      setAiLoading(true);
+      setAiResult(null);
+      setAiSuggestionOpen(true);
+    });
     try {
       const res = await api.aiDoctorSuggest({
         age_years: calculateAgeYears(patientDetails?.birth_date),
@@ -317,30 +504,122 @@ export default function Doctor() {
         oxygen_saturation: triage?.oxygen_saturation ?? null,
         weight: triage?.weight ?? null,
         priority: selectedVisit?.priority ?? null,
+        questionnaire_answers: useAIQuestionnaire
+          ? complaintQuestions
+          .map((q) => ({ question: q, answer: String(questionnaireAnswers[q] || "").trim() }))
+          .filter((item) => item.answer)
+          : [],
+        questionnaire_extra_note: useAIQuestionnaire ? String(questionnaireExtraNote || "").trim() || null : null,
       });
       safeSet(() => {
         setAiResult(res);
-        setPlanDraft(planFromAI(res));
-        setPlanAccepted(false);
       });
     } catch (e) {
       safeSet(() => setErr(e.message));
+      safeSet(() => setAiSuggestionOpen(false));
     } finally {
       safeSet(() => setAiLoading(false));
     }
   };
 
+  const generateQuestionnaireFromAI = async ({ visitId, chiefComplaint }) => {
+    if (!visitId || !chiefComplaint) return;
+    setQuestionnaireLoading(true);
+    setErr("");
+    try {
+      const visit = await api.getVisitById(visitId);
+
+      const res = await api.aiDoctorSuggest({
+        age_years: calculateAgeYears(patientDetails?.birth_date),
+        chief_complaint: chiefComplaint || "",
+        clinical_notes: triage?.clinical_notes || "",
+        temperature: triage?.temperature ?? null,
+        heart_rate: triage?.heart_rate ?? null,
+        respiratory_rate: triage?.respiratory_rate ?? null,
+        oxygen_saturation: triage?.oxygen_saturation ?? null,
+        weight: triage?.weight ?? null,
+        priority: selectedVisit?.priority ?? null,
+        generate_questions_only: true,
+      });
+      const generated = normalizeQuestions(res?.questions_to_clarify);
+      const questions = generated.length > 0 ? generated : fallbackComplaintQuestions(chiefComplaint || "");
+      setQuestionnaireQuestions(questions);
+      setQuestionnaireAnswers({});
+      setQuestionnaireExtraNote("");
+
+      const base = planFromVisit(visit);
+      await api.saveVisitMedicalPlan(visitId, {
+        ...base,
+        doctor_questionnaire_json: {
+          locale: "pt-MZ",
+          source: "ai",
+          chief_complaint: chiefComplaint,
+          questions,
+          answers: {},
+          extra_note: "",
+          generated_at: new Date().toISOString(),
+        },
+        accepted: !!visit?.plan_accepted_at,
+      });
+    } catch (e) {
+      const msg = String(e?.message || "");
+      if (msg.toLowerCase().includes("demorou")) {
+        setErr("A IA demorou a responder. Usámos perguntas padrão para continuar.");
+      } else {
+        setErr(msg);
+      }
+      setQuestionnaireQuestions(fallbackComplaintQuestions(chiefComplaint || ""));
+    } finally {
+      setQuestionnaireLoading(false);
+    }
+  };
+
+  const toggleAIQuestionnaire = async (enabled) => {
+    setUseAIQuestionnaire(enabled);
+    if (!enabled) return;
+    if (!selectedVisit?.id || !triage?.chief_complaint) return;
+    await generateQuestionnaireFromAI({
+      visitId: selectedVisit.id,
+      chiefComplaint: triage.chief_complaint,
+    });
+  };
+
   const canStart = !!selectedVisit?.id && selectedVisit.status === "WAITING_DOCTOR" && !!triage;
   const canFinish = !!selectedVisit?.id && selectedVisit.status === "IN_CONSULTATION";
+  const canDiagnose = canFinish;
+  const finishMissingFields = useMemo(() => {
+    if (!canFinish) return [];
+    const missing = [];
+    const answeredCount = complaintQuestions.filter((q) => String(questionnaireAnswers[q] || "").trim()).length;
+    if (useAIQuestionnaire && answeredCount === 0 && !String(questionnaireExtraNote || "").trim()) {
+      missing.push("questionário clínico");
+    }
+    if (!String(planDraft.likely_diagnosis || "").trim()) missing.push("diagnóstico provável");
+    if (!String(planDraft.clinical_reasoning || "").trim()) missing.push("justificativa clínica");
+    if (!String(planDraft.prescription_text || "").trim()) missing.push("prescrição");
+    if (!String(planDraft.disposition_plan || "").trim()) missing.push("destino do paciente");
+    if (!!planDraft.lab_requested && !String(planDraft.lab_exam_type || "").trim()) {
+      missing.push("tipo de exame laboratorial");
+    }
+    return missing;
+  }, [canFinish, complaintQuestions, questionnaireAnswers, questionnaireExtraNote, planDraft, useAIQuestionnaire]);
+  const canFinishStrict = canFinish && finishMissingFields.length === 0;
 
   const updatePlanField = (field, value) => {
     setPlanDraft((prev) => ({ ...prev, [field]: value }));
     setPlanAccepted(false);
   };
 
-  const applyAIToDraft = () => {
-    if (!aiResult) return;
-    setPlanDraft(planFromAI(aiResult));
+  const updateQuestionAnswer = (question, value) => {
+    setQuestionnaireAnswers((prev) => ({ ...prev, [question]: value }));
+    setPlanAccepted(false);
+  };
+
+  const updateLabExamType = (examType) => {
+    setPlanDraft((prev) => ({
+      ...prev,
+      lab_exam_type: examType,
+    }));
     setPlanAccepted(false);
   };
 
@@ -349,8 +628,30 @@ export default function Doctor() {
     setSavingPlan(true);
     setErr("");
     try {
+      const questionnaireText = complaintQuestions
+        .map((q) => {
+          const a = (questionnaireAnswers[q] || "").trim();
+          return a ? `- ${q}\n  Resposta: ${a}` : null;
+        })
+        .filter(Boolean)
+        .join("\n");
+      const baseReasoning = stripQuestionnaireBlock(planDraft.clinical_reasoning);
+      const mergedReasoning = useAIQuestionnaire && questionnaireText
+        ? [`Questionário clínico:\n${questionnaireText}`, baseReasoning].filter(Boolean).join("\n\n")
+        : baseReasoning;
+
       const updated = await api.saveVisitMedicalPlan(selectedVisit.id, {
         ...planDraft,
+        clinical_reasoning: mergedReasoning,
+        doctor_questionnaire_json: {
+          locale: "pt-MZ",
+          source: "ai",
+          chief_complaint: triage?.chief_complaint || "",
+          questions: useAIQuestionnaire ? complaintQuestions : [],
+          answers: useAIQuestionnaire ? questionnaireAnswers : {},
+          extra_note: useAIQuestionnaire ? String(questionnaireExtraNote || "").trim() : "",
+          generated_at: new Date().toISOString(),
+        },
         accepted: !!accept,
       });
       setSelectedVisit(updated);
@@ -363,7 +664,148 @@ export default function Doctor() {
     }
   };
 
+  const saveLabResultForVisit = async (visitId) => {
+    const resultText = String(labResultDrafts[visitId] || "").trim();
+    const readyChecked = !!labResultReadyDrafts[visitId];
+    if (!visitId || !resultText || !readyChecked) return;
+    setSavingLabResultId(Number(visitId));
+    setErr("");
+    try {
+      const visit = await api.getVisitById(visitId);
+      const base = planFromVisit(visit);
+      const updated = await api.saveVisitMedicalPlan(visitId, {
+        ...base,
+        lab_requested: true,
+        lab_result_text: resultText,
+        lab_result_status: "READY",
+        lab_result_ready_at: new Date().toISOString(),
+        accepted: !!visit?.plan_accepted_at,
+      });
+      setLabResultDrafts((prev) => ({ ...prev, [visitId]: "" }));
+      setLabResultReadyDrafts((prev) => ({ ...prev, [visitId]: false }));
+      if (selectedVisit?.id === Number(visitId)) {
+        setSelectedVisit(updated);
+        setPlanDraft(planFromVisit(updated));
+      }
+      await loadQueue();
+    } catch (e) {
+      setErr(e.message);
+    } finally {
+      setSavingLabResultId(null);
+    }
+  };
+
+  const searchHistoryPatients = async () => {
+    const q = String(historyQuery || "").trim();
+    if (q.length < 2) {
+      setErr("Escreva pelo menos 2 letras para pesquisar paciente.");
+      return;
+    }
+    setHistorySearchLoading(true);
+    setErr("");
+    try {
+      const rows = await api.searchPatients(q);
+      setHistorySearchResults(Array.isArray(rows) ? rows : []);
+    } catch (e) {
+      setErr(e.message);
+      setHistorySearchResults([]);
+    } finally {
+      setHistorySearchLoading(false);
+    }
+  };
+
+  const openHistoryPatient = async (patient) => {
+    if (!patient?.id) return;
+    setHistoryModal({ open: true, patient, visits: [], loading: true });
+    setErr("");
+    try {
+      const visits = await api.getPatientHistory(patient.id);
+      setHistoryModal({
+        open: true,
+        patient,
+        visits: Array.isArray(visits) ? visits : [],
+        loading: false,
+      });
+    } catch (e) {
+      setErr(e.message);
+      setHistoryModal({ open: true, patient, visits: [], loading: false });
+    }
+  };
+
+  const closeHistoryModal = () => {
+    setHistoryModal({ open: false, patient: null, visits: [], loading: false });
+  };
+
+  const loadAgenda = async () => {
+    if (!mountedRef.current) return;
+    safeSet(() => setLoadingAgenda(true));
+    try {
+      const data = await api.getMyAgenda();
+      safeSet(() =>
+        setAgenda({
+          assigned_today: Array.isArray(data?.assigned_today) ? data.assigned_today : [],
+          returns_today: Array.isArray(data?.returns_today) ? data.returns_today : [],
+        })
+      );
+    } catch (e) {
+      safeSet(() => setErr(e.message));
+    } finally {
+      safeSet(() => setLoadingAgenda(false));
+    }
+  };
+
+  const scheduleVisitReturn = async ({ visitId, return_visit_date, return_visit_reason }) => {
+    if (!visitId || !return_visit_date) return;
+    safeSet(() => setErr(""));
+    try {
+      const updated = await api.scheduleVisitReturn(visitId, {
+        return_visit_date,
+        return_visit_reason: return_visit_reason || null,
+      });
+      if (selectedVisit?.id === Number(visitId)) {
+        safeSet(() => {
+          setSelectedVisit(updated);
+          setPlanDraft((prev) => ({
+            ...prev,
+            return_visit_date: updated?.return_visit_date || "",
+            return_visit_reason: updated?.return_visit_reason || "",
+          }));
+        });
+      }
+      await loadAgenda();
+      await loadQueue();
+    } catch (e) {
+      safeSet(() => setErr(e.message));
+      throw e;
+    }
+  };
+
   const navItems = [
+    {
+      key: "dashboard",
+      label: "Dashboard",
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+          <rect x="3" y="3" width="7" height="9" rx="1" />
+          <rect x="14" y="3" width="7" height="5" rx="1" />
+          <rect x="14" y="12" width="7" height="9" rx="1" />
+          <rect x="3" y="16" width="7" height="5" rx="1" />
+        </svg>
+      ),
+    },
+    {
+      key: "agenda",
+      label: "Minha agenda",
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+          <line x1="16" y1="2" x2="16" y2="6" />
+          <line x1="8" y1="2" x2="8" y2="6" />
+          <line x1="3" y1="10" x2="21" y2="10" />
+        </svg>
+      ),
+      badge: agendaAssignedTodayCount > 0 ? agendaAssignedTodayCount : null,
+    },
     {
       key: "queue",
       label: "Fila de Pacientes",
@@ -376,7 +818,7 @@ export default function Doctor() {
     },
     {
       key: "history",
-      label: "Historico Medico",
+      label: "Histórico Médico",
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
           <path d="M3 3v18h18" />
@@ -385,20 +827,8 @@ export default function Doctor() {
       ),
     },
     {
-      key: "return",
-      label: "Agendar Retorno",
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-          <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-          <line x1="16" y1="2" x2="16" y2="6" />
-          <line x1="8" y1="2" x2="8" y2="6" />
-          <line x1="3" y1="10" x2="21" y2="10" />
-        </svg>
-      ),
-    },
-    {
       key: "lab",
-      label: "Exames/Lab",
+      label: "Exames",
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
           <path d="M10 2v7l-5 9a2 2 0 001.7 3h10.6a2 2 0 001.7-3l-5-9V2" />
@@ -411,9 +841,7 @@ export default function Doctor() {
   return (
     <div className="flex h-screen bg-gray-50">
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
-        input:focus, textarea:focus, select:focus { outline: none; border-color: #6b7280; }
+        input:focus, textarea:focus, select:focus { outline: none; border-color: #22c55e; box-shadow: 0 0 0 3px rgba(34,197,94,0.12); }
 
         .sidebar { transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); overflow: hidden; }
         .sidebar-open { width: 256px; }
@@ -439,7 +867,14 @@ export default function Doctor() {
 
         .sidebar-closed .nav-badge {
           position: absolute; top: 4px; right: 4px;
-          min-width: 16px; height: 16px; font-size: 10px;
+          width: 18px; height: 18px; font-size: 10px;
+          border-radius: 9999px;
+        }
+
+        .nav-badge-open {
+          width: 20px; height: 20px; border-radius: 9999px;
+          display: inline-flex; align-items: center; justify-content: center;
+          font-size: 11px; font-weight: 600;
         }
 
         .nav-tooltip {
@@ -451,13 +886,44 @@ export default function Doctor() {
         }
         .sidebar-closed .nav-item-wrap:hover .nav-tooltip { opacity: 1; }
         .sidebar-open .nav-tooltip { display: none; }
+        .nav-active { background: #22c55e !important; color: white !important; border-radius: 10px; }
+        .popup-overlay {
+          position: fixed;
+          inset: 0;
+          background: rgba(15, 23, 42, 0.35);
+          backdrop-filter: blur(2px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 200;
+          padding: 16px;
+        }
+        .popup-card {
+          width: min(460px, 100%);
+          background: #fff;
+          border: 1px solid #e5e7eb;
+          border-radius: 16px;
+          box-shadow: 0 20px 40px rgba(15, 23, 42, 0.18);
+          padding: 18px;
+        }
+        .popup-icon {
+          width: 36px;
+          height: 36px;
+          border-radius: 9999px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+        .popup-icon-warning { background: #fef3c7; color: #b45309; }
+        .popup-icon-success { background: #dcfce7; color: #166534; }
       `}</style>
 
-      {/* ── Sidebar ── */}
-      <aside className={`sidebar bg-white border-r border-gray-200 flex flex-col flex-shrink-0 ${sidebarOpen ? "sidebar-open" : "sidebar-closed"}`}>
+      {/* Sidebar */}
+      <aside className={`sidebar bg-white flex flex-col flex-shrink-0 ${sidebarOpen ? "sidebar-open" : "sidebar-closed"}`}>
 
         {/* Header */}
-        <div className="p-4 border-b border-gray-200 flex items-center gap-3">
+        <div className="p-4 flex items-center gap-3">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className="w-9 h-9 flex-shrink-0 flex items-center justify-center hover:bg-gray-100 transition-colors text-gray-700"
@@ -473,8 +939,7 @@ export default function Doctor() {
             )}
           </button>
           <div className="logo-text min-w-0">
-            <div className="text-sm font-semibold text-gray-900 leading-tight">Triagem</div>
-            <div className="text-xs text-gray-500">Painel Médico</div>
+            <div className="text-sm font-semibold text-gray-900 leading-tight">Painel Médico</div>
           </div>
         </div>
 
@@ -486,16 +951,16 @@ export default function Doctor() {
                 <button
                   onClick={() => setActiveView(item.key)}
                   className={`w-full text-left px-3 py-2.5 text-sm font-medium transition-colors flex items-center gap-3 relative ${
-                    activeView === item.key ? "bg-gray-900 text-white" : "text-gray-700 hover:bg-gray-100"
+                    activeView === item.key ? "nav-active" : "text-gray-700 hover:bg-gray-100"
                   }`}
                 >
                   {item.icon}
                   <span className="nav-label">{item.label}</span>
                   {item.badge && sidebarOpen && (
-                    <span className="ml-auto bg-gray-700 text-white text-xs px-1.5 py-0.5 rounded-full">{item.badge}</span>
+                    <span className="ml-auto nav-badge-open bg-green-500 text-white">{item.badge}</span>
                   )}
                   {item.badge && !sidebarOpen && (
-                    <span className="nav-badge absolute top-1 right-1 bg-gray-900 text-white text-xs px-1 py-0.5 rounded-full flex items-center justify-center">{item.badge}</span>
+                    <span className="nav-badge absolute top-1 right-1 bg-green-500 text-white text-xs px-1 py-0.5 rounded-full flex items-center justify-center">{item.badge}</span>
                   )}
                 </button>
                 <span className="nav-tooltip">{item.label}</span>
@@ -506,14 +971,7 @@ export default function Doctor() {
 
         {/* User + Logout */}
         <div className="p-3 border-t border-gray-200">
-          <div className="user-info mb-2 px-1">
-            <div className="text-xs font-medium text-gray-500 mb-0.5">Conectado como</div>
-            <div className="text-sm font-semibold text-gray-900 truncate">{me?.full_name || "Médico(a)"}</div>
-            <div className="text-xs text-gray-500">{roleLabel(me?.role)}</div>
-            {!!me?.specialization && (
-              <div className="text-xs text-gray-500 truncate">Esp.: {me.specialization}</div>
-            )}
-          </div>
+          <div className="user-info mb-2 px-1" />
           <div className="nav-item-wrap relative">
             <button
               onClick={logout}
@@ -529,190 +987,290 @@ export default function Doctor() {
         </div>
       </aside>
 
-      {/* ── Main ── */}
+      {/* Main */}
       <main className="flex-1 overflow-y-auto">
+        <div style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 100,
+          background: "white",
+          borderBottom: "1px solid #f0f0f0",
+          height: "60px",
+          display: "flex",
+          alignItems: "center",
+          paddingLeft: "24px",
+          paddingRight: "24px",
+          gap: "16px",
+        }}>
+          <div style={{ flex: 1, display: "flex", justifyContent: "center" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                width: "100%",
+                maxWidth: "360px",
+                background: "#f9fafb",
+                border: `1.5px solid ${topSearchFocus ? "#86efac" : "#f0f0f0"}`,
+                borderRadius: "10px",
+                padding: "8px 14px",
+                transition: "border-color 0.15s",
+              }}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+              </svg>
+              <input
+                placeholder="Pesquisar paciente"
+                value={topNavSearch}
+                onChange={(e) => setTopNavSearch(e.target.value)}
+                onFocus={() => setTopSearchFocus(true)}
+                onBlur={() => setTopSearchFocus(false)}
+                onKeyDown={(e) => e.key === "Enter" && searchFromTopNav()}
+                style={{
+                  border: "none",
+                  background: "transparent",
+                  outline: "none",
+                  fontSize: "13px",
+                  color: "#374151",
+                  width: "100%",
+                }}
+              />
+            </div>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "4px", flexShrink: 0 }}>
+            <button
+              type="button"
+              onClick={() => setErr("Chat interno disponível em breve.")}
+              style={{ width: "36px", height: "36px", borderRadius: "50%", border: "none", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#9ca3af", transition: "background 0.15s" }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = "#f3f4f6"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+              </svg>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setErr("Sem novas notificações no momento.")}
+              style={{ width: "36px", height: "36px", borderRadius: "50%", border: "none", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#9ca3af", position: "relative", transition: "background 0.15s" }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = "#f3f4f6"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+              </svg>
+              <span style={{ position: "absolute", top: "5px", right: "5px", width: "8px", height: "8px", borderRadius: "50%", background: "#ef4444", border: "1.5px solid white" }} />
+            </button>
+
+            <div style={{ marginLeft: "6px", fontSize: "13px", fontWeight: 600, color: "#374151", maxWidth: "220px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {me?.full_name || "Médico(a)"}
+              {!!me?.specialization && ` · ${me.specialization}`}
+            </div>
+            <button style={{ width: "34px", height: "34px", borderRadius: "50%", border: "2px solid #e5e7eb", overflow: "hidden", cursor: "pointer", marginLeft: "4px", padding: 0, background: "linear-gradient(135deg, #16a34a, #22c55e)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <span style={{ fontSize: "13px", fontWeight: "700", color: "white" }}>
+                {me?.full_name?.trim()?.[0]?.toUpperCase() || "D"}
+              </span>
+            </button>
+          </div>
+        </div>
         <div className="p-8 max-w-6xl mx-auto">
 
-          {/* Error */}
-          {err && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <div className="flex items-start gap-3">
-                <svg className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
-                <p className="text-sm text-red-800">{err}</p>
+          {activeView === "dashboard" && (
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard Médico</h1>
+              <p className="text-gray-600 mb-6">Visao geral da fila e da agenda do dia.</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <div className="bg-white border border-gray-200 rounded-lg p-5">
+                  <div className="text-xs text-gray-500">Fila total</div>
+                  <div className="text-3xl font-semibold text-gray-900 mt-1">{filteredQueue.length}</div>
+                </div>
+                <div className="bg-white border border-gray-200 rounded-lg p-5">
+                  <div className="text-xs text-gray-500">Aguardando Médico</div>
+                  <div className="text-3xl font-semibold text-gray-900 mt-1">{waitingCount}</div>
+                </div>
+                <div className="bg-white border border-gray-200 rounded-lg p-5">
+                  <div className="text-xs text-gray-500">Em consulta</div>
+                  <div className="text-3xl font-semibold text-gray-900 mt-1">{inConsultCount}</div>
+                </div>
+                <div className="bg-white border border-gray-200 rounded-lg p-5">
+                  <div className="text-xs text-gray-500">Agenda hoje</div>
+                  <div className="text-3xl font-semibold text-gray-900 mt-1">{agendaTodayCount}</div>
+                </div>
+              </div>
+              <div className="bg-white border border-gray-200 rounded-lg p-5">
+                <div className="text-sm font-semibold text-gray-900 mb-3">Ações rápidas</div>
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" onClick={() => setActiveView("queue")} className="px-4 py-2 bg-green-600 text-white text-sm font-medium hover:bg-green-700 transition-colors rounded-md">
+                    Ir para Fila de Pacientes
+                  </button>
+                  <button type="button" onClick={() => setActiveView("agenda")} className="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium hover:bg-gray-200 transition-colors">
+                    Abrir Minha Agenda
+                  </button>
+                </div>
               </div>
             </div>
           )}
 
-          {/* QUEUE VIEW */}
-          {["queue", "history", "return", "lab"].includes(activeView) && (
-            <div>
-              {/* Page title */}
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h1 className="text-3xl font-bold text-gray-900">
-                    {activeView === "history"
-                      ? "Historico do Paciente"
-                      : activeView === "return"
-                      ? "Agendamento de Retorno"
-                      : activeView === "lab"
-                      ? "Exames e Laboratorio"
-                      : "Fila de Pacientes"}
-                  </h1>
-                  <p className="text-gray-600 mt-1">
-                    {selectedVisit?.id
-                      ? `Visita #${selectedVisit.id}${patientDetails?.full_name ? ` - ${patientDetails.full_name}` : ""}`
-                      : `Bem-vindo(a), ${me?.full_name?.split(" ")[0] || "Medico(a)"}`}
-                  </p>
-                </div>
+          {activeView === "agenda" && (
+            <AgendaView
+              assignedToday={agenda.assigned_today}
+              returnsToday={agenda.returns_today}
+              loading={loadingAgenda}
+              onRefresh={() => {
+                loadAgenda();
+                loadQueue();
+              }}
+              onOpenVisit={(visitId) => {
+                setActiveView("queue");
+                const preview = filteredQueue.find((v) => Number(v.id) === Number(visitId)) || null;
+                openVisit(visitId, preview);
+                setTimeout(() => {
+                  detailsPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                }, 0);
+              }}
+              onScheduleReturn={scheduleVisitReturn}
+            />
+          )}
+          {activeView === "history" && (
+            <div className="bg-white border border-gray-200 rounded-lg p-4">
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <h3 className="text-sm font-semibold text-gray-900">Histórico Médico por Paciente</h3>
+                <div className="text-xs text-gray-500">Pesquisar no banco de pacientes</div>
+              </div>
+              <div className="flex gap-2 mb-3">
+                <input
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  placeholder="Digite nome do paciente..."
+                  value={historyQuery}
+                  onChange={(e) => setHistoryQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && searchHistoryPatients()}
+                />
                 <button
-                  onClick={loadQueue}
-                  disabled={loadingQueue}
-                  className="px-4 py-2 bg-gray-900 text-white text-sm font-medium hover:bg-gray-800 transition-colors disabled:opacity-50"
+                  type="button"
+                  onClick={searchHistoryPatients}
+                  disabled={historySearchLoading}
+                  className="px-3 py-2 bg-green-600 text-white text-sm font-medium hover:bg-green-700 rounded-md disabled:opacity-50"
                 >
-                  {loadingQueue ? "Atualizando..." : "Atualizar"}
+                  {historySearchLoading ? "Buscando..." : "Buscar"}
                 </button>
               </div>
-
-              {/* Stat cards */}
-              <div className="grid grid-cols-3 gap-6 mb-8">
-                <div className="bg-white border border-gray-200 rounded-lg p-6">
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                    </svg>
-                    <span style={{ fontSize: "13px", fontWeight: "500", color: "#6b7280" }}>Total na Fila</span>
-                  </div>
-                  <div className="text-3xl font-bold text-gray-900">{filteredQueue.length}</div>
+              {historySearchResults.length === 0 ? (
+                <p className="text-sm text-gray-500">Nenhum paciente encontrado ainda. Faça uma pesquisa acima.</p>
+              ) : (
+                <div className="space-y-2 max-h-72 overflow-y-auto">
+                  {historySearchResults.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => openHistoryPatient(p)}
+                      className="w-full text-left p-3 border border-gray-200 rounded-lg bg-gray-50 hover:bg-green-50 hover:border-green-200 transition-colors"
+                    >
+                      <div className="text-sm font-medium text-gray-900">{p.full_name || "-"}</div>
+                      <div className="text-xs text-gray-600">{p.clinical_code || "-"}</div>
+                    </button>
+                  ))}
                 </div>
-
-                <div className="bg-white border border-gray-200 rounded-lg p-6">
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
-                    </svg>
-                    <span style={{ fontSize: "13px", fontWeight: "500", color: "#6b7280" }}>Aguardando Médico</span>
-                  </div>
-                  <div className="text-3xl font-bold text-gray-900">{waitingCount}</div>
+              )}
+            </div>
+          )}
+          {activeView === "lab" && (
+            <div className="bg-white border border-gray-200 rounded-lg p-4">
+              <h3 className="text-sm font-semibold text-gray-900 mb-3">Exames pendentes de resultado</h3>
+              {pendingLabVisits.length === 0 ? (
+                <p className="text-sm text-gray-500">Nenhum exame pendente no momento.</p>
+              ) : (
+                <div className="space-y-3">
+                  {pendingLabVisits.map((v) => (
+                    <div key={v.id} className="border border-gray-200 rounded p-3 bg-gray-50">
+                      <div className="text-sm font-medium text-gray-900">
+                        {v.full_name} <span className="text-xs text-gray-500">#{v.id}</span>
+                      </div>
+                      <div className="text-xs text-gray-600 mt-1">
+                        {v.lab_exam_type || v.lab_tests || "Exame solicitado"}
+                      </div>
+                      <label className="flex items-center gap-2 text-xs text-gray-700 mt-2">
+                        <input
+                          type="checkbox"
+                          checked={!!labResultReadyDrafts[v.id]}
+                          onChange={(e) =>
+                            setLabResultReadyDrafts((prev) => ({ ...prev, [v.id]: e.target.checked }))
+                          }
+                        />
+                        Já recebi o resultado do laboratório
+                      </label>
+                      <textarea
+                        className="w-full mt-2 px-3 py-2 border border-gray-300 rounded text-sm min-h-[90px]"
+                        placeholder="Preencha o resultado do laboratório..."
+                        value={labResultDrafts[v.id] || ""}
+                        onChange={(e) =>
+                          setLabResultDrafts((prev) => ({ ...prev, [v.id]: e.target.value }))
+                        }
+                      />
+                      <div className="mt-2 flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => saveLabResultForVisit(v.id)}
+                          disabled={
+                            savingLabResultId === v.id ||
+                            !(labResultDrafts[v.id] || "").trim() ||
+                            !labResultReadyDrafts[v.id]
+                          }
+                          className="px-3 py-1 bg-green-600 text-white text-xs font-medium hover:bg-green-700 disabled:opacity-50 rounded-md"
+                        >
+                          {savingLabResultId === v.id ? "Salvando..." : "Salvar resultado"}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-
-                <div className="bg-white border border-gray-200 rounded-lg p-6">
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" />
-                      <rect x="9" y="3" width="6" height="4" rx="1" ry="1" />
-                      <path d="M9 14l2 2 4-4" />
-                    </svg>
-                    <span style={{ fontSize: "13px", fontWeight: "500", color: "#6b7280" }}>Em Consulta</span>
-                  </div>
-                  <div className="text-3xl font-bold text-gray-900">{inConsultCount}</div>
-                </div>
-              </div>
-
+              )}
+            </div>
+          )}
+          {/* QUEUE VIEW */}
+          {activeView === "queue" && (
+            <div>
               {/* Two-column layout: queue list + details panel */}
-              <div className="grid grid-cols-2 gap-6">
-
-                {/* Queue list */}
-                <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                  <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-                    <h2 className="text-base font-semibold text-gray-900">Pacientes</h2>
-                    <div className="text-right">
-                      <span className="text-xs text-gray-500 block">{filteredQueue.length} paciente(s)</span>
-                      <span className="text-xs text-gray-500">
-                        Especializacao: {me?.specialization || "-"}
-                      </span>
-                    </div>
-                  </div>
-
-                  {loadingQueue && filteredQueue.length === 0 ? (
-                    <div className="p-6 text-sm text-gray-500">Carregando...</div>
-                  ) : filteredQueue.length === 0 ? (
-                    <div className="p-12 text-center">
-                      <svg className="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                      </svg>
-                      <p className="text-sm text-gray-500 font-medium">Nenhum paciente aguardando</p>
-                    </div>
-                  ) : (
-                    <table className="w-full">
-                      <thead className="bg-gray-50 border-b border-gray-200">
-                        <tr>
-                          <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase">Paciente</th>
-                          <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase">Espera</th>
-                          <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase">Status</th>
-                          <th className="text-right py-3 px-4 text-xs font-semibold text-gray-600 uppercase">Ação</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredQueue.map((v, idx) => (
-                          <tr
-                            key={v.id}
-                            className={`border-b border-gray-100 ${selectedVisit?.id === v.id ? "bg-gray-50" : idx % 2 === 0 ? "bg-white" : "bg-gray-50/50"}`}
-                          >
-                            <td className="py-3 px-4">
-                              <div className="text-sm font-medium text-gray-900">{v.full_name}</div>
-                              <div className="text-xs text-gray-500">{v.clinical_code}</div>
-                            </td>
-                            <td className="py-3 px-4 text-sm text-gray-700 font-mono">{formatWait(v.wait_minutes)}</td>
-                            <td className="py-3 px-4">
-                              <span className={`inline-block px-2 py-1 text-xs font-medium rounded ${
-                                v.status === "IN_CONSULTATION" ? "bg-blue-100 text-blue-700" : "bg-orange-100 text-orange-700"
-                              }`}>
-                                {v.status === "IN_CONSULTATION" ? "Em Consulta" : "Aguardando"}
-                              </span>
-                            </td>
-                            <td className="py-3 px-4 text-right">
-                              <button
-                                onClick={() => { openVisit(v.id); }}
-                                className={`px-3 py-1 text-xs font-medium transition-colors ${
-                                  selectedVisit?.id === v.id
-                                    ? "bg-gray-900 text-white"
-                                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                                }`}
-                              >
-                                {selectedVisit?.id === v.id ? "Aberto" : "Abrir"}
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )}
-                </div>
+              <div className="grid grid-cols-1 gap-6">
+                <DoctorQueuePanel
+                  queue={filteredQueue}
+                  loading={loadingQueue}
+                  onRefresh={loadQueue}
+                  onOpenVisit={(visitId, previewVisit) => {
+                    setActiveView("queue");
+                    const preview =
+                      previewVisit && Number(previewVisit.id) === Number(visitId)
+                        ? previewVisit
+                        : filteredQueue.find((v) => Number(v.id) === Number(visitId)) || null;
+                    openVisit(visitId, preview);
+                    setTimeout(() => {
+                      detailsPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                    }, 0);
+                  }}
+                  me={me}
+                  selectedVisitId={selectedVisit?.id}
+                />
 
                 {/* Details panel */}
-                <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                  <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-                    <h2 className="text-base font-semibold text-gray-900">Detalhes da Consulta</h2>
-                    {selectedVisit && (
-                      <span className="text-xs text-gray-500">Visita #{selectedVisit.id}</span>
-                    )}
-                  </div>
+                {(loadingDetails || selectedVisit) && (
+                  <div ref={detailsPanelRef} className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                    <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                      <h2 className="text-base font-semibold text-gray-900">Detalhes da Consulta</h2>
+                      {selectedVisit && (
+                        <span className="text-xs text-gray-500">Visita #{selectedVisit.id}</span>
+                      )}
+                    </div>
 
-                  <div className="p-6">
-                    {loadingDetails ? (
-                      <div className="text-sm text-gray-500">Carregando detalhes...</div>
-                    ) : !selectedVisit ? (
-                      <div className="py-12 text-center">
-                        <svg className="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                        </svg>
-                        <p className="text-sm text-gray-500 font-medium">Selecione um paciente para ver detalhes</p>
-                      </div>
-                    ) : (
+                    <div className="p-6">
+                      {loadingDetails && !selectedVisit ? (
+                        <div className="text-sm text-gray-500">Carregando detalhes...</div>
+                      ) : (
                       <div className="space-y-4">
 
-                        {/* Status badge */}
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-gray-700">Status atual</span>
-                          <span className={`inline-block px-3 py-1 text-xs font-semibold rounded ${
-                            selectedVisit.status === "IN_CONSULTATION"
-                              ? "bg-blue-100 text-blue-700"
-                              : "bg-orange-100 text-orange-700"
-                          }`}>
-                            {formatStatus(selectedVisit.status)}
-                          </span>
+                        <div className="text-sm text-gray-600">
+                          Status atual: <span className="font-medium text-gray-900">{formatStatus(selectedVisit.status)}</span>
                         </div>
 
                         {patientDetails && (
@@ -720,7 +1278,7 @@ export default function Doctor() {
                             <h3 className="text-sm font-semibold text-gray-900 mb-2">Dados do Paciente</h3>
                             <div className="grid grid-cols-2 gap-2 text-sm text-gray-700">
                               <div>Nome: {patientDetails.full_name || "-"}</div>
-                              <div>Codigo: {patientDetails.clinical_code || "-"}</div>
+                              <div>Código: {patientDetails.clinical_code || "-"}</div>
                               <div>Nascimento: {patientDetails.birth_date || "-"}</div>
                               <div>Idade: {calculateAgeYears(patientDetails.birth_date) ?? "-"} anos</div>
                             </div>
@@ -750,17 +1308,98 @@ export default function Doctor() {
                               </div>
                               <div className="pt-2 border-t border-gray-100">
                                 <div className="text-xs text-gray-500 mb-1">Queixa Principal</div>
-                                <div className="text-sm text-gray-900">{triage.chief_complaint}</div>
+                                <div className="text-sm text-gray-900 leading-relaxed whitespace-pre-wrap break-words pr-2">
+                                  {triage.chief_complaint}
+                                </div>
                               </div>
                               {triage.clinical_notes && (
                                 <div>
                                   <div className="text-xs text-gray-500 mb-1">Notas Clínicas</div>
-                                  <div className="text-sm text-gray-900">{triage.clinical_notes}</div>
+                                  <div className="text-sm text-gray-900 leading-relaxed whitespace-pre-wrap break-words pr-2">
+                                    {triage.clinical_notes}
+                                  </div>
                                 </div>
                               )}
                             </div>
                           )}
                         </div>
+
+                        {!!selectedVisit?.id && !!triage && (
+                          <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                            <div className="flex items-center justify-between gap-3 mb-2">
+                              <div>
+                                <div className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Questionário clínico por IA</div>
+                                <p className="text-[11px] text-gray-500 mt-1">
+                                  Opcional. Ative para a IA gerar perguntas conforme a queixa principal.
+                                </p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => toggleAIQuestionnaire(!useAIQuestionnaire)}
+                                disabled={questionnaireLoading || selectedVisit?.status !== "IN_CONSULTATION"}
+                                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${
+                                  useAIQuestionnaire
+                                    ? "bg-green-600 text-white hover:bg-green-700"
+                                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                                } disabled:opacity-50`}
+                              >
+                                {useAIQuestionnaire ? "Ligado" : "Desligado"}
+                              </button>
+                            </div>
+                            {useAIQuestionnaire && questionnaireLoading ? (
+                              <div className="space-y-2 animate-pulse">
+                                <div className="h-3 bg-gray-200 rounded w-2/3" />
+                                <div className="h-9 bg-gray-100 rounded" />
+                                <div className="h-3 bg-gray-200 rounded w-1/2 mt-2" />
+                                <div className="h-9 bg-gray-100 rounded" />
+                                <div className="h-3 bg-gray-200 rounded w-3/4 mt-2" />
+                                <div className="h-9 bg-gray-100 rounded" />
+                              </div>
+                            ) : useAIQuestionnaire ? (
+                              <div className="space-y-2">
+                                {complaintQuestions.length === 0 ? (
+                                  <div className="space-y-2 animate-pulse">
+                                    <div className="h-3 bg-gray-200 rounded w-2/3" />
+                                    <div className="h-9 bg-gray-100 rounded" />
+                                    <div className="h-3 bg-gray-200 rounded w-1/2 mt-2" />
+                                    <div className="h-9 bg-gray-100 rounded" />
+                                    <div className="h-3 bg-gray-200 rounded w-3/4 mt-2" />
+                                    <div className="h-9 bg-gray-100 rounded" />
+                                  </div>
+                                ) : (
+                                  <>
+                                    {complaintQuestions.map((q) => (
+                                      <div key={q}>
+                                        <label className="text-xs text-gray-600 mb-1 block">{q}</label>
+                                        <input
+                                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+                                          value={questionnaireAnswers[q] || ""}
+                                          onChange={(e) => updateQuestionAnswer(q, e.target.value)}
+                                          placeholder="Resposta do paciente"
+                                        />
+                                      </div>
+                                    ))}
+                                    <div className="pt-1">
+                                      <label className="text-xs text-gray-600 mb-1 block">
+                                        Informação extra (caso não caiba nas perguntas)
+                                      </label>
+                                      <textarea
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white min-h-[80px]"
+                                        value={questionnaireExtraNote}
+                                        onChange={(e) => setQuestionnaireExtraNote(e.target.value)}
+                                        placeholder="Ex.: detalhe adicional relatado pelo paciente/acompanhante"
+                                      />
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="text-xs text-gray-500 bg-white border border-gray-200 rounded-md px-3 py-2">
+                                Questionário desativado. O médico pode seguir diretamente com avaliação e plano clínico.
+                              </div>
+                            )}
+                          </div>
+                        )}
 
                         {/* AI suggestion */}
                         <button
@@ -778,64 +1417,20 @@ export default function Doctor() {
                               : ""
                           }
                         >
-                          {aiLoading ? "IA Analisando..." : "Sugestão por IA — Diagnóstico e Prescrição"}
+                          {aiLoading ? "IA Analisando..." : "Sugestão por IA - Diagnóstico e Prescrição"}
                         </button>
 
-                        {aiResult && (
-                          <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                            <p className="text-xs text-gray-500 mb-3">
-                              {aiResult.disclaimer || "Sugestão gerada por IA. Validar por protocolo local."}
-                            </p>
-
-                            {aiResult.red_flag && (
-                              <div className="mb-3 p-2 bg-red-50 border border-red-200 rounded">
-                                <p className="text-sm font-semibold text-red-700">⚠️ Alerta: possível risco elevado — seguir protocolo do serviço.</p>
-                              </div>
-                            )}
-
-                            {aiResult.likely_diagnosis && (
-                              <div className="mb-3">
-                                <div className="text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Diagnóstico Provável</div>
-                                <p className="text-sm text-gray-900 font-semibold">{aiResult.likely_diagnosis}</p>
-                              </div>
-                            )}
-
-                            {aiResult.summary && (
-                              <div className="mb-3">
-                                <div className="text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Resumo</div>
-                                <p className="text-sm text-gray-800">{aiResult.summary}</p>
-                              </div>
-                            )}
-
-                            {Array.isArray(aiResult.differential_diagnoses) && aiResult.differential_diagnoses.length > 0 && (
-                              <div>
-                                <div className="text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">Diagnósticos Diferenciais</div>
-                                <div className="space-y-2">
-                                  {aiResult.differential_diagnoses.slice(0, 3).map((d, idx) => (
-                                    <div key={idx} className="text-sm text-gray-700">
-                                      <span className="font-medium text-gray-900">{d.name}:</span> {d.why}
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
+                        {!!selectedVisit?.id && !canDiagnose && (
+                          <div className="p-3 bg-amber-50 border border-amber-200 rounded text-sm text-amber-800">
+                            Inicie a consulta para liberar o diagnóstico e o preenchimento do plano médico.
                           </div>
                         )}
 
-                        {!!selectedVisit?.id && (
+                        {!!selectedVisit?.id && canDiagnose && (
                           <div className="border border-gray-200 rounded-lg p-4">
                             <div className="flex items-center justify-between mb-3">
-                              <h3 className="text-sm font-semibold text-gray-900">Plano Medico (Editavel)</h3>
+                              <h3 className="text-sm font-semibold text-gray-900">Plano Médico (Editavel)</h3>
                               <div className="flex items-center gap-2">
-                                {aiResult && (
-                                  <button
-                                    type="button"
-                                    onClick={applyAIToDraft}
-                                    className="px-3 py-1 bg-gray-100 text-gray-700 text-xs font-medium hover:bg-gray-200"
-                                  >
-                                    Aplicar IA no plano
-                                  </button>
-                                )}
                                 <button
                                   type="button"
                                   onClick={() => saveMedicalPlan({ accept: false })}
@@ -848,7 +1443,7 @@ export default function Doctor() {
                                   type="button"
                                   onClick={() => saveMedicalPlan({ accept: true })}
                                   disabled={savingPlan}
-                                  className="px-3 py-1 bg-gray-900 text-white text-xs font-medium hover:bg-gray-800 disabled:opacity-50"
+                                  className="px-3 py-1 bg-green-600 text-white text-xs font-medium hover:bg-green-700 disabled:opacity-50 rounded-md"
                                 >
                                   {savingPlan ? "Salvando..." : "Aceitar plano"}
                                 </button>
@@ -857,13 +1452,14 @@ export default function Doctor() {
 
                             {planAccepted && (
                               <div className="mb-3 p-2 bg-green-50 border border-green-200 text-green-700 text-xs font-medium rounded">
-                                Plano aceito pelo medico (ainda pode editar).
+                                Plano aceito pelo médico (ainda pode editar).
                               </div>
                             )}
 
                             <div className="space-y-3">
                               <div>
-                                <label className="text-xs font-medium text-gray-700 mb-1 block">Diagnostico provavel</label>
+                                <label className="text-xs font-medium text-gray-700 mb-1 block">Diagnóstico provável</label>
+                                <p className="text-[11px] text-gray-500 mb-1">Hipótese principal em linguagem clínica objetiva.</p>
                                 <input
                                   className="w-full px-4 py-3 border border-gray-300 rounded-lg text-base"
                                   value={planDraft.likely_diagnosis}
@@ -873,7 +1469,8 @@ export default function Doctor() {
                               </div>
 
                               <div>
-                                <label className="text-xs font-medium text-gray-700 mb-1 block">Justificativa clinica</label>
+                                <label className="text-xs font-medium text-gray-700 mb-1 block">Justificativa clínica</label>
+                                <p className="text-[11px] text-gray-500 mb-1">Explique brevemente os achados que sustentam o diagnóstico.</p>
                                 <textarea
                                   className="w-full px-4 py-3 border border-gray-300 rounded-lg text-base min-h-[120px]"
                                   value={planDraft.clinical_reasoning}
@@ -883,7 +1480,8 @@ export default function Doctor() {
                               </div>
 
                               <div>
-                                <label className="text-xs font-medium text-gray-700 mb-1 block">Prescricao (dose, via, frequencia, duracao)</label>
+                                <label className="text-xs font-medium text-gray-700 mb-1 block">Prescrição (dose, via, frequência, duração)</label>
+                                <p className="text-[11px] text-gray-500 mb-1">Informe medicamento, dose, via, frequência e duração.</p>
                                 <textarea
                                   className="w-full px-4 py-3 border border-gray-300 rounded-lg text-base min-h-[140px] font-mono"
                                   value={planDraft.prescription_text}
@@ -925,7 +1523,7 @@ export default function Doctor() {
                                   />
                                 </div>
                                 <div>
-                                  <label className="text-xs font-medium text-gray-700 mb-1 block">Orientacoes</label>
+                                  <label className="text-xs font-medium text-gray-700 mb-1 block">Orientações</label>
                                   <input
                                     className="w-full px-4 py-3 border border-gray-300 rounded-lg text-base"
                                     value={planDraft.follow_up_instructions}
@@ -949,7 +1547,7 @@ export default function Doctor() {
                                     checked={planDraft.no_charge_chronic}
                                     onChange={(e) => updatePlanField("no_charge_chronic", e.target.checked)}
                                   />
-                                  Doenca cronica (nao cobrar atendimento)
+                                  Doença crônica (não cobrar atendimento)
                                 </label>
                                 <input
                                   className="w-full mt-2 px-4 py-3 border border-amber-300 bg-white rounded-lg text-base"
@@ -958,106 +1556,43 @@ export default function Doctor() {
                                   placeholder="Ex.: asma persistente, diabetes tipo 1"
                                 />
                               </div>
-                            </div>
-                          </div>
-                        )}
 
-                        {activeView === "history" && (
-                          <div className="border border-gray-200 rounded-lg p-4">
-                            <h3 className="text-sm font-semibold text-gray-900 mb-3">Historico Medico</h3>
-                            {patientHistory.length === 0 ? (
-                              <p className="text-sm text-gray-500">Sem historico registrado para este paciente.</p>
-                            ) : (
-                              <div className="space-y-2 max-h-64 overflow-y-auto">
-                                {patientHistory.map((h) => (
-                                  <div key={h.visit_id} className="p-3 border border-gray-100 rounded bg-gray-50">
-                                    <div className="text-xs text-gray-500">
-                                      Visita #{h.visit_id} | {h.arrival_time ? new Date(h.arrival_time).toLocaleString() : "-"}
+                              <div className="p-3 border border-gray-200 rounded">
+                                <label className="flex items-center gap-2 text-sm text-gray-800 font-medium mb-3">
+                                  <input
+                                    type="checkbox"
+                                    checked={!!planDraft.lab_requested}
+                                    onChange={(e) => updatePlanField("lab_requested", e.target.checked)}
+                                  />
+                                  Foi necessário pedir exame laboratorial
+                                </label>
+                                {!!planDraft.lab_requested && (
+                                  <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                      <label className="text-xs font-medium text-gray-700 mb-1 block">Tipo de exame</label>
+                                      <select
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                                        value={planDraft.lab_exam_type || ""}
+                                        onChange={(e) => updateLabExamType(e.target.value)}
+                                      >
+                                        {LAB_EXAM_OPTIONS.map((o) => (
+                                          <option key={o.value} value={o.value}>{o.label}</option>
+                                        ))}
+                                      </select>
                                     </div>
-                                    <div className="text-sm text-gray-900 font-medium">
-                                      {h.likely_diagnosis || h.chief_complaint || "Sem resumo"}
+                                    <div>
+                                      <label className="text-xs font-medium text-gray-700 mb-1 block">Coleta da amostra</label>
+                                      <input
+                                        type="datetime-local"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                                        value={planDraft.lab_sample_collected_at || ""}
+                                        onChange={(e) => updatePlanField("lab_sample_collected_at", e.target.value)}
+                                      />
                                     </div>
-                                    {h.prescription_text && (
-                                      <div className="text-xs text-gray-700 mt-1">{h.prescription_text}</div>
-                                    )}
                                   </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        {activeView === "return" && (
-                          <div className="border border-gray-200 rounded-lg p-4">
-                            <h3 className="text-sm font-semibold text-gray-900 mb-3">Agendar Retorno</h3>
-                            <div className="grid grid-cols-2 gap-3 mb-3">
-                              <div>
-                                <label className="text-xs font-medium text-gray-700 mb-1 block">Data de retorno</label>
-                                <input
-                                  type="date"
-                                  className="w-full px-4 py-3 border border-gray-300 rounded-lg text-base"
-                                  value={planDraft.return_visit_date || ""}
-                                  onChange={(e) => updatePlanField("return_visit_date", e.target.value)}
-                                />
-                              </div>
-                              <div>
-                                <label className="text-xs font-medium text-gray-700 mb-1 block">Motivo</label>
-                                <input
-                                  className="w-full px-4 py-3 border border-gray-300 rounded-lg text-base"
-                                  value={planDraft.return_visit_reason}
-                                  onChange={(e) => updatePlanField("return_visit_reason", e.target.value)}
-                                />
+                                )}
                               </div>
                             </div>
-                            <button
-                              type="button"
-                              onClick={() => saveMedicalPlan({ accept: false })}
-                              disabled={savingPlan}
-                              className="px-3 py-1 bg-gray-900 text-white text-xs font-medium hover:bg-gray-800 disabled:opacity-50"
-                            >
-                              {savingPlan ? "Salvando..." : "Salvar retorno"}
-                            </button>
-                          </div>
-                        )}
-
-                        {activeView === "lab" && (
-                          <div className="border border-gray-200 rounded-lg p-4">
-                            <h3 className="text-sm font-semibold text-gray-900 mb-3">Exames e Laboratorio</h3>
-                            <label className="flex items-center gap-2 text-sm text-gray-800 font-medium mb-3">
-                              <input
-                                type="checkbox"
-                                checked={!!planDraft.lab_requested}
-                                onChange={(e) => updatePlanField("lab_requested", e.target.checked)}
-                              />
-                              Exame laboratorial solicitado
-                            </label>
-                            <div className="grid grid-cols-2 gap-3 mb-3">
-                              <div>
-                                <label className="text-xs font-medium text-gray-700 mb-1 block">Exames solicitados</label>
-                                <textarea
-                                  className="w-full px-4 py-3 border border-gray-300 rounded-lg text-base min-h-[120px]"
-                                  value={planDraft.lab_tests}
-                                  onChange={(e) => updatePlanField("lab_tests", e.target.value)}
-                                />
-                              </div>
-                              <div>
-                                <label className="text-xs font-medium text-gray-700 mb-1 block">Coleta da amostra</label>
-                                <input
-                                  type="datetime-local"
-                                  className="w-full px-4 py-3 border border-gray-300 rounded-lg text-base"
-                                  value={planDraft.lab_sample_collected_at || ""}
-                                  onChange={(e) => updatePlanField("lab_sample_collected_at", e.target.value)}
-                                />
-                              </div>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => saveMedicalPlan({ accept: false })}
-                              disabled={savingPlan}
-                              className="px-3 py-1 bg-gray-900 text-white text-xs font-medium hover:bg-gray-800 disabled:opacity-50"
-                            >
-                              {savingPlan ? "Salvando..." : "Salvar exames"}
-                            </button>
                           </div>
                         )}
 
@@ -1066,7 +1601,7 @@ export default function Doctor() {
                           <button
                             onClick={startConsultation}
                             disabled={!canStart}
-                            className="py-2.5 bg-gray-900 text-white text-sm font-medium hover:bg-gray-800 transition-colors disabled:opacity-40"
+                            className="py-2.5 bg-green-600 text-white text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-40 rounded-md"
                             title={
                               !triage
                                 ? "Precisa de triagem antes de iniciar consulta"
@@ -1079,9 +1614,16 @@ export default function Doctor() {
                           </button>
                           <button
                             onClick={finishConsultation}
-                            disabled={!canFinish}
+                            disabled={!canFinishStrict}
                             className="py-2.5 text-sm font-medium transition-colors disabled:opacity-40"
-                            style={{ background: canFinish ? "#16a34a" : "#d1fae5", color: canFinish ? "#fff" : "#6b7280" }}
+                            style={{ background: canFinishStrict ? "#16a34a" : "#d1fae5", color: canFinishStrict ? "#fff" : "#6b7280" }}
+                            title={
+                              !canFinish
+                                ? "A consulta precisa estar iniciada"
+                                : finishMissingFields.length > 0
+                                ? `Falta preencher: ${finishMissingFields.join(", ")}`
+                                : ""
+                            }
                           >
                             Finalizar Consulta
                           </button>
@@ -1092,8 +1634,9 @@ export default function Doctor() {
                         </p>
                       </div>
                     )}
+                    </div>
                   </div>
-                </div>
+                )}
 
               </div>
             </div>
@@ -1101,8 +1644,157 @@ export default function Doctor() {
 
         </div>
       </main>
+
+      {popup.open && (
+        <div className="popup-overlay">
+          <div className="popup-card">
+            <div style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
+              <div className={`popup-icon ${popup.type === "success" ? "popup-icon-success" : "popup-icon-warning"}`}>
+                {popup.type === "success" ? (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20 6L9 17l-5-5" />
+                  </svg>
+                ) : (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="8" x2="12" y2="12" />
+                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                  </svg>
+                )}
+              </div>
+              <div style={{ flex: 1 }}>
+                <h3 style={{ margin: 0, fontSize: "15px", fontWeight: 700, color: "#111827" }}>{popup.title}</h3>
+                <p style={{ margin: "6px 0 0", fontSize: "13px", color: "#4b5563", lineHeight: 1.45 }}>{popup.message}</p>
+              </div>
+            </div>
+            <div style={{ marginTop: "16px", display: "flex", justifyContent: "flex-end" }}>
+              <button
+                type="button"
+                onClick={closePopup}
+                className="px-4 py-2 bg-green-600 text-white text-sm font-medium hover:bg-green-700 rounded-md"
+              >
+                Entendi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {historyModal.open && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4" style={{ zIndex: 200 }}>
+          <div className="w-full max-w-3xl bg-white rounded-lg border border-gray-200 shadow-xl max-h-[85vh] overflow-y-auto">
+            <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900">Histórico do Paciente</h3>
+                <p className="text-xs text-gray-500 mt-1">
+                  {historyModal.patient?.full_name || "-"} {historyModal.patient?.clinical_code ? `· ${historyModal.patient.clinical_code}` : ""}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeHistoryModal}
+                className="px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 rounded"
+              >
+                Fechar
+              </button>
+            </div>
+            <div className="p-5">
+              {historyModal.loading ? (
+                <p className="text-sm text-gray-500">Carregando histórico...</p>
+              ) : historyModal.visits.length === 0 ? (
+                <p className="text-sm text-gray-500">Sem histórico para este paciente.</p>
+              ) : (
+                <div className="space-y-3">
+                  {historyModal.visits.map((v) => (
+                    <div key={v.visit_id} className="border border-gray-200 rounded-lg p-3 bg-gray-50">
+                      <div className="text-xs text-gray-500">
+                        Visita #{v.visit_id} · {v.arrival_time ? new Date(v.arrival_time).toLocaleString() : "-"}
+                      </div>
+                      <div className="text-sm font-semibold text-gray-900 mt-1">
+                        {v.chief_complaint || "Sem queixa principal"}
+                      </div>
+                      <div className="text-sm text-gray-800 mt-1">
+                        Diagnóstico: {v.likely_diagnosis || "Não registrado"}
+                      </div>
+                      {v.prescription_text && (
+                        <div className="text-xs text-gray-700 mt-1 whitespace-pre-wrap">{v.prescription_text}</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {aiSuggestionOpen && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4" style={{ zIndex: 200 }}>
+          <div className="w-full max-w-2xl bg-white rounded-lg border border-gray-200 shadow-xl max-h-[85vh] overflow-y-auto">
+            <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-gray-900">Sugestão da IA</h3>
+              <button
+                type="button"
+                onClick={() => setAiSuggestionOpen(false)}
+                className="px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 rounded"
+              >
+                Fechar
+              </button>
+            </div>
+            <div className="p-5">
+              {aiLoading ? (
+                <div className="space-y-3 animate-pulse">
+                  <div className="h-3 bg-gray-200 rounded w-2/3" />
+                  <div className="h-3 bg-gray-200 rounded w-full" />
+                  <div className="h-3 bg-gray-200 rounded w-11/12" />
+                  <div className="h-20 bg-gray-100 rounded" />
+                  <div className="h-20 bg-gray-100 rounded" />
+                </div>
+              ) : aiResult ? (
+                <div className="space-y-4">
+                  <p className="text-xs text-gray-500">
+                    {aiResult.disclaimer || "Sugestão gerada por IA. Validar por protocolo local."}
+                  </p>
+                  {aiResult.red_flag && (
+                    <div className="p-2 bg-red-50 border border-red-200 rounded">
+                      <p className="text-sm font-semibold text-red-700">Alerta: possível risco elevado - seguir protocolo do serviço.</p>
+                    </div>
+                  )}
+                  {aiResult.likely_diagnosis && (
+                    <div>
+                      <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">Diagnóstico provável</div>
+                      <p className="text-sm text-gray-900">{aiResult.likely_diagnosis}</p>
+                    </div>
+                  )}
+                  {aiResult.summary && (
+                    <div>
+                      <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">Resumo</div>
+                      <p className="text-sm text-gray-800">{aiResult.summary}</p>
+                    </div>
+                  )}
+                  {Array.isArray(aiResult.differential_diagnoses) && aiResult.differential_diagnoses.length > 0 && (
+                    <div>
+                      <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">Diferenciais</div>
+                      <div className="space-y-1">
+                        {aiResult.differential_diagnoses.slice(0, 3).map((d, idx) => (
+                          <p key={idx} className="text-sm text-gray-700">
+                            <span className="font-medium text-gray-900">{d.name}:</span> {d.why}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div className="pt-2 border-t border-gray-100 text-xs text-gray-600">
+                    Revise esta sugestão e preencha o formulário manualmente de acordo com a sua avaliação clínica.
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">Nenhuma sugestão disponível.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-
-

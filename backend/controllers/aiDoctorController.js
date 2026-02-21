@@ -54,6 +54,26 @@ const normalizeDoctorResult = (result = {}) => {
   };
 };
 
+const fallbackQuestionsByComplaint = (chiefComplaint = "") => {
+  const c = String(chiefComplaint || "").toLowerCase();
+  const base = [
+    "O que est· a sentir agora?",
+    "Quando os sintomas comeÁaram?",
+    "Tem dor? Onde e com que intensidade?",
+    "Teve febre? H· quantos dias?",
+  ];
+  if (/(tosse|respira|falta de ar)/.test(c)) {
+    return [...base, "Tem falta de ar ao falar ou caminhar?", "A tosse tem catarro ou sangue?"];
+  }
+  if (/(vomit|diarre|abd|barriga)/.test(c)) {
+    return [...base, "Teve vÛmitos ou diarreia?", "Est· a conseguir beber lÌquidos?"];
+  }
+  if (/(dor de cabeÁa|cefale|convuls)/.test(c)) {
+    return [...base, "Teve desmaio, convuls„o ou rigidez no pescoÁo?", "A dor piora com luz ou barulho?"];
+  }
+  return [...base, "H· outro sintoma importante que queira relatar?"];
+};
+
 const doctorAssistAI = async (req, res) => {
   try {
     const {
@@ -66,13 +86,32 @@ const doctorAssistAI = async (req, res) => {
       oxygen_saturation,
       weight,
       priority,
+      questionnaire_answers,
+      questionnaire_extra_note,
+      generate_questions_only,
     } = req.body;
 
     if (!chief_complaint) {
-      return res.status(400).json({ error: "chief_complaint √© obrigat√≥rio" });
+      return res.status(400).json({ error: "chief_complaint È obrigatÛrio" });
     }
 
-    const result = await geminiService.doctorDiagnosisSuggestion({
+    const hasQuestionnaireAnswer =
+      Array.isArray(questionnaire_answers) &&
+      questionnaire_answers.some(
+        (qa) =>
+          String(qa?.question || "").trim() &&
+          String(qa?.answer || "").trim()
+      );
+    const hasExtraNote = !!String(questionnaire_extra_note || "").trim();
+    const isQuestionGenerationOnly = !!generate_questions_only;
+    if (!isQuestionGenerationOnly && !hasQuestionnaireAnswer && !hasExtraNote) {
+      return res.status(400).json({
+        error:
+          "Responda o question·rio clÌnico (ou informe um dado extra) antes de solicitar a sugest„o da IA.",
+      });
+    }
+
+    const payload = {
       age_years,
       chief_complaint,
       clinical_notes,
@@ -82,17 +121,50 @@ const doctorAssistAI = async (req, res) => {
       oxygen_saturation,
       weight,
       priority,
-    });
+      questionnaire_answers,
+      questionnaire_extra_note,
+    };
+
+    const result = isQuestionGenerationOnly
+      ? await geminiService.doctorQuestionsSuggestion(payload)
+      : await geminiService.doctorDiagnosisSuggestion(payload);
 
     return res.json({
       disclaimer:
-        "Sugest√£o gerada por IA. N√£o substitui avalia√ß√£o/decis√£o m√©dica. Validar por protocolo local.",
+        "Sugest„o gerada por IA. N„o substitui avaliaÁ„o/decis„o mÈdica. Validar por protocolo local.",
       ...normalizeDoctorResult(result),
     });
   } catch (err) {
+    const isQuestionGenerationOnly = !!req.body?.generate_questions_only;
+    const rawMessage = String(err?.message || "");
+    const isQuotaError =
+      err?.status === 429 ||
+      err?.code === 429 ||
+      /quota|resource_exhausted|429/i.test(rawMessage);
+
+    if (isQuotaError && isQuestionGenerationOnly) {
+      return res.json({
+        disclaimer:
+          "IA indisponÌvel no momento por limite de quota. A mostrar perguntas base para continuar a consulta.",
+        ...normalizeDoctorResult({
+          questions_to_clarify: fallbackQuestionsByComplaint(
+            req.body?.chief_complaint
+          ).slice(0, 5),
+          confidence: 0.2,
+        }),
+      });
+    }
+
+    if (isQuotaError) {
+      return res.status(429).json({
+        error:
+          "IA temporariamente indisponÌvel por limite de quota. Tente novamente em alguns segundos.",
+      });
+    }
+
     console.error("AI DOCTOR ERROR:", err);
     return res.status(500).json({
-      error: "Erro ao gerar sugest√£o de diagn√≥stico por IA",
+      error: "Erro ao gerar sugest„o de diagnÛstico por IA",
       debug: { message: err.message },
     });
   }

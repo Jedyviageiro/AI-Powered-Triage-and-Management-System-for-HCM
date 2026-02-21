@@ -53,6 +53,17 @@ DADOS DO PACIENTE:
 
 async function doctorDiagnosisSuggestion(payload) {
   const basePrompt = loadPrompt("doctorDiagnosis.txt");
+  const questionnaireBlock = Array.isArray(payload.questionnaire_answers)
+    ? payload.questionnaire_answers
+        .map((qa) => {
+          const q = String(qa?.question || "").trim();
+          const a = String(qa?.answer || "").trim();
+          if (!q || !a) return null;
+          return `  - ${q}: ${a}`;
+        })
+        .filter(Boolean)
+        .join("\n")
+    : "";
 
   const dynamicData = `
 DADOS DO CASO:
@@ -65,6 +76,9 @@ DADOS DO CASO:
 - SpO2: ${payload.oxygen_saturation ?? "n/a"}
 - peso(kg): ${payload.weight ?? "n/a"}
 - prioridade: ${payload.priority ?? "n/a"}
+- respostas_questionario:
+${questionnaireBlock || "  - n/a"}
+- informacao_extra_paciente: ${payload.questionnaire_extra_note ?? "n/a"}
 `;
 
   const fullPrompt = basePrompt + "\n\n" + dynamicData;
@@ -78,5 +92,40 @@ DADOS DO CASO:
   return extractJson(text);
 }
 
+async function doctorQuestionsSuggestion(payload) {
+  const prompt = `
+Voce e um medico pediatra assistente.
+Gere APENAS JSON valido com este formato:
+{
+  "questions_to_clarify": ["pergunta 1", "pergunta 2", "pergunta 3"]
+}
 
-module.exports = { triageSeveritySuggestion, doctorDiagnosisSuggestion };
+Regras:
+- Maximo 5 perguntas.
+- Perguntas curtas, objetivas, em portugues (uso local de Mocambique).
+- Focadas na queixa principal e sinais vitais.
+- Nao incluir diagnostico, prescricao, explicacoes longas ou texto fora de JSON.
+
+DADOS DO CASO:
+- idade(anos): ${payload.age_years ?? "desconhecida"}
+- queixa principal: ${payload.chief_complaint ?? ""}
+- notas clinicas: ${payload.clinical_notes ?? ""}
+- temperatura: ${payload.temperature ?? "n/a"}
+- FC: ${payload.heart_rate ?? "n/a"}
+- FR: ${payload.respiratory_rate ?? "n/a"}
+- SpO2: ${payload.oxygen_saturation ?? "n/a"}
+- peso(kg): ${payload.weight ?? "n/a"}
+- prioridade: ${payload.priority ?? "n/a"}
+`;
+
+  const resp = await ai.models.generateContent({
+    model: MODEL,
+    contents: [{ role: "user", parts: [{ text: prompt }] }],
+  });
+
+  const text = resp.text?.trim?.() || "";
+  return extractJson(text);
+}
+
+
+module.exports = { triageSeveritySuggestion, doctorDiagnosisSuggestion, doctorQuestionsSuggestion };
