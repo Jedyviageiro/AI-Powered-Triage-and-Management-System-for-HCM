@@ -1,13 +1,13 @@
-Ôªøimport { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../lib/api";
 import { clearAuth, getUser } from "../lib/auth";
-import AgendaView from "../components/AgendaView";
-import DoctorQueuePanel from "../components/DoctorQueuePanel";
+import AgendaView from "../components/doctors/AgendaView";
+import DoctorQueuePanel from "../components/doctors/DoctorQueuePanel";
 
 const formatStatus = (s) => {
   if (s === "WAITING") return "Aguardando Triagem";
   if (s === "IN_TRIAGE") return "Em Triagem";
-  if (s === "WAITING_DOCTOR") return "Aguardando M√©dico";
+  if (s === "WAITING_DOCTOR") return "Aguardando MÈdico";
   if (s === "IN_CONSULTATION") return "Em Consulta";
   if (s === "FINISHED") return "Finalizado";
   return s || "-";
@@ -28,18 +28,42 @@ const DISPOSITION_OPTIONS = [
   { value: "BED_REST", label: "Repouso (bed rest)" },
   { value: "HOME", label: "Alta para casa" },
   { value: "RETURN_VISIT", label: "Retorno agendado" },
-  { value: "ADMIT_URGENT", label: "Internar / urg√™ncia" },
+  { value: "ADMIT_URGENT", label: "Internar / urgÍncia" },
 ];
 
 const LAB_EXAM_OPTIONS = [
   { value: "", label: "Selecionar exame" },
   { value: "HEMOGRAMA", label: "Hemograma" },
-  { value: "MALARIA", label: "Teste de mal√°ria" },
+  { value: "MALARIA", label: "Teste de mal·ria" },
   { value: "RAIO_X", label: "Raio-X" },
   { value: "URINA", label: "Urina tipo 1" },
-  { value: "BIOQUIMICA", label: "Bioqu√≠mica" },
+  { value: "BIOQUIMICA", label: "BioquÌmica" },
   { value: "OUTRO", label: "Outro" },
 ];
+
+const HOSPITAL_STATUS_OPTIONS = [
+  { value: "", label: "Selecionar estado hospitalar" },
+  { value: "IN_HOSPITAL", label: "Internado" },
+  { value: "BED_REST", label: "Repouso / Acamado" },
+  { value: "DISCHARGED", label: "Alta" },
+  { value: "TRANSFERRED", label: "Transferido" },
+  { value: "DECEASED", label: "”bito" },
+];
+
+const VITAL_STATUS_OPTIONS = [
+  { value: "", label: "Selecionar estado vital" },
+  { value: "ALIVE", label: "Vivo" },
+  { value: "DECEASED", label: "”bito" },
+  { value: "UNKNOWN", label: "Desconhecido" },
+];
+
+const toDatetimeLocalValue = (value) => {
+  if (!value) return "";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
 
 const makeEmptyPlanDraft = () => ({
   likely_diagnosis: "",
@@ -61,6 +85,13 @@ const makeEmptyPlanDraft = () => ({
   lab_result_text: "",
   lab_result_status: "",
   lab_result_ready_at: "",
+  hospital_status: "",
+  vital_status: "",
+  is_bedridden: false,
+  inpatient_unit: "",
+  inpatient_bed: "",
+  discharged_at: "",
+  death_note: "",
 });
 
 const planFromVisit = (visit) => ({
@@ -83,25 +114,32 @@ const planFromVisit = (visit) => ({
   lab_result_text: visit?.lab_result_text || "",
   lab_result_status: visit?.lab_result_status || "",
   lab_result_ready_at: visit?.lab_result_ready_at || "",
+  hospital_status: visit?.hospital_status || "",
+  vital_status: visit?.vital_status || "",
+  is_bedridden: !!visit?.is_bedridden,
+  inpatient_unit: visit?.inpatient_unit || "",
+  inpatient_bed: visit?.inpatient_bed || "",
+  discharged_at: toDatetimeLocalValue(visit?.discharged_at),
+  death_note: visit?.death_note || "",
 });
 
 const fallbackComplaintQuestions = (chiefComplaint = "") => {
   const c = String(chiefComplaint || "").toLowerCase();
   const base = [
-    "O que est√° a sentir?",
-    "Quando os sintomas come√ßaram?",
-    "Tem dor? Onde d√≥i?",
-    "A dor √© forte ou fraca?",
-    "Tem febre? H√° quantos dias?",
+    "O que est· a sentir?",
+    "Quando os sintomas comeÁaram?",
+    "Tem dor? Onde dÛi?",
+    "A dor È forte ou fraca?",
+    "Tem febre? H· quantos dias?",
   ];
   if (/(tosse|falta de ar|respira)/.test(c)) {
     return [...base, "Tem dificuldade para respirar?", "A tosse tem catarro ou sangue?"];
   }
   if (/(vomit|diarre|abdom|barriga)/.test(c)) {
-    return [...base, "Teve v√¥mitos ou diarreia?", "Consegue beber l√≠quidos normalmente?"];
+    return [...base, "Teve vÙmitos ou diarreia?", "Consegue beber lÌquidos normalmente?"];
   }
-  if (/(dor de cabe√ßa|cefale|convuls)/.test(c)) {
-    return [...base, "A dor de cabe√ßa piora com luz/ru√≠do?", "Teve desmaio ou convuls√£o?"];
+  if (/(dor de cabeÁa|cefale|convuls)/.test(c)) {
+    return [...base, "A dor de cabeÁa piora com luz/ruÌdo?", "Teve desmaio ou convuls„o?"];
   }
   return [...base, "Tem outro sintoma importante que queira relatar?"];
 };
@@ -113,7 +151,30 @@ const normalizeQuestions = (value) =>
     .slice(0, 8);
 
 const stripQuestionnaireBlock = (text = "") =>
-  String(text || "").replace(/^Question√°rio cl√≠nico:\n[\s\S]*?(?:\n\n|$)/i, "").trim();
+  String(text || "").replace(/^Question·rio clÌnico:\n[\s\S]*?(?:\n\n|$)/i, "").trim();
+
+const buildTriageFallback = (src) => {
+  if (!src || typeof src !== "object") return null;
+  const chief = src?.chief_complaint || src?.triage_chief_complaint || src?.triage?.chief_complaint || "";
+  const notes = src?.clinical_notes || src?.triage_clinical_notes || src?.triage?.clinical_notes || "";
+  const temperature = src?.temperature ?? src?.triage?.temperature ?? null;
+  const oxygen = src?.oxygen_saturation ?? src?.triage?.oxygen_saturation ?? null;
+  const heart = src?.heart_rate ?? src?.triage?.heart_rate ?? null;
+  const resp = src?.respiratory_rate ?? src?.triage?.respiratory_rate ?? null;
+  const weight = src?.weight ?? src?.triage?.weight ?? null;
+  if (!chief && !notes && temperature == null && oxygen == null && heart == null && resp == null && weight == null) {
+    return null;
+  }
+  return {
+    chief_complaint: chief,
+    clinical_notes: notes,
+    temperature,
+    oxygen_saturation: oxygen,
+    heart_rate: heart,
+    respiratory_rate: resp,
+    weight,
+  };
+};
 
 const isSameLocalDay = (value, refDate = new Date()) => {
   if (!value) return false;
@@ -152,6 +213,7 @@ export default function Doctor() {
   const [planDraft, setPlanDraft] = useState(makeEmptyPlanDraft());
   const [planAccepted, setPlanAccepted] = useState(false);
   const [savingPlan, setSavingPlan] = useState(false);
+  const [startingConsultation, setStartingConsultation] = useState(false);
   const [popup, setPopup] = useState({
     open: false,
     type: "warning",
@@ -223,13 +285,35 @@ export default function Doctor() {
   const pendingLabVisits = useMemo(() => {
     const rows = Array.isArray(queue) ? queue : [];
     return rows.filter((v) => {
-      const isMine = Number(v?.doctor_id) === Number(me?.id);
       const hasResult = !!String(v?.lab_result_text || "").trim();
       const statusReady = String(v?.lab_result_status || "").toUpperCase() === "READY";
-      const pendingResult = !!v?.lab_requested && !hasResult && !statusReady;
-      return isMine && pendingResult;
+      return !!v?.lab_requested && !hasResult && !statusReady;
     });
-  }, [queue, me?.id]);
+  }, [queue]);
+
+  const hasUnsavedLabRequest = useMemo(() => {
+    if (!selectedVisit?.id) return false;
+    const alreadySaved = !!selectedVisit?.lab_requested;
+    return !!planDraft?.lab_requested && !alreadySaved;
+  }, [selectedVisit?.id, selectedVisit?.lab_requested, planDraft?.lab_requested]);
+
+  const labPendingDisplayRows = useMemo(() => {
+    const base = Array.isArray(pendingLabVisits) ? pendingLabVisits : [];
+    if (!hasUnsavedLabRequest || !selectedVisit?.id) return base;
+    const exists = base.some((v) => Number(v?.id) === Number(selectedVisit.id));
+    if (exists) return base;
+    return [
+      {
+        ...selectedVisit,
+        full_name: patientDetails?.full_name || selectedVisit?.full_name || "-",
+        clinical_code: patientDetails?.clinical_code || selectedVisit?.clinical_code || "",
+        lab_exam_type: planDraft?.lab_exam_type || "",
+        lab_tests: planDraft?.lab_tests || "",
+        __unsaved_lab_request: true,
+      },
+      ...base,
+    ];
+  }, [pendingLabVisits, hasUnsavedLabRequest, selectedVisit, patientDetails, planDraft?.lab_exam_type, planDraft?.lab_tests]);
 
   const agendaAssignedTodayCount = useMemo(() => {
     const rows = Array.isArray(agenda?.assigned_today) ? agenda.assigned_today : [];
@@ -280,6 +364,8 @@ export default function Doctor() {
       const v = await api.getVisitById(visitId);
       safeSet(() => {
         setSelectedVisit(v);
+        const fallback = buildTriageFallback(previewVisit) || buildTriageFallback(v);
+        if (fallback) setTriage(fallback);
         setPlanDraft(planFromVisit(v));
         setPlanAccepted(!!v?.plan_accepted_at);
         setQuestionnaireQuestions(
@@ -315,9 +401,9 @@ export default function Doctor() {
       }
       try {
         const t = await api.getTriageByVisitId(visitId);
-        safeSet(() => setTriage(t));
+        safeSet(() => setTriage(t || buildTriageFallback(previewVisit) || buildTriageFallback(v)));
       } catch {
-        safeSet(() => setTriage(null));
+        safeSet(() => setTriage(buildTriageFallback(previewVisit) || buildTriageFallback(v)));
       }
     } catch (e) {
       safeSet(() => setErr(e.message));
@@ -349,11 +435,14 @@ export default function Doctor() {
     if (activeView === "agenda") {
       loadAgenda();
     }
+    if (activeView === "lab") {
+      loadQueue();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeView]);
 
   useEffect(() => {
-    if (err) showPopup("warning", "Aten√ß√£o", err);
+    if (err) showPopup("warning", "AtenÁ„o", err);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [err]);
 
@@ -366,21 +455,36 @@ export default function Doctor() {
 
   const startConsultation = async () => {
     if (!selectedVisit?.id) return;
+    if (selectedVisit?.doctor_id && Number(selectedVisit.doctor_id) !== Number(me?.id)) {
+      safeSet(() => setErr("Esta visita est· atribuÌda a outro mÈdico."));
+      return;
+    }
+    if (selectedVisit.status === "IN_CONSULTATION") {
+      safeSet(() => setErr("Esta visita j· est· em consulta."));
+      return;
+    }
     if (selectedVisit.status !== "WAITING_DOCTOR") {
-      safeSet(() => setErr("O paciente precisa estar em 'Aguardando M√©dico'."));
+      safeSet(() =>
+        setErr(`O paciente precisa estar em 'Aguardando MÈdico'. Estado atual: ${formatStatus(selectedVisit.status)}.`)
+      );
       return;
     }
-    if (!triage) {
-      safeSet(() => setErr("N√£o pode iniciar consulta sem triagem registrada."));
+    if (!hasTriageForConsult) {
+      safeSet(() => setErr("N„o pode iniciar consulta sem triagem registrada."));
       return;
     }
-    safeSet(() => setErr(""));
+    safeSet(() => {
+      setErr("");
+      setStartingConsultation(true);
+    });
     try {
       await api.startConsultation(selectedVisit.id);
       await openVisit(selectedVisit.id);
       await loadQueue();
     } catch (e) {
       safeSet(() => setErr(e.message));
+    } finally {
+      safeSet(() => setStartingConsultation(false));
     }
   };
 
@@ -419,7 +523,7 @@ export default function Doctor() {
 
     if (finishMissingFields.length > 0) {
       safeSet(() =>
-        setErr(`N√£o √© poss√≠vel finalizar a consulta. Falta: ${finishMissingFields.join(", ")}.`)
+        setErr(`N„o È possÌvel finalizar a consulta. Falta: ${finishMissingFields.join(", ")}.`)
       );
       return;
     }
@@ -435,7 +539,7 @@ export default function Doctor() {
         .join("\n");
       const baseReasoning = stripQuestionnaireBlock(planDraft.clinical_reasoning);
       const mergedReasoning = useAIQuestionnaire && questionnaireText
-        ? [`Question√°rio cl√≠nico:\n${questionnaireText}`, baseReasoning].filter(Boolean).join("\n\n")
+        ? [`Question·rio clÌnico:\n${questionnaireText}`, baseReasoning].filter(Boolean).join("\n\n")
         : baseReasoning;
 
       await api.saveVisitMedicalPlan(selectedVisit.id, {
@@ -479,12 +583,12 @@ export default function Doctor() {
       return;
     }
     if (!triage?.chief_complaint) {
-      safeSet(() => setErr("N√£o h√° dados de triagem suficientes para pedir sugest√£o da IA."));
+      safeSet(() => setErr("N„o h· dados de triagem suficientes para pedir sugest„o da IA."));
       return;
     }
     const answeredCount = complaintQuestions.filter((q) => String(questionnaireAnswers[q] || "").trim()).length;
     if (useAIQuestionnaire && answeredCount === 0 && !String(questionnaireExtraNote || "").trim()) {
-      safeSet(() => setErr("Responda o question√°rio (ou adicione informa√ß√£o extra) antes de pedir sugest√£o da IA."));
+      safeSet(() => setErr("Responda o question·rio (ou adicione informaÁ„o extra) antes de pedir sugest„o da IA."));
       return;
     }
     safeSet(() => {
@@ -564,7 +668,7 @@ export default function Doctor() {
     } catch (e) {
       const msg = String(e?.message || "");
       if (msg.toLowerCase().includes("demorou")) {
-        setErr("A IA demorou a responder. Us√°mos perguntas padr√£o para continuar.");
+        setErr("A IA demorou a responder. Us·mos perguntas padr„o para continuar.");
       } else {
         setErr(msg);
       }
@@ -584,7 +688,19 @@ export default function Doctor() {
     });
   };
 
-  const canStart = !!selectedVisit?.id && selectedVisit.status === "WAITING_DOCTOR" && !!triage;
+  const hasTriageForConsult = useMemo(() => {
+    return !!(
+      triage?.chief_complaint ||
+      selectedVisit?.chief_complaint ||
+      selectedVisit?.triage_chief_complaint ||
+      selectedVisit?.triage?.chief_complaint
+    );
+  }, [triage, selectedVisit]);
+
+  const canStart =
+    !!selectedVisit?.id &&
+    !startingConsultation &&
+    selectedVisit?.status === "WAITING_DOCTOR";
   const canFinish = !!selectedVisit?.id && selectedVisit.status === "IN_CONSULTATION";
   const canDiagnose = canFinish;
   const finishMissingFields = useMemo(() => {
@@ -592,11 +708,11 @@ export default function Doctor() {
     const missing = [];
     const answeredCount = complaintQuestions.filter((q) => String(questionnaireAnswers[q] || "").trim()).length;
     if (useAIQuestionnaire && answeredCount === 0 && !String(questionnaireExtraNote || "").trim()) {
-      missing.push("question√°rio cl√≠nico");
+      missing.push("question·rio clÌnico");
     }
-    if (!String(planDraft.likely_diagnosis || "").trim()) missing.push("diagn√≥stico prov√°vel");
-    if (!String(planDraft.clinical_reasoning || "").trim()) missing.push("justificativa cl√≠nica");
-    if (!String(planDraft.prescription_text || "").trim()) missing.push("prescri√ß√£o");
+    if (!String(planDraft.likely_diagnosis || "").trim()) missing.push("diagnÛstico prov·vel");
+    if (!String(planDraft.clinical_reasoning || "").trim()) missing.push("justificativa clÌnica");
+    if (!String(planDraft.prescription_text || "").trim()) missing.push("prescriÁ„o");
     if (!String(planDraft.disposition_plan || "").trim()) missing.push("destino do paciente");
     if (!!planDraft.lab_requested && !String(planDraft.lab_exam_type || "").trim()) {
       missing.push("tipo de exame laboratorial");
@@ -637,7 +753,7 @@ export default function Doctor() {
         .join("\n");
       const baseReasoning = stripQuestionnaireBlock(planDraft.clinical_reasoning);
       const mergedReasoning = useAIQuestionnaire && questionnaireText
-        ? [`Question√°rio cl√≠nico:\n${questionnaireText}`, baseReasoning].filter(Boolean).join("\n\n")
+        ? [`Question·rio clÌnico:\n${questionnaireText}`, baseReasoning].filter(Boolean).join("\n\n")
         : baseReasoning;
 
       const updated = await api.saveVisitMedicalPlan(selectedVisit.id, {
@@ -657,6 +773,7 @@ export default function Doctor() {
       setSelectedVisit(updated);
       setPlanDraft(planFromVisit(updated));
       setPlanAccepted(!!updated?.plan_accepted_at);
+      await loadQueue();
     } catch (e) {
       setErr(e.message);
     } finally {
@@ -697,8 +814,8 @@ export default function Doctor() {
 
   const searchHistoryPatients = async () => {
     const q = String(historyQuery || "").trim();
-    if (q.length < 2) {
-      setErr("Escreva pelo menos 2 letras para pesquisar paciente.");
+    if (q.length < 1) {
+      setErr("Escreva pelo menos 1 letra para pesquisar paciente.");
       return;
     }
     setHistorySearchLoading(true);
@@ -713,6 +830,21 @@ export default function Doctor() {
       setHistorySearchLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (activeView !== "history") return;
+    const q = String(historyQuery || "").trim();
+    if (!q) {
+      setHistorySearchResults([]);
+      setHistorySearchLoading(false);
+      return;
+    }
+    const t = setTimeout(() => {
+      searchHistoryPatients();
+    }, 250);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [historyQuery, activeView]);
 
   const openHistoryPatient = async (patient) => {
     if (!patient?.id) return;
@@ -818,7 +950,7 @@ export default function Doctor() {
     },
     {
       key: "history",
-      label: "Hist√≥rico M√©dico",
+      label: "HistÛrico MÈdico",
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
           <path d="M3 3v18h18" />
@@ -835,6 +967,7 @@ export default function Doctor() {
           <line x1="8" y1="2" x2="16" y2="2" />
         </svg>
       ),
+      badge: pendingLabVisits.length > 0 ? pendingLabVisits.length : null,
     },
   ];
 
@@ -939,7 +1072,7 @@ export default function Doctor() {
             )}
           </button>
           <div className="logo-text min-w-0">
-            <div className="text-sm font-semibold text-gray-900 leading-tight">Painel M√©dico</div>
+            <div className="text-sm font-semibold text-gray-900 leading-tight">Painel MÈdico</div>
           </div>
         </div>
 
@@ -1042,7 +1175,7 @@ export default function Doctor() {
           <div style={{ display: "flex", alignItems: "center", gap: "4px", flexShrink: 0 }}>
             <button
               type="button"
-              onClick={() => setErr("Chat interno dispon√≠vel em breve.")}
+              onClick={() => setErr("Chat interno disponÌvel em breve.")}
               style={{ width: "36px", height: "36px", borderRadius: "50%", border: "none", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#9ca3af", transition: "background 0.15s" }}
               onMouseEnter={(e) => { e.currentTarget.style.background = "#f3f4f6"; }}
               onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
@@ -1054,7 +1187,7 @@ export default function Doctor() {
 
             <button
               type="button"
-              onClick={() => setErr("Sem novas notifica√ß√µes no momento.")}
+              onClick={() => setErr("Sem novas notificaÁıes no momento.")}
               style={{ width: "36px", height: "36px", borderRadius: "50%", border: "none", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#9ca3af", position: "relative", transition: "background 0.15s" }}
               onMouseEnter={(e) => { e.currentTarget.style.background = "#f3f4f6"; }}
               onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
@@ -1066,8 +1199,8 @@ export default function Doctor() {
             </button>
 
             <div style={{ marginLeft: "6px", fontSize: "13px", fontWeight: 600, color: "#374151", maxWidth: "220px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {me?.full_name || "M√©dico(a)"}
-              {!!me?.specialization && ` ¬∑ ${me.specialization}`}
+              {me?.full_name || "MÈdico(a)"}
+              {!!me?.specialization && ` ∑ ${me.specialization}`}
             </div>
             <button style={{ width: "34px", height: "34px", borderRadius: "50%", border: "2px solid #e5e7eb", overflow: "hidden", cursor: "pointer", marginLeft: "4px", padding: 0, background: "linear-gradient(135deg, #16a34a, #22c55e)", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <span style={{ fontSize: "13px", fontWeight: "700", color: "white" }}>
@@ -1080,7 +1213,7 @@ export default function Doctor() {
 
           {activeView === "dashboard" && (
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard M√©dico</h1>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard MÈdico</h1>
               <p className="text-gray-600 mb-6">Visao geral da fila e da agenda do dia.</p>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 <div className="bg-white border border-gray-200 rounded-lg p-5">
@@ -1088,7 +1221,7 @@ export default function Doctor() {
                   <div className="text-3xl font-semibold text-gray-900 mt-1">{filteredQueue.length}</div>
                 </div>
                 <div className="bg-white border border-gray-200 rounded-lg p-5">
-                  <div className="text-xs text-gray-500">Aguardando M√©dico</div>
+                  <div className="text-xs text-gray-500">Aguardando MÈdico</div>
                   <div className="text-3xl font-semibold text-gray-900 mt-1">{waitingCount}</div>
                 </div>
                 <div className="bg-white border border-gray-200 rounded-lg p-5">
@@ -1101,7 +1234,7 @@ export default function Doctor() {
                 </div>
               </div>
               <div className="bg-white border border-gray-200 rounded-lg p-5">
-                <div className="text-sm font-semibold text-gray-900 mb-3">A√ß√µes r√°pidas</div>
+                <div className="text-sm font-semibold text-gray-900 mb-3">AÁıes r·pidas</div>
                 <div className="flex flex-wrap gap-2">
                   <button type="button" onClick={() => setActiveView("queue")} className="px-4 py-2 bg-green-600 text-white text-sm font-medium hover:bg-green-700 transition-colors rounded-md">
                     Ir para Fila de Pacientes
@@ -1137,28 +1270,24 @@ export default function Doctor() {
           {activeView === "history" && (
             <div className="bg-white border border-gray-200 rounded-lg p-4">
               <div className="flex items-center justify-between gap-3 mb-3">
-                <h3 className="text-sm font-semibold text-gray-900">Hist√≥rico M√©dico por Paciente</h3>
-                <div className="text-xs text-gray-500">Pesquisar no banco de pacientes</div>
+                <h3 className="text-sm font-semibold text-gray-900">HistÛrico MÈdico por Paciente</h3>
+                <div className="text-xs text-gray-500">Sugestıes autom·ticas ao digitar</div>
               </div>
-              <div className="flex gap-2 mb-3">
+              <div className="mb-3">
                 <input
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                   placeholder="Digite nome do paciente..."
                   value={historyQuery}
                   onChange={(e) => setHistoryQuery(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && searchHistoryPatients()}
                 />
-                <button
-                  type="button"
-                  onClick={searchHistoryPatients}
-                  disabled={historySearchLoading}
-                  className="px-3 py-2 bg-green-600 text-white text-sm font-medium hover:bg-green-700 rounded-md disabled:opacity-50"
-                >
-                  {historySearchLoading ? "Buscando..." : "Buscar"}
-                </button>
               </div>
-              {historySearchResults.length === 0 ? (
-                <p className="text-sm text-gray-500">Nenhum paciente encontrado ainda. Fa√ßa uma pesquisa acima.</p>
+              {historySearchLoading ? (
+                <p className="text-sm text-gray-500">Buscando pacientes...</p>
+              ) : historyQuery.trim() && historySearchResults.length === 0 ? (
+                <p className="text-sm text-gray-500">Nenhum paciente encontrado para esse nome.</p>
+              ) : historySearchResults.length === 0 ? (
+                <p className="text-sm text-gray-500">Nenhum paciente encontrado ainda. FaÁa uma pesquisa acima.</p>
               ) : (
                 <div className="space-y-2 max-h-72 overflow-y-auto">
                   {historySearchResults.map((p) => (
@@ -1179,11 +1308,17 @@ export default function Doctor() {
           {activeView === "lab" && (
             <div className="bg-white border border-gray-200 rounded-lg p-4">
               <h3 className="text-sm font-semibold text-gray-900 mb-3">Exames pendentes de resultado</h3>
-              {pendingLabVisits.length === 0 ? (
+              {hasUnsavedLabRequest && (
+                <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800">
+                  Marcou "Exame laboratorial solicitado" na consulta atual, mas ainda n„o salvou o plano.
+                  Clique em "Salvar rascunho" na consulta para o paciente aparecer nesta lista.
+                </div>
+              )}
+              {labPendingDisplayRows.length === 0 ? (
                 <p className="text-sm text-gray-500">Nenhum exame pendente no momento.</p>
               ) : (
                 <div className="space-y-3">
-                  {pendingLabVisits.map((v) => (
+                  {labPendingDisplayRows.map((v) => (
                     <div key={v.id} className="border border-gray-200 rounded p-3 bg-gray-50">
                       <div className="text-sm font-medium text-gray-900">
                         {v.full_name} <span className="text-xs text-gray-500">#{v.id}</span>
@@ -1191,6 +1326,19 @@ export default function Doctor() {
                       <div className="text-xs text-gray-600 mt-1">
                         {v.lab_exam_type || v.lab_tests || "Exame solicitado"}
                       </div>
+                      {!!v.__unsaved_lab_request && (
+                        <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800">
+                          Pedido de exame ainda n„o salvo no plano desta consulta.
+                          <button
+                            type="button"
+                            onClick={() => saveMedicalPlan({ accept: false })}
+                            disabled={savingPlan || Number(selectedVisit?.id) !== Number(v.id)}
+                            className="ml-2 px-2 py-1 rounded bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50"
+                          >
+                            {savingPlan ? "Salvando..." : "Salvar pedido"}
+                          </button>
+                        </div>
+                      )}
                       <label className="flex items-center gap-2 text-xs text-gray-700 mt-2">
                         <input
                           type="checkbox"
@@ -1198,22 +1346,25 @@ export default function Doctor() {
                           onChange={(e) =>
                             setLabResultReadyDrafts((prev) => ({ ...prev, [v.id]: e.target.checked }))
                           }
+                          disabled={!!v.__unsaved_lab_request}
                         />
-                        J√° recebi o resultado do laborat√≥rio
+                        J· recebi o resultado do laboratÛrio
                       </label>
                       <textarea
                         className="w-full mt-2 px-3 py-2 border border-gray-300 rounded text-sm min-h-[90px]"
-                        placeholder="Preencha o resultado do laborat√≥rio..."
+                        placeholder="Preencha o resultado do laboratÛrio..."
                         value={labResultDrafts[v.id] || ""}
                         onChange={(e) =>
                           setLabResultDrafts((prev) => ({ ...prev, [v.id]: e.target.value }))
                         }
+                        disabled={!!v.__unsaved_lab_request}
                       />
                       <div className="mt-2 flex justify-end">
                         <button
                           type="button"
                           onClick={() => saveLabResultForVisit(v.id)}
                           disabled={
+                            !!v.__unsaved_lab_request ||
                             savingLabResultId === v.id ||
                             !(labResultDrafts[v.id] || "").trim() ||
                             !labResultReadyDrafts[v.id]
@@ -1278,7 +1429,7 @@ export default function Doctor() {
                             <h3 className="text-sm font-semibold text-gray-900 mb-2">Dados do Paciente</h3>
                             <div className="grid grid-cols-2 gap-2 text-sm text-gray-700">
                               <div>Nome: {patientDetails.full_name || "-"}</div>
-                              <div>C√≥digo: {patientDetails.clinical_code || "-"}</div>
+                              <div>CÛdigo: {patientDetails.clinical_code || "-"}</div>
                               <div>Nascimento: {patientDetails.birth_date || "-"}</div>
                               <div>Idade: {calculateAgeYears(patientDetails.birth_date) ?? "-"} anos</div>
                             </div>
@@ -1289,14 +1440,14 @@ export default function Doctor() {
                         <div className="border border-gray-200 rounded-lg p-4">
                           <h3 className="text-sm font-semibold text-gray-900 mb-3">Dados de Triagem</h3>
                           {!triage ? (
-                            <p className="text-sm text-gray-500">Triagem ainda n√£o registrada.</p>
+                            <p className="text-sm text-gray-500">Triagem ainda n„o registrada.</p>
                           ) : (
                             <div className="space-y-3">
                               <div className="grid grid-cols-2 gap-x-6 gap-y-2">
                                 {[
-                                  { label: "Temperatura", value: triage.temperature != null ? `${triage.temperature} ¬∞C` : "-" },
+                                  { label: "Temperatura", value: triage.temperature != null ? `${triage.temperature} ∞C` : "-" },
                                   { label: "SpO2", value: triage.oxygen_saturation != null ? `${triage.oxygen_saturation} %` : "-" },
-                                  { label: "Freq. Card√≠aca", value: triage.heart_rate != null ? `${triage.heart_rate} bpm` : "-" },
+                                  { label: "Freq. CardÌaca", value: triage.heart_rate != null ? `${triage.heart_rate} bpm` : "-" },
                                   { label: "Freq. Resp.", value: triage.respiratory_rate != null ? `${triage.respiratory_rate} rpm` : "-" },
                                   { label: "Peso", value: triage.weight != null ? `${triage.weight} kg` : "-" },
                                 ].map(({ label, value }) => (
@@ -1314,7 +1465,7 @@ export default function Doctor() {
                               </div>
                               {triage.clinical_notes && (
                                 <div>
-                                  <div className="text-xs text-gray-500 mb-1">Notas Cl√≠nicas</div>
+                                  <div className="text-xs text-gray-500 mb-1">Notas ClÌnicas</div>
                                   <div className="text-sm text-gray-900 leading-relaxed whitespace-pre-wrap break-words pr-2">
                                     {triage.clinical_notes}
                                   </div>
@@ -1328,7 +1479,7 @@ export default function Doctor() {
                           <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
                             <div className="flex items-center justify-between gap-3 mb-2">
                               <div>
-                                <div className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Question√°rio cl√≠nico por IA</div>
+                                <div className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Question·rio clÌnico por IA</div>
                                 <p className="text-[11px] text-gray-500 mt-1">
                                   Opcional. Ative para a IA gerar perguntas conforme a queixa principal.
                                 </p>
@@ -1381,7 +1532,7 @@ export default function Doctor() {
                                     ))}
                                     <div className="pt-1">
                                       <label className="text-xs text-gray-600 mb-1 block">
-                                        Informa√ß√£o extra (caso n√£o caiba nas perguntas)
+                                        InformaÁ„o extra (caso n„o caiba nas perguntas)
                                       </label>
                                       <textarea
                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white min-h-[80px]"
@@ -1395,7 +1546,7 @@ export default function Doctor() {
                               </div>
                             ) : (
                               <div className="text-xs text-gray-500 bg-white border border-gray-200 rounded-md px-3 py-2">
-                                Question√°rio desativado. O m√©dico pode seguir diretamente com avalia√ß√£o e plano cl√≠nico.
+                                Question·rio desativado. O mÈdico pode seguir diretamente com avaliaÁ„o e plano clÌnico.
                               </div>
                             )}
                           </div>
@@ -1417,19 +1568,19 @@ export default function Doctor() {
                               : ""
                           }
                         >
-                          {aiLoading ? "IA Analisando..." : "Sugest√£o por IA - Diagn√≥stico e Prescri√ß√£o"}
+                          {aiLoading ? "IA Analisando..." : "Sugest„o por IA - DiagnÛstico e PrescriÁ„o"}
                         </button>
 
                         {!!selectedVisit?.id && !canDiagnose && (
                           <div className="p-3 bg-amber-50 border border-amber-200 rounded text-sm text-amber-800">
-                            Inicie a consulta para liberar o diagn√≥stico e o preenchimento do plano m√©dico.
+                            Inicie a consulta para liberar o diagnÛstico e o preenchimento do plano mÈdico.
                           </div>
                         )}
 
                         {!!selectedVisit?.id && canDiagnose && (
                           <div className="border border-gray-200 rounded-lg p-4">
                             <div className="flex items-center justify-between mb-3">
-                              <h3 className="text-sm font-semibold text-gray-900">Plano M√©dico (Editavel)</h3>
+                              <h3 className="text-sm font-semibold text-gray-900">Plano MÈdico (Editavel)</h3>
                               <div className="flex items-center gap-2">
                                 <button
                                   type="button"
@@ -1452,14 +1603,14 @@ export default function Doctor() {
 
                             {planAccepted && (
                               <div className="mb-3 p-2 bg-green-50 border border-green-200 text-green-700 text-xs font-medium rounded">
-                                Plano aceito pelo m√©dico (ainda pode editar).
+                                Plano aceito pelo mÈdico (ainda pode editar).
                               </div>
                             )}
 
                             <div className="space-y-3">
                               <div>
-                                <label className="text-xs font-medium text-gray-700 mb-1 block">Diagn√≥stico prov√°vel</label>
-                                <p className="text-[11px] text-gray-500 mb-1">Hip√≥tese principal em linguagem cl√≠nica objetiva.</p>
+                                <label className="text-xs font-medium text-gray-700 mb-1 block">DiagnÛstico prov·vel</label>
+                                <p className="text-[11px] text-gray-500 mb-1">HipÛtese principal em linguagem clÌnica objetiva.</p>
                                 <input
                                   className="w-full px-4 py-3 border border-gray-300 rounded-lg text-base"
                                   value={planDraft.likely_diagnosis}
@@ -1469,8 +1620,8 @@ export default function Doctor() {
                               </div>
 
                               <div>
-                                <label className="text-xs font-medium text-gray-700 mb-1 block">Justificativa cl√≠nica</label>
-                                <p className="text-[11px] text-gray-500 mb-1">Explique brevemente os achados que sustentam o diagn√≥stico.</p>
+                                <label className="text-xs font-medium text-gray-700 mb-1 block">Justificativa clÌnica</label>
+                                <p className="text-[11px] text-gray-500 mb-1">Explique brevemente os achados que sustentam o diagnÛstico.</p>
                                 <textarea
                                   className="w-full px-4 py-3 border border-gray-300 rounded-lg text-base min-h-[120px]"
                                   value={planDraft.clinical_reasoning}
@@ -1480,8 +1631,8 @@ export default function Doctor() {
                               </div>
 
                               <div>
-                                <label className="text-xs font-medium text-gray-700 mb-1 block">Prescri√ß√£o (dose, via, frequ√™ncia, dura√ß√£o)</label>
-                                <p className="text-[11px] text-gray-500 mb-1">Informe medicamento, dose, via, frequ√™ncia e dura√ß√£o.</p>
+                                <label className="text-xs font-medium text-gray-700 mb-1 block">PrescriÁ„o (dose, via, frequÍncia, duraÁ„o)</label>
+                                <p className="text-[11px] text-gray-500 mb-1">Informe medicamento, dose, via, frequÍncia e duraÁ„o.</p>
                                 <textarea
                                   className="w-full px-4 py-3 border border-gray-300 rounded-lg text-base min-h-[140px] font-mono"
                                   value={planDraft.prescription_text}
@@ -1513,31 +1664,91 @@ export default function Doctor() {
                                 </div>
                               </div>
 
-                              <div className="grid grid-cols-3 gap-3">
-                                <div>
-                                  <label className="text-xs font-medium text-gray-700 mb-1 block">Retorno em</label>
-                                  <input
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg text-base"
-                                    value={planDraft.follow_up_when}
-                                    onChange={(e) => updatePlanField("follow_up_when", e.target.value)}
-                                  />
+                              <div className="p-3 border border-gray-200 rounded">
+                                <div className="text-xs font-semibold text-gray-700 mb-2">Estado ClÌnico e Hospitalar</div>
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div>
+                                    <label className="text-xs font-medium text-gray-700 mb-1 block">Estado hospitalar</label>
+                                    <select
+                                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                                      value={planDraft.hospital_status || ""}
+                                      onChange={(e) => updatePlanField("hospital_status", e.target.value)}
+                                    >
+                                      {HOSPITAL_STATUS_OPTIONS.map((o) => (
+                                        <option key={o.value} value={o.value}>{o.label}</option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                  <div>
+                                    <label className="text-xs font-medium text-gray-700 mb-1 block">Estado vital</label>
+                                    <select
+                                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                                      value={planDraft.vital_status || ""}
+                                      onChange={(e) => updatePlanField("vital_status", e.target.value)}
+                                    >
+                                      {VITAL_STATUS_OPTIONS.map((o) => (
+                                        <option key={o.value} value={o.value}>{o.label}</option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                  <div className="flex items-center">
+                                    <label className="flex items-center gap-2 text-sm text-gray-800 font-medium">
+                                      <input
+                                        type="checkbox"
+                                        checked={!!planDraft.is_bedridden}
+                                        onChange={(e) => updatePlanField("is_bedridden", e.target.checked)}
+                                      />
+                                      Paciente acamado
+                                    </label>
+                                  </div>
+                                  <div>
+                                    <label className="text-xs font-medium text-gray-700 mb-1 block">Data/Hora de alta</label>
+                                    <input
+                                      type="datetime-local"
+                                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                                      value={planDraft.discharged_at || ""}
+                                      onChange={(e) => updatePlanField("discharged_at", e.target.value)}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="text-xs font-medium text-gray-700 mb-1 block">Unidade de internamento</label>
+                                    <input
+                                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                                      value={planDraft.inpatient_unit || ""}
+                                      onChange={(e) => updatePlanField("inpatient_unit", e.target.value)}
+                                      placeholder="Ex.: Pediatria A"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="text-xs font-medium text-gray-700 mb-1 block">Leito</label>
+                                    <input
+                                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                                      value={planDraft.inpatient_bed || ""}
+                                      onChange={(e) => updatePlanField("inpatient_bed", e.target.value)}
+                                      placeholder="Ex.: Leito 12"
+                                    />
+                                  </div>
                                 </div>
-                                <div>
-                                  <label className="text-xs font-medium text-gray-700 mb-1 block">Orienta√ß√µes</label>
-                                  <input
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg text-base"
-                                    value={planDraft.follow_up_instructions}
-                                    onChange={(e) => updatePlanField("follow_up_instructions", e.target.value)}
-                                  />
-                                </div>
-                                <div>
-                                  <label className="text-xs font-medium text-gray-700 mb-1 block">Retornar se</label>
-                                  <input
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg text-base"
-                                    value={planDraft.follow_up_return_if}
-                                    onChange={(e) => updatePlanField("follow_up_return_if", e.target.value)}
-                                  />
-                                </div>
+                                {String(planDraft.vital_status || "").toUpperCase() === "DECEASED" && (
+                                  <div className="mt-3">
+                                    <label className="text-xs font-medium text-red-700 mb-1 block">Nota de Ûbito</label>
+                                    <textarea
+                                      className="w-full px-3 py-2 border border-red-200 rounded-lg text-sm min-h-[80px]"
+                                      value={planDraft.death_note || ""}
+                                      onChange={(e) => updatePlanField("death_note", e.target.value)}
+                                      placeholder="Detalhes clÌnicos relevantes sobre o Ûbito"
+                                    />
+                                  </div>
+                                )}
+                              </div>
+
+                              <div>
+                                <label className="text-xs font-medium text-gray-700 mb-1 block">OrientaÁıes</label>
+                                <input
+                                  className="w-full px-4 py-3 border border-gray-300 rounded-lg text-base"
+                                  value={planDraft.follow_up_instructions}
+                                  onChange={(e) => updatePlanField("follow_up_instructions", e.target.value)}
+                                />
                               </div>
 
                               <div className="p-3 bg-amber-50 border border-amber-200 rounded">
@@ -1547,7 +1758,7 @@ export default function Doctor() {
                                     checked={planDraft.no_charge_chronic}
                                     onChange={(e) => updatePlanField("no_charge_chronic", e.target.checked)}
                                   />
-                                  Doen√ßa cr√¥nica (n√£o cobrar atendimento)
+                                  DoenÁa crÙnica (n„o cobrar atendimento)
                                 </label>
                                 <input
                                   className="w-full mt-2 px-4 py-3 border border-amber-300 bg-white rounded-lg text-base"
@@ -1564,7 +1775,7 @@ export default function Doctor() {
                                     checked={!!planDraft.lab_requested}
                                     onChange={(e) => updatePlanField("lab_requested", e.target.checked)}
                                   />
-                                  Foi necess√°rio pedir exame laboratorial
+                                  Foi necess·rio pedir exame laboratorial
                                 </label>
                                 {!!planDraft.lab_requested && (
                                   <div className="grid grid-cols-2 gap-3">
@@ -1603,14 +1814,18 @@ export default function Doctor() {
                             disabled={!canStart}
                             className="py-2.5 bg-green-600 text-white text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-40 rounded-md"
                             title={
-                              !triage
+                              !selectedVisit?.id
+                                ? "Selecione um paciente"
+                                : startingConsultation
+                                ? "Iniciando consulta..."
+                                : selectedVisit?.status !== "WAITING_DOCTOR"
+                                ? "A visita precisa estar em 'Aguardando MÈdico'"
+                                : !hasTriageForConsult
                                 ? "Precisa de triagem antes de iniciar consulta"
-                                : selectedVisit.status !== "WAITING_DOCTOR"
-                                ? "O paciente precisa estar em 'Aguardando M√©dico'"
                                 : ""
                             }
                           >
-                            Iniciar Consulta
+                            {startingConsultation ? "Iniciando..." : "Iniciar Consulta"}
                           </button>
                           <button
                             onClick={finishConsultation}
@@ -1630,7 +1845,7 @@ export default function Doctor() {
                         </div>
 
                         <p className="text-xs text-gray-400 text-center pt-1">
-                          A IA apenas sugere. O m√©dico valida ou ignora. A triagem √© feita pelo enfermeiro.
+                          A IA apenas sugere. O mÈdico valida ou ignora. A triagem È feita pelo enfermeiro.
                         </p>
                       </div>
                     )}
@@ -1685,9 +1900,9 @@ export default function Doctor() {
           <div className="w-full max-w-3xl bg-white rounded-lg border border-gray-200 shadow-xl max-h-[85vh] overflow-y-auto">
             <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-semibold text-gray-900">Hist√≥rico do Paciente</h3>
+                <h3 className="text-sm font-semibold text-gray-900">HistÛrico do Paciente</h3>
                 <p className="text-xs text-gray-500 mt-1">
-                  {historyModal.patient?.full_name || "-"} {historyModal.patient?.clinical_code ? `¬∑ ${historyModal.patient.clinical_code}` : ""}
+                  {historyModal.patient?.full_name || "-"} {historyModal.patient?.clinical_code ? `∑ ${historyModal.patient.clinical_code}` : ""}
                 </p>
               </div>
               <button
@@ -1700,21 +1915,21 @@ export default function Doctor() {
             </div>
             <div className="p-5">
               {historyModal.loading ? (
-                <p className="text-sm text-gray-500">Carregando hist√≥rico...</p>
+                <p className="text-sm text-gray-500">Carregando histÛrico...</p>
               ) : historyModal.visits.length === 0 ? (
-                <p className="text-sm text-gray-500">Sem hist√≥rico para este paciente.</p>
+                <p className="text-sm text-gray-500">Sem histÛrico para este paciente.</p>
               ) : (
                 <div className="space-y-3">
                   {historyModal.visits.map((v) => (
                     <div key={v.visit_id} className="border border-gray-200 rounded-lg p-3 bg-gray-50">
                       <div className="text-xs text-gray-500">
-                        Visita #{v.visit_id} ¬∑ {v.arrival_time ? new Date(v.arrival_time).toLocaleString() : "-"}
+                        Visita #{v.visit_id} ∑ {v.arrival_time ? new Date(v.arrival_time).toLocaleString() : "-"}
                       </div>
                       <div className="text-sm font-semibold text-gray-900 mt-1">
                         {v.chief_complaint || "Sem queixa principal"}
                       </div>
                       <div className="text-sm text-gray-800 mt-1">
-                        Diagn√≥stico: {v.likely_diagnosis || "N√£o registrado"}
+                        DiagnÛstico: {v.likely_diagnosis || "N„o registrado"}
                       </div>
                       {v.prescription_text && (
                         <div className="text-xs text-gray-700 mt-1 whitespace-pre-wrap">{v.prescription_text}</div>
@@ -1732,7 +1947,7 @@ export default function Doctor() {
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4" style={{ zIndex: 200 }}>
           <div className="w-full max-w-2xl bg-white rounded-lg border border-gray-200 shadow-xl max-h-[85vh] overflow-y-auto">
             <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-gray-900">Sugest√£o da IA</h3>
+              <h3 className="text-sm font-semibold text-gray-900">Sugest„o da IA</h3>
               <button
                 type="button"
                 onClick={() => setAiSuggestionOpen(false)}
@@ -1753,16 +1968,16 @@ export default function Doctor() {
               ) : aiResult ? (
                 <div className="space-y-4">
                   <p className="text-xs text-gray-500">
-                    {aiResult.disclaimer || "Sugest√£o gerada por IA. Validar por protocolo local."}
+                    {aiResult.disclaimer || "Sugest„o gerada por IA. Validar por protocolo local."}
                   </p>
                   {aiResult.red_flag && (
                     <div className="p-2 bg-red-50 border border-red-200 rounded">
-                      <p className="text-sm font-semibold text-red-700">Alerta: poss√≠vel risco elevado - seguir protocolo do servi√ßo.</p>
+                      <p className="text-sm font-semibold text-red-700">Alerta: possÌvel risco elevado - seguir protocolo do serviÁo.</p>
                     </div>
                   )}
                   {aiResult.likely_diagnosis && (
                     <div>
-                      <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">Diagn√≥stico prov√°vel</div>
+                      <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">DiagnÛstico prov·vel</div>
                       <p className="text-sm text-gray-900">{aiResult.likely_diagnosis}</p>
                     </div>
                   )}
@@ -1785,11 +2000,11 @@ export default function Doctor() {
                     </div>
                   )}
                   <div className="pt-2 border-t border-gray-100 text-xs text-gray-600">
-                    Revise esta sugest√£o e preencha o formul√°rio manualmente de acordo com a sua avalia√ß√£o cl√≠nica.
+                    Revise esta sugest„o e preencha o formul·rio manualmente de acordo com a sua avaliaÁ„o clÌnica.
                   </div>
                 </div>
               ) : (
-                <p className="text-sm text-gray-500">Nenhuma sugest√£o dispon√≠vel.</p>
+                <p className="text-sm text-gray-500">Nenhuma sugest„o disponÌvel.</p>
               )}
             </div>
           </div>

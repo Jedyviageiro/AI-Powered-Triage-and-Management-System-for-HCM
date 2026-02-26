@@ -58,6 +58,7 @@ export const api = {
 
   // ================= QUEUE =================
   getQueue: () => request("/queue"),
+  getQueueSummary: () => request("/queue/summary"),
 
   // ================= USERS =================
   listUsers: () => request("/users"),
@@ -97,6 +98,9 @@ export const api = {
 
   createPatient: (payload) =>
     request("/patients", { method: "POST", body: payload }),
+
+  updatePatient: (id, payload) =>
+    request(`/patients/${id}`, { method: "PATCH", body: payload }),
 
   // ================= VISITS =================
   createVisit: (patient_id) =>
@@ -150,6 +154,7 @@ export const api = {
 
   // ================= TRIAGE =================
   createTriage: (payload) => request("/triages", { method: "POST", body: payload }),
+  updateTriage: (triageId, payload) => request(`/triages/${triageId}`, { method: "PATCH", body: payload }),
 
   getTriageByVisitId: (visitId) => request(`/triages/visit/${visitId}`),
 
@@ -180,6 +185,25 @@ export const api = {
       body: { is_available: !!is_available },
     }),
 
+  // ================= NURSE SHIFT =================
+  getNurseShiftStatus: () => request("/nurse-shift/status"),
+  startNurseShift: () => request("/nurse-shift/start", { method: "PATCH" }),
+  extendNurseShift: (minutes = 60) =>
+    request("/nurse-shift/extend", { method: "PATCH", body: { minutes } }),
+  stopNurseShift: () => request("/nurse-shift/stop", { method: "PATCH" }),
+  startNurseBreak: () => request("/nurse-shift/break", { method: "PATCH" }),
+  resumeNurseShift: () => request("/nurse-shift/resume", { method: "PATCH" }),
+
+  // ================= NOTIFICATIONS =================
+  listNotifications: (limit = 100) => request(`/notifications?limit=${encodeURIComponent(limit)}`),
+  getLatestNotification: () => request("/notifications/latest"),
+  markNotificationRead: (id) => request(`/notifications/${id}/read`, { method: "PATCH" }),
+  markAllNotificationsRead: () => request("/notifications/read-all", { method: "PATCH" }),
+
+  // ================= PREFERENCES =================
+  getMyPreferences: () => request("/preferences/me"),
+  updateMyPreferences: (payload) => request("/preferences/me", { method: "PATCH", body: payload }),
+
   // aliases usados na UI
   listDoctors: () => api.listDoctorsAvailability(),
   assignDoctor: (visitId, doctorId) => api.assignDoctorToVisit(visitId, doctorId),
@@ -196,7 +220,15 @@ editVisitPriority: (visitId, payload) =>
     body: payload, // { priority, max_wait_minutes }
   }),
 
+updatePastVisitSummary: (visitId, payload) =>
+  request(`/visits/${visitId}/past-edit`, {
+    method: "PATCH",
+    body: payload,
+  }),
+
 };
+
+
 
 
 

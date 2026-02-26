@@ -19,18 +19,33 @@ const listDoctorsWithAvailability = async () => {
         SELECT 1
         FROM visits v
         WHERE v.doctor_id = u.id
-          AND v.status = 'IN_CONSULTATION'
-          AND v.consultation_ended_at IS NULL
-          AND COALESCE(v.consultation_started_at, v.updated_at, v.arrival_time) >= NOW() - INTERVAL '24 hours'
+          AND (
+            v.status = 'WAITING_DOCTOR'
+            OR (
+              v.status = 'IN_CONSULTATION'
+              AND v.consultation_ended_at IS NULL
+            )
+          )
       ) AS is_busy,
 
       (
         SELECT v.id
         FROM visits v
         WHERE v.doctor_id = u.id
-          AND v.status = 'IN_CONSULTATION'
-          AND v.consultation_ended_at IS NULL
-        ORDER BY COALESCE(v.consultation_started_at, v.updated_at, v.arrival_time) DESC
+          AND (
+            v.status = 'WAITING_DOCTOR'
+            OR (
+              v.status = 'IN_CONSULTATION'
+              AND v.consultation_ended_at IS NULL
+            )
+          )
+        ORDER BY
+          CASE
+            WHEN v.status = 'IN_CONSULTATION' THEN 1
+            WHEN v.status = 'WAITING_DOCTOR' THEN 2
+            ELSE 3
+          END,
+          COALESCE(v.consultation_started_at, v.updated_at, v.arrival_time) DESC
         LIMIT 1
       ) AS current_visit_id
 

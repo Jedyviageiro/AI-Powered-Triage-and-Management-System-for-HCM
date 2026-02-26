@@ -26,6 +26,9 @@ app.use("/triages", require("./routes/triageRoutes"));
 app.use("/queue", require("./routes/queueRoutes"));
 app.use("/ai", aiRoutes);
 app.use("/doctors", require("./routes/doctorRoutes"));
+app.use("/nurse-shift", require("./routes/nurseShiftRoutes"));
+app.use("/notifications", require("./routes/notificationRoutes"));
+app.use("/preferences", require("./routes/preferenceRoutes"));
 
 app.get("/health", (req, res) => res.json({ ok: true }));
 

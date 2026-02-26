@@ -101,7 +101,6 @@ export default function AgendaView({
 }) {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [calView, setCalView] = useState("week");
-  const [rangeFilter, setRangeFilter] = useState("ALL");
   const [showModal, setShowModal] = useState(false);
   const [clickedSlot, setClickedSlot] = useState(null);
   const [scheduleDraft, setScheduleDraft] = useState({
@@ -119,20 +118,7 @@ export default function AgendaView({
     [assignedAppts, returnAppts]
   );
 
-  const filteredAppointments = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return appointments.filter((a) => {
-      if (rangeFilter === "ALL") return true;
-      const ad = new Date(a.date);
-      ad.setHours(0, 0, 0, 0);
-      const diffDays = Math.floor((ad.getTime() - today.getTime()) / 86400000);
-      if (rangeFilter === "TODAY") return diffDays === 0;
-      if (rangeFilter === "NEXT_7") return diffDays >= 0 && diffDays <= 7;
-      if (rangeFilter === "NEXT_30") return diffDays >= 0 && diffDays <= 30;
-      return true;
-    });
-  }, [appointments, rangeFilter]);
+  const filteredAppointments = useMemo(() => appointments, [appointments]);
 
   const schedulableVisits = useMemo(
     () =>
@@ -312,23 +298,6 @@ export default function AgendaView({
               {["day", "week", "month"].map((v) => (
                 <button key={v} className={`view-btn ${calView === v ? "active" : "inactive"}`} onClick={() => setCalView(v)}>
                   {v === "day" ? "Dia" : v === "week" ? "Semana" : "Mes"}
-                </button>
-              ))}
-            </div>
-            <div style={{ display: "flex", gap: 4, marginLeft: 8, background: "#f3f4f6", padding: 3, borderRadius: 10 }}>
-              {[
-                { key: "TODAY", label: "Hoje" },
-                { key: "NEXT_7", label: "7 dias" },
-                { key: "NEXT_30", label: "30 dias" },
-                { key: "ALL", label: "Todos" },
-              ].map((f) => (
-                <button
-                  key={f.key}
-                  className={`view-btn ${rangeFilter === f.key ? "active" : "inactive"}`}
-                  onClick={() => setRangeFilter(f.key)}
-                  title={`Filtrar: ${f.label}`}
-                >
-                  {f.label}
                 </button>
               ))}
             </div>

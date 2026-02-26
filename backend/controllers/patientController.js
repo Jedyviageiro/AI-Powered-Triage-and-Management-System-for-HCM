@@ -1,4 +1,4 @@
-const patientModel = require("../models/patientModel");
+﻿const patientModel = require("../models/patientModel");
 
 // ========================
 // CREATE PATIENT
@@ -37,7 +37,7 @@ const createPatient = async (req, res) => {
     return res.status(201).json(patient);
   } catch (err) {
     if (err.code === "23505") {
-      return res.status(400).json({ error: "clinical_code já existe" });
+      return res.status(400).json({ error: "clinical_code jÃ¡ existe" });
     }
     return res.status(500).json({ error: "Erro ao criar paciente" });
   }
@@ -51,7 +51,7 @@ const getPatientById = async (req, res) => {
     const { id } = req.params;
 
     const patient = await patientModel.getPatientById(id);
-    if (!patient) return res.status(404).json({ error: "Paciente não encontrado" });
+    if (!patient) return res.status(404).json({ error: "Paciente nÃ£o encontrado" });
 
     return res.json(patient);
   } catch (err) {
@@ -67,7 +67,7 @@ const getPatientByCode = async (req, res) => {
     const { code } = req.params;
 
     const patient = await patientModel.getPatientByCode(code);
-    if (!patient) return res.status(404).json({ error: "Paciente não encontrado" });
+    if (!patient) return res.status(404).json({ error: "Paciente nÃ£o encontrado" });
 
     return res.json(patient);
   } catch (err) {
@@ -82,8 +82,8 @@ const searchPatients = async (req, res) => {
   try {
     const { name } = req.query;
 
-    if (!name || name.trim().length < 2) {
-      return res.status(400).json({ error: "Informe pelo menos 2 letras no parâmetro name" });
+    if (!name || name.trim().length < 1) {
+      return res.status(400).json({ error: "Informe pelo menos 1 letra no parâmetro name" });
     }
 
     const patients = await patientModel.searchPatients(name.trim());
@@ -101,7 +101,7 @@ const updatePatient = async (req, res) => {
     const { id } = req.params;
 
     const updated = await patientModel.updatePatient(id, req.body);
-    if (!updated) return res.status(404).json({ error: "Paciente não encontrado" });
+    if (!updated) return res.status(404).json({ error: "Paciente nÃ£o encontrado" });
 
     return res.json(updated);
   } catch (err) {
@@ -117,7 +117,7 @@ const deletePatient = async (req, res) => {
     const { id } = req.params;
 
     const deleted = await patientModel.deletePatient(id);
-    if (!deleted) return res.status(404).json({ error: "Paciente não encontrado" });
+    if (!deleted) return res.status(404).json({ error: "Paciente nÃ£o encontrado" });
 
     return res.json({ message: "Paciente removido com sucesso" });
   } catch (err) {
@@ -144,3 +144,4 @@ module.exports = {
   deletePatient,
   getPatientHistory,
 };
+

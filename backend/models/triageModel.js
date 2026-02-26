@@ -100,8 +100,7 @@ const updateTriage = async (id, {
              oxygen_saturation = $4,
              weight = $5,
              chief_complaint = $6,
-             clinical_notes = $7,
-             updated_at = NOW()
+             clinical_notes = $7
          WHERE id = $8
          RETURNING *`,
         [

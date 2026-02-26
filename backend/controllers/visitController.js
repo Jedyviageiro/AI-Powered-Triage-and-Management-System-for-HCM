@@ -312,6 +312,13 @@ const saveMedicalPlan = async (req, res) => {
       lab_result_text,
       lab_result_status,
       lab_result_ready_at,
+      hospital_status,
+      vital_status,
+      is_bedridden,
+      inpatient_unit,
+      inpatient_bed,
+      discharged_at,
+      death_note,
       doctor_questionnaire_json,
       accepted,
     } = req.body || {};
@@ -320,6 +327,18 @@ const saveMedicalPlan = async (req, res) => {
     const disposition = disposition_plan || "";
     if (!allowedDisposition.includes(disposition)) {
       return res.status(400).json({ error: "disposition_plan inválido" });
+    }
+
+    const allowedHospital = ["", "DISCHARGED", "IN_HOSPITAL", "BED_REST", "TRANSFERRED", "DECEASED"];
+    const hospital = String(hospital_status || "").toUpperCase();
+    if (!allowedHospital.includes(hospital)) {
+      return res.status(400).json({ error: "hospital_status inválido" });
+    }
+
+    const allowedVital = ["", "ALIVE", "DECEASED", "UNKNOWN"];
+    const vital = String(vital_status || "").toUpperCase();
+    if (!allowedVital.includes(vital)) {
+      return res.status(400).json({ error: "vital_status inválido" });
     }
 
     const updated = await visitModel.saveMedicalPlan(
@@ -344,6 +363,13 @@ const saveMedicalPlan = async (req, res) => {
         lab_result_text,
         lab_result_status,
         lab_result_ready_at,
+        hospital_status: hospital || null,
+        vital_status: vital || null,
+        is_bedridden: !!is_bedridden,
+        inpatient_unit,
+        inpatient_bed,
+        discharged_at,
+        death_note,
         doctor_questionnaire_json,
         accepted: !!accepted,
       },
@@ -406,6 +432,33 @@ const scheduleVisitReturn = async (req, res) => {
   }
 };
 
+const updatePastVisitSummary = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { likely_diagnosis, clinical_reasoning, prescription_text, doctor_id, hospital_status } = req.body || {};
+    const allowedHospital = ["", "DISCHARGED", "IN_HOSPITAL", "BED_REST", "TRANSFERRED", "DECEASED"];
+    const hospital = String(hospital_status || "").toUpperCase();
+    if (!allowedHospital.includes(hospital)) {
+      return res.status(400).json({ error: "hospital_status inválido" });
+    }
+    const updated = await visitModel.updatePastVisitSummary(id, {
+      likely_diagnosis,
+      clinical_reasoning,
+      prescription_text,
+      doctor_id: doctor_id ? Number(doctor_id) : null,
+      hospital_status: hospital || null,
+    });
+
+    if (!updated) {
+      return res.status(404).json({ error: "Visita antiga não encontrada" });
+    }
+    return res.json(updated);
+  } catch (err) {
+    console.error("UPDATE PAST VISIT SUMMARY ERROR:", err);
+    return res.status(500).json({ error: "Erro ao atualizar visita antiga" });
+  }
+};
+
 
 module.exports = {
   createVisit,
@@ -422,6 +475,7 @@ module.exports = {
   editVisitPriority,
   saveMedicalPlan,
   scheduleVisitReturn,
+  updatePastVisitSummary,
 };
 
 

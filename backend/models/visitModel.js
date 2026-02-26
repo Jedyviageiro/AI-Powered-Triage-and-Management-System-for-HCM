@@ -129,11 +129,17 @@ const listPastVisits = async (limit = 200) => {
        v.likely_diagnosis,
        v.clinical_reasoning,
        v.prescription_text,
-       v.disposition_plan,
-       v.disposition_reason,
-       v.follow_up_when,
-       v.follow_up_instructions,
-       v.follow_up_return_if,
+        v.disposition_plan,
+        v.disposition_reason,
+        v.hospital_status,
+        v.vital_status,
+        v.is_bedridden,
+        v.inpatient_unit,
+        v.inpatient_bed,
+        v.discharged_at,
+        v.follow_up_when,
+        v.follow_up_instructions,
+        v.follow_up_return_if,
        v.no_charge_chronic,
        v.no_charge_reason,
        v.return_visit_date,
@@ -146,10 +152,13 @@ const listPastVisits = async (limit = 200) => {
        v.lab_result_status,
        v.lab_result_ready_at,
        v.doctor_questionnaire_json,
-       p.full_name,
-       p.clinical_code,
-       t.chief_complaint AS triage_chief_complaint,
-       t.clinical_notes AS triage_clinical_notes,
+        p.full_name,
+        p.clinical_code,
+        p.is_deceased,
+        p.deceased_at,
+        p.death_note,
+        t.chief_complaint AS triage_chief_complaint,
+        t.clinical_notes AS triage_clinical_notes,
        d.full_name AS doctor_full_name,
        d.username AS doctor_username,
        COALESCE(d.specialization, '') AS doctor_specialization
@@ -396,6 +405,12 @@ const saveMedicalPlan = async (
     nullIfBlank(payload.lab_result_text),
     nullIfBlank(payload.lab_result_status),
     nullIfBlank(payload.lab_result_ready_at),
+    nullIfBlank(payload.hospital_status),
+    nullIfBlank(payload.vital_status),
+    !!payload.is_bedridden,
+    nullIfBlank(payload.inpatient_unit),
+    nullIfBlank(payload.inpatient_bed),
+    nullIfBlank(payload.discharged_at),
     payload.doctor_questionnaire_json ?? null,
     payload.accepted ? new Date() : null,
     payload.accepted ? actorId : null,
@@ -404,6 +419,7 @@ const saveMedicalPlan = async (
   ];
 
   if (isAdmin) {
+    const adminParams = params.slice(0, 29);
     const result = await pool.query(
       `UPDATE visits
         SET likely_diagnosis = $1,
@@ -422,17 +438,23 @@ const saveMedicalPlan = async (
            lab_exam_type = $14,
            lab_tests = $15,
            lab_sample_collected_at = $16,
-           lab_result_text = $17,
-           lab_result_status = $18,
-           lab_result_ready_at = $19,
-            doctor_questionnaire_json = $20,
-            plan_accepted_at = $21,
-            plan_accepted_by = $22,
-            updated_at = NOW()
-       WHERE id = $23
+            lab_result_text = $17,
+            lab_result_status = $18,
+            lab_result_ready_at = $19,
+            hospital_status = $20,
+            vital_status = $21,
+            is_bedridden = $22,
+            inpatient_unit = $23,
+            inpatient_bed = $24,
+            discharged_at = $25,
+             doctor_questionnaire_json = $26,
+             plan_accepted_at = $27,
+             plan_accepted_by = $28,
+             updated_at = NOW()
+       WHERE id = $29
          AND status NOT IN ('FINISHED','CANCELLED')
        RETURNING *`,
-      params
+      adminParams
     );
     return result.rows[0];
   }
@@ -455,20 +477,52 @@ const saveMedicalPlan = async (
          lab_exam_type = $14,
          lab_tests = $15,
          lab_sample_collected_at = $16,
-         lab_result_text = $17,
-         lab_result_status = $18,
+          lab_result_text = $17,
+          lab_result_status = $18,
           lab_result_ready_at = $19,
-          doctor_questionnaire_json = $20,
-          plan_accepted_at = $21,
-          plan_accepted_by = $22,
-          updated_at = NOW()
-      WHERE id = $23
+          hospital_status = $20,
+          vital_status = $21,
+          is_bedridden = $22,
+          inpatient_unit = $23,
+          inpatient_bed = $24,
+          discharged_at = $25,
+           doctor_questionnaire_json = $26,
+           plan_accepted_at = $27,
+           plan_accepted_by = $28,
+           updated_at = NOW()
+      WHERE id = $29
         AND status NOT IN ('FINISHED','CANCELLED')
-        AND doctor_id = $24
+        AND doctor_id = $30
       RETURNING *`,
     params
   );
-  return result.rows[0];
+  const updated = result.rows[0];
+  if (!updated) return null;
+
+  const shouldMarkDeceased = String(payload?.vital_status || "").toUpperCase() === "DECEASED";
+  const shouldMarkAlive = String(payload?.vital_status || "").toUpperCase() === "ALIVE";
+  if (shouldMarkDeceased) {
+    await pool.query(
+      `UPDATE patients
+       SET is_deceased = TRUE,
+           deceased_at = COALESCE(deceased_at, NOW()),
+           death_note = COALESCE($2, death_note),
+           updated_at = NOW()
+       WHERE id = $1`,
+      [updated.patient_id, nullIfBlank(payload.death_note)]
+    );
+  } else if (shouldMarkAlive) {
+    await pool.query(
+      `UPDATE patients
+       SET is_deceased = FALSE,
+           deceased_at = NULL,
+           updated_at = NOW()
+       WHERE id = $1`,
+      [updated.patient_id]
+    );
+  }
+
+  return updated;
 };
 
 const scheduleReturn = async (
@@ -506,6 +560,39 @@ const scheduleReturn = async (
   return result.rows[0];
 };
 
+const updatePastVisitSummary = async (
+  id,
+  { likely_diagnosis = null, clinical_reasoning = null, prescription_text = null, doctor_id = null, hospital_status = null } = {}
+) => {
+  const nullIfBlank = (v) => {
+    if (v == null) return null;
+    if (typeof v === "string" && v.trim() === "") return null;
+    return v;
+  };
+
+  const result = await pool.query(
+    `UPDATE visits
+     SET likely_diagnosis = $1,
+         clinical_reasoning = $2,
+         prescription_text = $3,
+         doctor_id = $4,
+         hospital_status = $5,
+         updated_at = NOW()
+     WHERE id = $6
+       AND status IN ('FINISHED','CANCELLED')
+     RETURNING *`,
+    [
+      nullIfBlank(likely_diagnosis),
+      nullIfBlank(clinical_reasoning),
+      nullIfBlank(prescription_text),
+      doctor_id || null,
+      nullIfBlank(hospital_status),
+      id,
+    ]
+  );
+  return result.rows[0];
+};
+
 
 module.exports = {
   findOpenVisitByPatientId,
@@ -524,4 +611,5 @@ module.exports = {
   editPriority,
   saveMedicalPlan,
   scheduleReturn,
+  updatePastVisitSummary,
 };

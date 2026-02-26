@@ -25,6 +25,7 @@ const requireAuth = async (req, res, next) => {
     req.user = {
   id: user.id,
   username: user.username,
+  full_name: user.full_name,
   role: String(user.role || "").trim().toUpperCase(),
 };
 

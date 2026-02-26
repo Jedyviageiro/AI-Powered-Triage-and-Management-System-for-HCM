@@ -56,6 +56,7 @@ router.patch("/:id/cancel", requireRole("NURSE", "ADMIN"), visitController.cance
 
 // editar prioridade depois (NURSE e ADMIN)
 router.patch("/:id/edit-priority", requireRole("NURSE", "ADMIN"), visitController.editVisitPriority);
+router.patch("/:id/past-edit", requireRole("NURSE", "ADMIN"), visitController.updatePastVisitSummary);
 
 // salvar plano médico (DOCTOR e ADMIN)
 router.patch(
