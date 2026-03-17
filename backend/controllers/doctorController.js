@@ -53,9 +53,7 @@ const setAvailability = async (req, res) => {
     const { is_available } = req.body;
 
     if (typeof is_available !== "boolean") {
-      return res
-        .status(400)
-        .json({ error: "is_available deve ser boolean (true/false)" });
+      return res.status(400).json({ error: "is_available deve ser boolean (true/false)" });
     }
 
     const updated = await doctorModel.setAvailability(doctorId, is_available);

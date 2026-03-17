@@ -57,7 +57,7 @@ export const api = {
     }),
 
   // ================= QUEUE =================
-  getQueue: () => request("/queue"),
+  getQueue: (scope = "") => request(scope ? `/queue?scope=${encodeURIComponent(scope)}` : "/queue"),
   getQueueSummary: () => request("/queue/summary"),
 
   // ================= USERS =================
@@ -75,6 +75,12 @@ export const api = {
       body: payload,
     }),
 
+  updateUserShift: (id, shift_type) =>
+    request(`/users/${id}/shift`, {
+      method: "PATCH",
+      body: { shift_type },
+    }),
+
   resetUserPassword: (id, newPassword) =>
     request(`/users/${id}/password`, {
       method: "PATCH",
@@ -87,28 +93,29 @@ export const api = {
     }),
 
   // ================= PATIENTS =================
-  searchPatients: (name) =>
-    request(`/patients/search?name=${encodeURIComponent(name)}`),
+  searchPatients: (name) => request(`/patients/search?name=${encodeURIComponent(name)}`),
 
-  getPatientByCode: (code) =>
-    request(`/patients/code/${encodeURIComponent(code)}`),
+  getPatientByCode: (code) => request(`/patients/code/${encodeURIComponent(code)}`),
 
   getPatientById: (id) => request(`/patients/${id}`),
   getPatientHistory: (id) => request(`/patients/${id}/history`),
 
-  createPatient: (payload) =>
-    request("/patients", { method: "POST", body: payload }),
+  createPatient: (payload) => request("/patients", { method: "POST", body: payload }),
 
-  updatePatient: (id, payload) =>
-    request(`/patients/${id}`, { method: "PATCH", body: payload }),
+  updatePatient: (id, payload) => request(`/patients/${id}`, { method: "PATCH", body: payload }),
+
+  deletePatient: (id) => request(`/patients/${id}`, { method: "DELETE" }),
 
   // ================= VISITS =================
-  createVisit: (patient_id) =>
-    request("/visits", { method: "POST", body: { patient_id } }),
+  createVisit: (patient_id, extra = {}) =>
+    request("/visits", { method: "POST", body: { patient_id, ...(extra || {}) } }),
 
   getVisitById: (id) => request(`/visits/${id}`),
   listPastVisits: (limit = 200) => request(`/visits/history?limit=${encodeURIComponent(limit)}`),
   getMyAgenda: () => request("/visits/my-agenda"),
+  listLabPending: () => request("/visits/lab/pending"),
+  listLabReady: (limit = 200) => request(`/visits/lab/ready?limit=${encodeURIComponent(limit)}`),
+  listLabHistoryToday: () => request("/visits/lab/history-today"),
 
   // prioridade definida pelo enfermeiro
   setVisitPriority: (visitId, payload) =>
@@ -138,6 +145,21 @@ export const api = {
       method: "PATCH",
       body: payload,
     }),
+  updateLabWorkflow: (visitId, payload) =>
+    request(`/visits/${visitId}/lab-workflow`, {
+      method: "PATCH",
+      body: payload,
+    }),
+  saveLabResult: (visitId, payload) =>
+    request(`/visits/${visitId}/lab-result`, {
+      method: "PATCH",
+      body: payload,
+    }),
+  notifyPatientLabReady: (visitId, payload = {}) =>
+    request(`/visits/${visitId}/lab-ready-notify`, {
+      method: "PATCH",
+      body: payload,
+    }),
 
   scheduleVisitReturn: (visitId, payload) =>
     request(`/visits/${visitId}/return-schedule`, {
@@ -154,7 +176,8 @@ export const api = {
 
   // ================= TRIAGE =================
   createTriage: (payload) => request("/triages", { method: "POST", body: payload }),
-  updateTriage: (triageId, payload) => request(`/triages/${triageId}`, { method: "PATCH", body: payload }),
+  updateTriage: (triageId, payload) =>
+    request(`/triages/${triageId}`, { method: "PATCH", body: payload }),
 
   getTriageByVisitId: (visitId) => request(`/triages/visit/${visitId}`),
 
@@ -191,8 +214,13 @@ export const api = {
   extendNurseShift: (minutes = 60) =>
     request("/nurse-shift/extend", { method: "PATCH", body: { minutes } }),
   stopNurseShift: () => request("/nurse-shift/stop", { method: "PATCH" }),
-  startNurseBreak: () => request("/nurse-shift/break", { method: "PATCH" }),
-  resumeNurseShift: () => request("/nurse-shift/resume", { method: "PATCH" }),
+
+  // ================= DOCTOR SHIFT =================
+  getDoctorShiftStatus: () => request("/doctor-shift/status"),
+  startDoctorShift: () => request("/doctor-shift/start", { method: "PATCH" }),
+  extendDoctorShift: (minutes = 60) =>
+    request("/doctor-shift/extend", { method: "PATCH", body: { minutes } }),
+  stopDoctorShift: () => request("/doctor-shift/stop", { method: "PATCH" }),
 
   // ================= NOTIFICATIONS =================
   listNotifications: (limit = 100) => request(`/notifications?limit=${encodeURIComponent(limit)}`),
@@ -209,26 +237,37 @@ export const api = {
   assignDoctor: (visitId, doctorId) => api.assignDoctorToVisit(visitId, doctorId),
 
   cancelVisit: (visitId, reason) =>
-  request(`/visits/${visitId}/cancel`, {
-    method: "PATCH",
-    body: { reason },
-  }),
+    request(`/visits/${visitId}/cancel`, {
+      method: "PATCH",
+      body: { reason },
+    }),
 
-editVisitPriority: (visitId, payload) =>
-  request(`/visits/${visitId}/edit-priority`, {
-    method: "PATCH",
-    body: payload, // { priority, max_wait_minutes }
-  }),
+  editVisitPriority: (visitId, payload) =>
+    request(`/visits/${visitId}/edit-priority`, {
+      method: "PATCH",
+      body: payload, // { priority, max_wait_minutes }
+    }),
 
-updatePastVisitSummary: (visitId, payload) =>
-  request(`/visits/${visitId}/past-edit`, {
-    method: "PATCH",
-    body: payload,
-  }),
+  removeVisitTriage: (visitId) =>
+    request(`/visits/${visitId}/remove-triage`, {
+      method: "PATCH",
+    }),
 
+  updateVisitDestinationStatus: (visitId, payload) =>
+    request(`/visits/${visitId}/destination-status`, {
+      method: "PATCH",
+      body: payload,
+    }),
+
+  updateVisitAdmissionStatus: (visitId, payload) =>
+    request(`/visits/${visitId}/destination-admission`, {
+      method: "PATCH",
+      body: payload,
+    }),
+
+  updatePastVisitSummary: (visitId, payload) =>
+    request(`/visits/${visitId}/past-edit`, {
+      method: "PATCH",
+      body: payload,
+    }),
 };
-
-
-
-
-

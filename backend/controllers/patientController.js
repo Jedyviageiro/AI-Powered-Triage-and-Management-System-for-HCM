@@ -5,23 +5,9 @@
 // ========================
 const createPatient = async (req, res) => {
   try {
-    const {
-      clinical_code,
-      full_name,
-      sex,
-      birth_date,
-      guardian_name,
-      guardian_phone,
-    } = req.body;
+    const { clinical_code, full_name, sex, birth_date, guardian_name, guardian_phone } = req.body;
 
-    if (
-      !clinical_code ||
-      !full_name ||
-      !sex ||
-      !birth_date ||
-      !guardian_name ||
-      !guardian_phone
-    ) {
+    if (!clinical_code || !full_name || !sex || !birth_date || !guardian_name || !guardian_phone) {
       return res.status(400).json({ error: "Preencha todos os campos" });
     }
 
@@ -144,4 +130,3 @@ module.exports = {
   deletePatient,
   getPatientHistory,
 };
-

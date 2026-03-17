@@ -9,4 +9,3 @@ router.get("/me", preferenceController.getMyPreferences);
 router.patch("/me", preferenceController.updateMyPreferences);
 
 module.exports = router;
-

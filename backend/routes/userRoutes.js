@@ -12,6 +12,7 @@ router.post("/", userController.createUser);
 router.get("/", userController.listUsers);
 router.get("/:id", userController.getUser);
 router.patch("/:id", userController.updateUser);
+router.patch("/:id/shift", userController.updateUserShift);
 router.patch("/:id/password", userController.resetPassword);
 router.delete("/:id", userController.deleteUser);
 

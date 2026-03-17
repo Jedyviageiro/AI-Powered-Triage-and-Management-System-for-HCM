@@ -1,0 +1,12 @@
+{
+  "name": "pedriatic-system",
+  "private": true,
+  "scripts": {
+    "format:frontend": "npm --prefix frontend run format",
+    "format:backend": "npm --prefix backend run format",
+    "format": "npm run format:frontend && npm run format:backend",
+    "format:check:frontend": "npm --prefix frontend run format:check",
+    "format:check:backend": "npm --prefix backend run format:check",
+    "format:check": "npm run format:check:frontend && npm run format:check:backend"
+  }
+}

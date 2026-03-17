@@ -8,7 +8,11 @@ const requireRole = require("../middleware/requireRole");
 router.use(requireAuth);
 
 // visualizar triagem
-router.get("/visit/:visit_id", requireRole("ADMIN", "DOCTOR", "NURSE"), triageController.getTriageByVisitId);
+router.get(
+  "/visit/:visit_id",
+  requireRole("ADMIN", "DOCTOR", "NURSE"),
+  triageController.getTriageByVisitId
+);
 router.get("/:id", requireRole("ADMIN", "DOCTOR", "NURSE"), triageController.getTriageById);
 
 // criar/editar/remover triagem

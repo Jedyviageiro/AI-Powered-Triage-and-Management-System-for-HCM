@@ -24,7 +24,9 @@ const ensureNotificationsTable = async () => {
 
 const listByUserId = async (userId, limit = 100) => {
   await ensureNotificationsTable();
-  const safeLimit = Number.isFinite(Number(limit)) ? Math.max(1, Math.min(500, Math.floor(Number(limit)))) : 100;
+  const safeLimit = Number.isFinite(Number(limit))
+    ? Math.max(1, Math.min(500, Math.floor(Number(limit))))
+    : 100;
   const result = await pool.query(
     `SELECT id, user_id, title, message, level, source, visit_id, created_at, read_at
      FROM notifications
@@ -60,6 +62,29 @@ const countUnreadByUserId = async (userId) => {
   return result.rows[0]?.unread_count || 0;
 };
 
+const createNotification = async ({
+  user_id,
+  title,
+  message,
+  level = "INFO",
+  source = null,
+  visit_id = null,
+}) => {
+  await ensureNotificationsTable();
+  const normalizedLevel = ["INFO", "WARNING", "CRITICAL"].includes(
+    String(level || "").toUpperCase()
+  )
+    ? String(level).toUpperCase()
+    : "INFO";
+  const result = await pool.query(
+    `INSERT INTO notifications (user_id, title, message, level, source, visit_id)
+     VALUES ($1, $2, $3, $4, $5, $6)
+     RETURNING id, user_id, title, message, level, source, visit_id, created_at, read_at`,
+    [user_id, title, message, normalizedLevel, source, visit_id]
+  );
+  return result.rows[0] || null;
+};
+
 const markRead = async (id, userId) => {
   await ensureNotificationsTable();
   const result = await pool.query(
@@ -85,10 +110,10 @@ const markAllRead = async (userId) => {
 };
 
 module.exports = {
+  createNotification,
   listByUserId,
   getLatestByUserId,
   countUnreadByUserId,
   markRead,
   markAllRead,
 };
-

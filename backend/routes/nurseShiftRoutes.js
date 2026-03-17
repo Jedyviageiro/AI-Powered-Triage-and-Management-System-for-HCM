@@ -9,7 +9,5 @@ router.get("/status", nurseShiftController.getShiftStatus);
 router.patch("/start", nurseShiftController.startShift);
 router.patch("/extend", nurseShiftController.extendShift);
 router.patch("/stop", nurseShiftController.stopShift);
-router.patch("/break", nurseShiftController.startBreak);
-router.patch("/resume", nurseShiftController.resumeBreak);
 
 module.exports = router;

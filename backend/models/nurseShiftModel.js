@@ -39,6 +39,9 @@ const getLatestSessionByUserId = async (userId) => {
   await ensureShiftBreakColumns();
   const result = await pool.query(
     `SELECT id, user_id, shift_type, scheduled_start, scheduled_end, clock_in_at, delay_minutes, extended_until,
+            to_char(scheduled_start, 'HH24:MI') AS scheduled_start_hm,
+            to_char(scheduled_end, 'HH24:MI') AS scheduled_end_hm,
+            CASE WHEN extended_until IS NOT NULL THEN to_char(extended_until, 'HH24:MI') ELSE NULL END AS extended_until_hm,
             break_started_at, break_total_minutes
      FROM nurse_shift_sessions
      WHERE user_id = $1

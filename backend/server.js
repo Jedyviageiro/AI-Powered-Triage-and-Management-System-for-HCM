@@ -13,7 +13,6 @@ app.use((req, res, next) => {
   next();
 });
 
-
 app.use(cors());
 app.use(express.json());
 
@@ -27,11 +26,11 @@ app.use("/queue", require("./routes/queueRoutes"));
 app.use("/ai", aiRoutes);
 app.use("/doctors", require("./routes/doctorRoutes"));
 app.use("/nurse-shift", require("./routes/nurseShiftRoutes"));
+app.use("/doctor-shift", require("./routes/doctorShiftRoutes"));
 app.use("/notifications", require("./routes/notificationRoutes"));
 app.use("/preferences", require("./routes/preferenceRoutes"));
 
 app.get("/health", (req, res) => res.json({ ok: true }));
-
 
 app.get("/", (req, res) => res.send("API rodando"));
 

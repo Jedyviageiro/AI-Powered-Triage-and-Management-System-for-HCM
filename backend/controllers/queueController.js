@@ -15,20 +15,21 @@ const minutesSince = (dateValue) => {
 const getQueue = async (req, res) => {
   try {
     const isDoctor = req.user?.role === "DOCTOR";
+    const scope = String(req.query?.scope || "").toLowerCase();
+    const doctorMineOnly = isDoctor && scope !== "department";
     const visits = isDoctor
-      ? await visitModel.listActiveVisitsByDoctor(req.user.id)
+      ? doctorMineOnly
+        ? await visitModel.listActiveVisitsByDoctor(req.user.id)
+        : await visitModel.listActiveVisits()
       : await visitModel.listActiveVisits();
 
     // Enriquecer com "wait_minutes" e "is_overdue"
     const queue = visits.map((v) => {
       const wait_minutes = minutesSince(v.arrival_time);
       const is_overdue =
-        v.max_wait_minutes != null &&
-        wait_minutes != null &&
-        wait_minutes > v.max_wait_minutes;
+        v.max_wait_minutes != null && wait_minutes != null && wait_minutes > v.max_wait_minutes;
 
-      const needs_reeval =
-        v.reeval_at != null && new Date(v.reeval_at).getTime() <= Date.now();
+      const needs_reeval = v.reeval_at != null && new Date(v.reeval_at).getTime() <= Date.now();
 
       return {
         ...v,
@@ -60,12 +61,9 @@ const getOverdueQueue = async (req, res) => {
         const wait_minutes = minutesSince(v.arrival_time);
 
         const is_overdue =
-          v.max_wait_minutes != null &&
-          wait_minutes != null &&
-          wait_minutes > v.max_wait_minutes;
+          v.max_wait_minutes != null && wait_minutes != null && wait_minutes > v.max_wait_minutes;
 
-        const needs_reeval =
-          v.reeval_at != null && new Date(v.reeval_at).getTime() <= Date.now();
+        const needs_reeval = v.reeval_at != null && new Date(v.reeval_at).getTime() <= Date.now();
 
         return {
           ...v,
@@ -107,12 +105,9 @@ const getQueueSummary = async (req, res) => {
       const wait_minutes = minutesSince(v.arrival_time);
 
       const is_overdue =
-        v.max_wait_minutes != null &&
-        wait_minutes != null &&
-        wait_minutes > v.max_wait_minutes;
+        v.max_wait_minutes != null && wait_minutes != null && wait_minutes > v.max_wait_minutes;
 
-      const needs_reeval =
-        v.reeval_at != null && new Date(v.reeval_at).getTime() <= Date.now();
+      const needs_reeval = v.reeval_at != null && new Date(v.reeval_at).getTime() <= Date.now();
 
       if (v.priority === "URGENT") summary.urgent++;
       else if (v.priority === "LESS_URGENT") summary.less_urgent++;

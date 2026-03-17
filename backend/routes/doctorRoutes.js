@@ -13,32 +13,12 @@ router.get(
 );
 
 // Check-in / Check-out / Availability / Heartbeat: só DOCTOR
-router.patch(
-  "/checkin",
-  requireAuth,
-  requireRole("DOCTOR"),
-  doctorController.checkin
-);
+router.patch("/checkin", requireAuth, requireRole("DOCTOR"), doctorController.checkin);
 
-router.patch(
-  "/checkout",
-  requireAuth,
-  requireRole("DOCTOR"),
-  doctorController.checkout
-);
+router.patch("/checkout", requireAuth, requireRole("DOCTOR"), doctorController.checkout);
 
-router.patch(
-  "/availability",
-  requireAuth,
-  requireRole("DOCTOR"),
-  doctorController.setAvailability
-);
+router.patch("/availability", requireAuth, requireRole("DOCTOR"), doctorController.setAvailability);
 
-router.patch(
-  "/heartbeat",
-  requireAuth,
-  requireRole("DOCTOR"),
-  doctorController.heartbeat
-);
+router.patch("/heartbeat", requireAuth, requireRole("DOCTOR"), doctorController.heartbeat);
 
 module.exports = router;

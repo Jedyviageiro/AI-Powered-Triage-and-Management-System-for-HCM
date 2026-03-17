@@ -29,18 +29,18 @@ const login = async (req, res) => {
     return res.status(200).json({
       message: "Login feito com sucesso",
       token,
-      user
+      user,
     });
   } catch (err) {
-      console.error("LOGIN ERROR:", err);
-  return res.status(500).json({
-    error: "Erro no login",
-    debug: {
-      message: err.message,
-      code: err.code,
-      detail: err.detail,
-    },
-  });
+    console.error("LOGIN ERROR:", err);
+    return res.status(500).json({
+      error: "Erro no login",
+      debug: {
+        message: err.message,
+        code: err.code,
+        detail: err.detail,
+      },
+    });
   }
 };
 

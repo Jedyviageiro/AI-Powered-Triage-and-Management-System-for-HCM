@@ -23,14 +23,16 @@ const requireAuth = async (req, res, next) => {
 
     // Sempre usa o que está no banco (role correto)
     req.user = {
-  id: user.id,
-  username: user.username,
-  full_name: user.full_name,
-  role: String(user.role || "").trim().toUpperCase(),
-};
+      id: user.id,
+      username: user.username,
+      full_name: user.full_name,
+      role: String(user.role || "")
+        .trim()
+        .toUpperCase(),
+    };
 
-// DEBUG (temporário)
-console.log("AUTH DEBUG -> user:", req.user);
+    // DEBUG (temporário)
+    console.log("AUTH DEBUG -> user:", req.user);
 
     next();
   } catch (err) {

@@ -6,12 +6,7 @@ const aiDoctorController = require("../controllers/aiDoctorController"); // doct
 const requireAuth = require("../middleware/requireAuth");
 const requireRole = require("../middleware/requireRole");
 
-router.post(
-  "/triage",
-  requireAuth,
-  requireRole("NURSE", "ADMIN"),
-  aiController.nurseTriageAI
-);
+router.post("/triage", requireAuth, requireRole("NURSE", "ADMIN"), aiController.nurseTriageAI);
 
 // DOCTOR/ADMIN -> diagnóstico + prescrição sugerida
 router.post(

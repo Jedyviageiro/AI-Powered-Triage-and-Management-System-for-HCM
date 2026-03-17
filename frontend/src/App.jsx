@@ -1,10 +1,12 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import Login from "./pages/Login.jsx";
-import Queue from "./pages/Queue.jsx";
-import Admin from "./pages/Admin.jsx";
-import TriageNurse from "./pages/TriageNurse.jsx";
-import Doctor from "./pages/Doctor.jsx";
-import ProtectedRoute from "./components/ProtectedRoute.jsx";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import ProtectedRoute from "./components/auth/ProtectedRoute.jsx";
+import Admin from "./pages/admin/Admin.jsx";
+import Login from "./pages/auth/Login.jsx";
+import DoctorPage from "./pages/doctor/DoctorPage.jsx";
+import LabTechnicianPage from "./pages/lab-technician/LabTechnicianPage.jsx";
+import { LAB_VIEW_ROUTES } from "./pages/lab-technician/lab-config/labNavigationConfig.js";
+import NursePage from "./pages/nurse/NursePage.jsx";
+import Queue from "./pages/shared/Queue.jsx";
 
 export default function App() {
   return (
@@ -13,7 +15,6 @@ export default function App() {
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<Login />} />
 
-        {/* ADMIN */}
         <Route
           path="/admin"
           element={
@@ -23,17 +24,6 @@ export default function App() {
           }
         />
 
-        {/* NURSE */}
-        <Route
-          path="/triage"
-          element={
-            <ProtectedRoute allowedRoles={["NURSE"]}>
-              <TriageNurse />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* Queue (NURSE/DOCTOR) */}
         <Route
           path="/queue"
           element={
@@ -43,12 +33,32 @@ export default function App() {
           }
         />
 
-        {/* DOCTOR */}
+        <Route path="/doctor" element={<Navigate to="/doctor/dashboard" replace />} />
         <Route
-          path="/doctor"
+          path="/doctor/*"
           element={
             <ProtectedRoute allowedRoles={["DOCTOR"]}>
-              <Doctor />
+              <DoctorPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route path="/triage" element={<Navigate to="/triage/dashboard" replace />} />
+        <Route
+          path="/triage/*"
+          element={
+            <ProtectedRoute allowedRoles={["NURSE"]}>
+              <NursePage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route path="/lab" element={<Navigate to={LAB_VIEW_ROUTES.dashboard} replace />} />
+        <Route
+          path="/lab/*"
+          element={
+            <ProtectedRoute allowedRoles={["LAB_TECHNICIAN"]}>
+              <LabTechnicianPage />
             </ProtectedRoute>
           }
         />

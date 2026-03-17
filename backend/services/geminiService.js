@@ -53,6 +53,7 @@ DADOS DO PACIENTE:
 
 async function doctorDiagnosisSuggestion(payload) {
   const basePrompt = loadPrompt("doctorDiagnosis.txt");
+  const followUpPrompt = loadPrompt("doctorFollowUpDecision.txt");
   const questionnaireBlock = Array.isArray(payload.questionnaire_answers)
     ? payload.questionnaire_answers
         .map((qa) => {
@@ -79,9 +80,15 @@ DADOS DO CASO:
 - respostas_questionario:
 ${questionnaireBlock || "  - n/a"}
 - informacao_extra_paciente: ${payload.questionnaire_extra_note ?? "n/a"}
+- plano_do_medico_diagnostico: ${payload.doctor_likely_diagnosis ?? "n/a"}
+- plano_do_medico_justificativa: ${payload.doctor_clinical_reasoning ?? "n/a"}
+- plano_do_medico_prescricao: ${payload.doctor_prescription_text ?? "n/a"}
+- comparacao_profissional_de_seguimento: ${payload.follow_up_comparison_context ? JSON.stringify(payload.follow_up_comparison_context) : "n/a"}
+- contexto_de_retorno: ${payload.follow_up_context ? JSON.stringify(payload.follow_up_context) : "n/a"}
+- contexto_de_pedido_laboratorial: ${payload.lab_request_context ? JSON.stringify(payload.lab_request_context) : "n/a"}
 `;
 
-  const fullPrompt = basePrompt + "\n\n" + dynamicData;
+  const fullPrompt = `${basePrompt}\n\n${followUpPrompt}\n\n${dynamicData}`;
 
   const resp = await ai.models.generateContent({
     model: MODEL, // continua gemini-2.5-flash
@@ -127,5 +134,40 @@ DADOS DO CASO:
   return extractJson(text);
 }
 
+async function labResultExplanationSuggestion(payload) {
+  const basePrompt = loadPrompt("lab_result_explanation_prompt.txt");
+  const structuredResultJson =
+    payload.lab_result_json && typeof payload.lab_result_json === "object"
+      ? JSON.stringify(payload.lab_result_json, null, 2)
+      : "n/a";
+  const dynamicData = `
+DADOS DO CASO:
+- exame: ${payload.lab_exam_type ?? "n/a"}
+- tipo_de_amostra: ${payload.lab_sample_type ?? "n/a"}
+- resultado_laboratorial: ${payload.lab_result_text ?? ""}
+- resultado_estruturado_json:
+${structuredResultJson}
+- queixa_principal: ${payload.chief_complaint ?? "n/a"}
+- notas_clinicas: ${payload.clinical_notes ?? "n/a"}
+- prioridade: ${payload.priority ?? "n/a"}
+- diagnostico_medico_atual: ${payload.doctor_likely_diagnosis ?? "n/a"}
+- justificativa_medica_atual: ${payload.doctor_clinical_reasoning ?? "n/a"}
+- prescricao_medica_atual: ${payload.doctor_prescription_text ?? "n/a"}
+`;
 
-module.exports = { triageSeveritySuggestion, doctorDiagnosisSuggestion, doctorQuestionsSuggestion };
+  const fullPrompt = `${basePrompt}\n\n${dynamicData}`;
+  const resp = await ai.models.generateContent({
+    model: MODEL,
+    contents: [{ role: "user", parts: [{ text: fullPrompt }] }],
+  });
+
+  const text = resp.text?.trim?.() || "";
+  return extractJson(text);
+}
+
+module.exports = {
+  triageSeveritySuggestion,
+  doctorDiagnosisSuggestion,
+  doctorQuestionsSuggestion,
+  labResultExplanationSuggestion,
+};

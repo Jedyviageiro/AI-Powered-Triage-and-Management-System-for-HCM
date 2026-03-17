@@ -11,6 +11,12 @@ const createTriage = async (req, res) => {
       weight,
       chief_complaint,
       clinical_notes,
+      general_state,
+      needs_oxygen,
+      suspected_severe_dehydration,
+      excessive_lethargy,
+      difficulty_maintaining_sitting,
+      history_syncope_collapse,
     } = req.body;
 
     const nurse_id = req.user?.id || null;
@@ -44,6 +50,12 @@ const createTriage = async (req, res) => {
       weight,
       chief_complaint,
       clinical_notes,
+      general_state: general_state || null,
+      needs_oxygen: !!needs_oxygen,
+      suspected_severe_dehydration: !!suspected_severe_dehydration,
+      excessive_lethargy: !!excessive_lethargy,
+      difficulty_maintaining_sitting: !!difficulty_maintaining_sitting,
+      history_syncope_collapse: !!history_syncope_collapse,
     });
 
     return res.status(201).json(triage);

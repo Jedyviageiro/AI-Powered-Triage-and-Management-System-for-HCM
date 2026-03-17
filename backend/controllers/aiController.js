@@ -47,7 +47,9 @@ const scoreDoctorBySpecialtyFit = (doctor, contextTokens, suggestedSpecialty) =>
   }
 
   const hints = Object.entries(SPECIALTY_HINTS).find(([k]) => spec.includes(k))?.[1] || [];
-  const hintMatches = hints.filter((h) => contextTokens.some((t) => t.includes(h) || h.includes(t))).length;
+  const hintMatches = hints.filter((h) =>
+    contextTokens.some((t) => t.includes(h) || h.includes(t))
+  ).length;
   if (hintMatches > 0) {
     score += hintMatches * 10;
     if (reason === "Especializacao sem match direto") {

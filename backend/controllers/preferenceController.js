@@ -20,7 +20,9 @@ const getUserId = (req, res) => {
 };
 
 const normalizeFontSize = (value) => {
-  const normalized = String(value || "").trim().toUpperCase();
+  const normalized = String(value || "")
+    .trim()
+    .toUpperCase();
   return normalized === "LARGE" ? "LARGE" : "NORMAL";
 };
 
@@ -76,8 +78,8 @@ const updateMyPreferences = async (req, res) => {
         body.font_size != null
           ? normalizeFontSize(body.font_size)
           : fontScalePercent > 100
-          ? "LARGE"
-          : "NORMAL",
+            ? "LARGE"
+            : "NORMAL",
       font_scale_percent: fontScalePercent,
       notify_new_urgent: toBool(body.notify_new_urgent, current.notify_new_urgent),
       notify_wait_over_30: toBool(body.notify_wait_over_30, current.notify_wait_over_30),
