@@ -10,6 +10,7 @@
     "format:check": "npm run format:check:frontend && npm run format:check:backend"
   },
   "dependencies": {
+    "@novu/react": "^3.14.1",
     "framer-motion": "^12.38.0",
     "lucide-react": "^0.577.0"
   }

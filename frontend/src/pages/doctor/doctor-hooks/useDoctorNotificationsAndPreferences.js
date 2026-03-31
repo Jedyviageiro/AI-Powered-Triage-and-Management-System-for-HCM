@@ -161,6 +161,9 @@ export function useDoctorNotificationsAndPreferences({
       setNotifyingPatientVisitId(row.id);
       try {
         const updated = await api.notifyPatientLabReady(row.id);
+        const deliveredBy = Array.isArray(updated?.notification_delivery?.successfulChannels)
+          ? updated.notification_delivery.successfulChannels
+          : [];
         setLabReadyResults((prev) =>
           (Array.isArray(prev) ? prev : []).map((item) =>
             Number(item?.id) === Number(row.id) ? { ...item, ...updated } : item
@@ -177,13 +180,27 @@ export function useDoctorNotificationsAndPreferences({
         showPopup(
           "success",
           "Paciente avisado",
-          "O sistema registou que o paciente ja foi avisado de que o exame esta pronto."
+          deliveredBy.length > 0
+            ? `Notificacao enviada por ${deliveredBy.join(" e ")}.`
+            : "O sistema registou que o paciente ja foi avisado de que o exame esta pronto."
         );
       } catch (e) {
+        const channelDetails = Array.isArray(e?.data?.channels)
+          ? e.data.channels
+              .map((channel) => {
+                if (!channel) return null;
+                const provider = String(channel.provider || "canal").toUpperCase();
+                if (channel.ok) return `${provider}: enviado com sucesso`;
+                if (channel.skipped) return `${provider}: nao configurado`;
+                return `${provider}: ${channel.error || "falha no envio"}`;
+              })
+              .filter(Boolean)
+              .join(" | ")
+          : "";
         showPopup(
           "warning",
           "Atenção",
-          e?.message || "Não foi possível registar o aviso ao paciente."
+          channelDetails || e?.message || "Não foi possível registar o aviso ao paciente."
         );
       } finally {
         setNotifyingPatientVisitId(null);
@@ -234,3 +251,4 @@ export function useDoctorNotificationsAndPreferences({
     latestNotification,
   };
 }
+

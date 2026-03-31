@@ -42,7 +42,10 @@ async function request(path, options = {}) {
   }
 
   if (!res.ok) {
-    throw new Error(data?.error || "Erro na API");
+    const error = new Error(data?.error || "Erro na API");
+    error.status = res.status;
+    error.data = data;
+    throw error;
   }
 
   return data;

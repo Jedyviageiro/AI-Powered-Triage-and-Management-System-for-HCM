@@ -469,11 +469,31 @@ export const toMaybeNumber = (value) => {
 };
 
 export const getVisitClinicalSnapshot = (visit) => ({
-  temperature: toMaybeNumber(visit?.temperature ?? visit?.triage?.temperature),
-  heart_rate: toMaybeNumber(visit?.heart_rate ?? visit?.triage?.heart_rate),
-  respiratory_rate: toMaybeNumber(visit?.respiratory_rate ?? visit?.triage?.respiratory_rate),
-  oxygen_saturation: toMaybeNumber(visit?.oxygen_saturation ?? visit?.triage?.oxygen_saturation),
-  weight: toMaybeNumber(visit?.weight ?? visit?.triage?.weight),
+  temperature: toMaybeNumber(
+    visit?.doctor_questionnaire_json?.retake_vitals?.temperature ??
+      visit?.temperature ??
+      visit?.triage?.temperature
+  ),
+  heart_rate: toMaybeNumber(
+    visit?.doctor_questionnaire_json?.retake_vitals?.heart_rate ??
+      visit?.heart_rate ??
+      visit?.triage?.heart_rate
+  ),
+  respiratory_rate: toMaybeNumber(
+    visit?.doctor_questionnaire_json?.retake_vitals?.respiratory_rate ??
+      visit?.respiratory_rate ??
+      visit?.triage?.respiratory_rate
+  ),
+  oxygen_saturation: toMaybeNumber(
+    visit?.doctor_questionnaire_json?.retake_vitals?.oxygen_saturation ??
+      visit?.oxygen_saturation ??
+      visit?.triage?.oxygen_saturation
+  ),
+  weight: toMaybeNumber(
+    visit?.doctor_questionnaire_json?.retake_vitals?.weight ??
+      visit?.weight ??
+      visit?.triage?.weight
+  ),
   chief_complaint: String(
     visit?.chief_complaint || visit?.triage_chief_complaint || visit?.triage?.chief_complaint || ""
   ).trim(),

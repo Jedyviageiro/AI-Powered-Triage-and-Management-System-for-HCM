@@ -182,6 +182,40 @@ const getVisitById = async (id) => {
   return result.rows[0];
 };
 
+const getLabNotificationContextByVisitId = async (id) => {
+  const visitId = Number(id);
+  if (!Number.isInteger(visitId) || visitId <= 0) return null;
+
+  await ensureLabPatientNotificationColumns();
+  await ensureLabStructuredResultColumns();
+
+  const result = await pool.query(
+    `SELECT
+       v.id AS visit_id,
+       v.patient_id,
+       v.doctor_id,
+       v.lab_exam_type,
+       v.lab_result_status,
+       v.lab_result_ready_at,
+       v.lab_result_text,
+       v.lab_patient_notified_at,
+       p.full_name AS patient_full_name,
+       p.guardian_name,
+       p.guardian_phone,
+       d.full_name AS doctor_full_name
+     FROM visits v
+     JOIN patients p ON p.id = v.patient_id
+     LEFT JOIN users d ON d.id = v.doctor_id
+     WHERE v.id = $1
+       AND v.lab_requested = TRUE
+       AND v.status NOT IN ('CANCELLED')
+     LIMIT 1`,
+    [visitId]
+  );
+
+  return result.rows[0] || null;
+};
+
 const findLatestFinishedLabFollowup = async (patient_id) => {
   const result = await pool.query(
     `SELECT
@@ -1357,6 +1391,7 @@ module.exports = {
   findLatestFinishedLabFollowup,
   createVisitForLabFollowup,
   getVisitById,
+  getLabNotificationContextByVisitId,
   listActiveVisits,
   listActiveVisitsByDoctor,
   listPastVisits,

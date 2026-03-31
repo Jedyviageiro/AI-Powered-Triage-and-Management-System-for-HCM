@@ -1,5 +1,6 @@
 const notificationModel = require("../models/notificationModel");
 const visitModel = require("../models/visitModel");
+const { notifyParentAboutLabResult } = require("../services/labNotificationService");
 
 const VISIT_MOTIVES = new Set([
   "MEDICAL_CONSULTATION",
@@ -638,7 +639,41 @@ const notifyPatientLabReady = async (req, res) => {
     const visitId = parsePositiveInt(req.params.id);
     if (!visitId) return res.status(400).json({ error: "id invalido" });
 
-    const note = typeof req.body?.note === "string" ? req.body.note : null;
+    const context = await visitModel.getLabNotificationContextByVisitId(visitId);
+    if (!context) {
+      return res.status(404).json({
+        error: "Visita nao encontrada ou sem resultado laboratorial pronto.",
+      });
+    }
+
+    const hasReadyResult =
+      !!String(context.lab_result_text || "").trim() ||
+      ["READY", "RESULTED", "VERIFIED"].includes(
+        String(context.lab_result_status || "")
+          .trim()
+          .toUpperCase()
+      );
+
+    if (!hasReadyResult) {
+      return res.status(400).json({ error: "O resultado laboratorial ainda nao esta pronto." });
+    }
+
+    const delivery = await notifyParentAboutLabResult({
+      visitId: context.visit_id,
+      patientId: context.patient_id,
+      patientName: context.patient_full_name,
+      guardianName: context.guardian_name,
+      guardianPhone: context.guardian_phone,
+      doctorName: context.doctor_full_name,
+      labExamType: context.lab_exam_type,
+      labResultReadyAt: context.lab_result_ready_at,
+    });
+
+    const userNote =
+      typeof req.body?.note === "string" && req.body.note.trim() ? req.body.note.trim() : null;
+    const autoNote = `Notificacao enviada por ${delivery.successfulChannels.join(", ")} para ${delivery.phone}.`;
+    const note = userNote ? `${autoNote} ${userNote}` : autoNote;
+
     const updated = await visitModel.markLabPatientNotified(visitId, {
       actorId: req.user?.id || null,
       note,
@@ -650,8 +685,17 @@ const notifyPatientLabReady = async (req, res) => {
       });
     }
 
-    return res.json(updated);
+    return res.json({
+      ...updated,
+      notification_delivery: delivery,
+    });
   } catch (error) {
+    if (error?.statusCode) {
+      return res.status(error.statusCode).json({
+        error: error.message || "Erro ao enviar notificacao do resultado laboratorial",
+        channels: Array.isArray(error.results) ? error.results : undefined,
+      });
+    }
     return sendServerError(
       res,
       "NOTIFY PATIENT LAB READY ERROR",

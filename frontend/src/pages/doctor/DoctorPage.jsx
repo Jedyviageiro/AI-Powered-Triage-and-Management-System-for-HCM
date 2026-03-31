@@ -128,6 +128,8 @@ export default function DoctorPage({ forcedView = "dashboard" }) {
     setPlanDraft,
     planAccepted,
     setPlanAccepted,
+    popup,
+    closePopup,
     questionnaireLoading,
     setQuestionnaireLoading,
     useAIQuestionnaire,
@@ -662,6 +664,8 @@ export default function DoctorPage({ forcedView = "dashboard" }) {
         savingPreferences={savingPreferences}
         savePreferences={savePreferences}
         setPreferences={setPreferences}
+        popup={popup}
+        closePopup={closePopup}
         myAssignedQueue={myAssignedQueue}
         selectedVisit={selectedVisit}
         attendPatientFromQueue={attendPatientFromQueue}

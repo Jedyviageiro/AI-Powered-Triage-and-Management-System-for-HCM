@@ -135,6 +135,10 @@ export function useDoctorPageShellState(initialActiveView = "dashboard") {
     [safeSet]
   );
 
+  const closePopup = useCallback(() => {
+    safeSet(() => setPopup({ open: false, type: "warning", title: "", message: "" }));
+  }, [safeSet]);
+
   return {
     navListRef,
     navItemRefs,
@@ -201,6 +205,8 @@ export function useDoctorPageShellState(initialActiveView = "dashboard") {
     setPlanDraft,
     planAccepted,
     setPlanAccepted,
+    popup: _popup,
+    closePopup,
     questionnaireLoading,
     setQuestionnaireLoading,
     useAIQuestionnaire,

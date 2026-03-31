@@ -84,6 +84,8 @@ export default function DoctorLayout(props) {
     savingPreferences,
     savePreferences,
     setPreferences,
+    popup,
+    closePopup,
     myAssignedQueue,
     selectedVisit,
     attendPatientFromQueue,
@@ -854,6 +856,63 @@ export default function DoctorLayout(props) {
         aiResult={aiResult}
         onClose={() => setAiSuggestionOpen(false)}
       />
+
+      {popup?.open && (
+        <div className="popup-overlay" onClick={closePopup}>
+          <div className="popup-card" onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+              <div
+                className={`popup-icon ${
+                  popup.type === "success" ? "popup-icon-success" : "popup-icon-warning"
+                }`}
+              >
+                {popup.type === "success" ? (
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.3"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M20 6L9 17l-5-5" />
+                  </svg>
+                ) : (
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.3"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M12 9v4" />
+                    <path d="M12 17h.01" />
+                    <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                  </svg>
+                )}
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 17, fontWeight: 700, color: "#111827", marginBottom: 6 }}>
+                  {popup.title}
+                </div>
+                <div style={{ fontSize: 14, color: "#4b5563", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+                  {popup.message}
+                </div>
+              </div>
+            </div>
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}>
+              <button type="button" className="cf-btn-sec" onClick={closePopup}>
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

@@ -176,14 +176,19 @@ const deletePatient = async (id) => {
 const getPatientHistory = async (patientId) => {
   const result = await pool.query(
     `SELECT
+            v.id,
             v.id AS visit_id,
             v.arrival_time,
             v.status,
             v.priority,
             v.likely_diagnosis,
+            v.clinical_reasoning,
             v.prescription_text,
             v.disposition_plan,
             v.disposition_reason,
+            v.finished_at,
+            v.consultation_ended_at,
+            v.doctor_questionnaire_json,
             v.return_visit_date,
             v.return_visit_reason,
             v.lab_requested,
@@ -203,7 +208,7 @@ const getPatientHistory = async (patientId) => {
          FROM visits v
          LEFT JOIN triage t ON t.visit_id = v.id
          WHERE v.patient_id = $1
-         ORDER BY v.arrival_time DESC`,
+         ORDER BY COALESCE(v.consultation_ended_at, v.finished_at, v.updated_at, v.arrival_time) DESC`,
     [patientId]
   );
   return result.rows;

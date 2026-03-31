@@ -68,7 +68,16 @@ export function useDoctorConsultationState({
     () =>
       (Array.isArray(patientHistory) ? patientHistory : [])
         .filter((entry) => Number(entry?.id || entry?.visit_id) !== Number(selectedVisit?.id))
-        .sort((a, b) => new Date(b?.arrival_time || 0) - new Date(a?.arrival_time || 0))[0] || null,
+        .filter((entry) => String(entry?.status || "").toUpperCase() === "FINISHED")
+        .sort(
+          (a, b) =>
+            new Date(
+              b?.consultation_ended_at || b?.finished_at || b?.updated_at || b?.arrival_time || 0
+            )
+            - new Date(
+              a?.consultation_ended_at || a?.finished_at || a?.updated_at || a?.arrival_time || 0
+            )
+        )[0] || null,
     [patientHistory, selectedVisit?.id]
   );
 
