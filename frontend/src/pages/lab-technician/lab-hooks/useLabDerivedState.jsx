@@ -1,6 +1,64 @@
 import { useCallback, useMemo } from "react";
 import { examLabel, EXAM_PROTOCOLS, getProtocolPresentation } from "../lab-helpers/labExamHelpers";
 
+const getUrgencyMeta = (priority) => {
+  const key = String(priority || "").toUpperCase();
+  if (["URGENT", "HIGH"].includes(key)) {
+    return {
+      key,
+      label: "Urgente",
+      bg: "#FEF2F2",
+      color: "#B91C1C",
+      border: "#FECACA",
+      accent: "#EF4444",
+    };
+  }
+  if (["LESS_URGENT", "MEDIUM"].includes(key)) {
+    return {
+      key,
+      label: "Pouco urgente",
+      bg: "#FFF7ED",
+      color: "#C2410C",
+      border: "#FED7AA",
+      accent: "#F97316",
+    };
+  }
+  if (["NON_URGENT", "NOT_URGENT", "LOW"].includes(key)) {
+    return {
+      key,
+      label: "Não urgente",
+      bg: "#ECFDF5",
+      color: "#047857",
+      border: "#A7F3D0",
+      accent: "#10B981",
+    };
+  }
+  return {
+    key,
+    label: "Sem prioridade",
+    bg: "#F3F4F6",
+    color: "#6B7280",
+    border: "#E5E7EB",
+    accent: "#9CA3AF",
+  };
+};
+
+const getRequestingDoctorName = (visit) =>
+  String(
+    visit?.doctor_full_name ||
+      visit?.doctor_name ||
+      visit?.doctor_username ||
+      visit?.doctor?.full_name ||
+      visit?.doctor?.username ||
+      ""
+  ).trim() || "-";
+
+const normalizeLabVisit = (visit) => ({
+  ...visit,
+  requestingDoctorName: getRequestingDoctorName(visit),
+  urgencyMeta: getUrgencyMeta(visit?.priority),
+});
+
 const navItems = [
   {
     key: "dashboard",
@@ -146,7 +204,8 @@ export function useLabDerivedState({
 
   const allKnownVisits = useMemo(() => {
     const map = new Map();
-    [...pending, ...ready, ...historyToday].forEach((visit) => {
+    [...pending, ...ready, ...historyToday].forEach((rawVisit) => {
+      const visit = normalizeLabVisit(rawVisit);
       const id = Number(visit?.id);
       if (Number.isFinite(id)) map.set(id, visit);
     });
@@ -197,30 +256,48 @@ export function useLabDerivedState({
     const query = String(search || "")
       .trim()
       .toLowerCase();
-    return tableRows.filter(
+    return tableRows
+      .map(normalizeLabVisit)
+      .filter(
       (visit) =>
         !query ||
-        [visit.full_name, visit.clinical_code, visit.lab_exam_type, visit.lab_tests].some((field) =>
+        [
+          visit.full_name,
+          visit.clinical_code,
+          visit.lab_exam_type,
+          visit.lab_tests,
+          visit.requestingDoctorName,
+          visit.urgencyMeta?.label,
+        ].some((field) =>
           String(field || "")
             .toLowerCase()
             .includes(query)
         )
-    );
+      );
   }, [tableRows, search]);
 
   const filteredPending = useMemo(() => {
     const query = String(search || "")
       .trim()
       .toLowerCase();
-    return pending.filter(
+    return pending
+      .map(normalizeLabVisit)
+      .filter(
       (visit) =>
         !query ||
-        [visit.full_name, visit.clinical_code, visit.lab_exam_type, visit.lab_tests].some((field) =>
+        [
+          visit.full_name,
+          visit.clinical_code,
+          visit.lab_exam_type,
+          visit.lab_tests,
+          visit.requestingDoctorName,
+          visit.urgencyMeta?.label,
+        ].some((field) =>
           String(field || "")
             .toLowerCase()
             .includes(query)
         )
-    );
+      );
   }, [pending, search]);
 
   const notificationItems = useMemo(() => {

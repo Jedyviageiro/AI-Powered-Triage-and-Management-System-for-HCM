@@ -1,16 +1,16 @@
 const StatusBadge = ({ status }) => {
   const cfg = {
-    WAITING_DOCTOR: { bg: "#fff3e0", color: "#c07700", label: "Aguardando médico" },
-    IN_CONSULTATION: { bg: "#e3f2fd", color: "#0077cc", label: "Em consulta" },
-    FINISHED: { bg: "#e8f5e9", color: "#1a7a3c", label: "Finalizado" },
-    RECEIVED: { bg: "#e3f2fd", color: "#0077cc", label: "Amostra recebida" },
-    PROCESSING: { bg: "#f3e8ff", color: "#7c3aed", label: "Em análise" },
-    READY: { bg: "#e8f5e9", color: "#1a7a3c", label: "Pronto" },
-    PENDING: { bg: "#fff3e0", color: "#c07700", label: "Pendente" },
+    WAITING_DOCTOR: { bg: "#FFF7ED", color: "#C2610C", label: "Aguardando médico" },
+    IN_CONSULTATION: { bg: "#DBEAFE", color: "#1D4ED8", label: "Em consulta" },
+    FINISHED: { bg: "#ECFDF5", color: "#047857", label: "Finalizado" },
+    RECEIVED: { bg: "#E0F2FE", color: "#0369A1", label: "Amostra recebida" },
+    PROCESSING: { bg: "#F3E8FF", color: "#7C3AED", label: "Em análise" },
+    READY: { bg: "#ECFDF5", color: "#047857", label: "Pronto" },
+    PENDING: { bg: "#FFF7ED", color: "#C2610C", label: "Pendente" },
   };
   const current = cfg[String(status || "").toUpperCase()] || {
-    bg: "#f2f2f7",
-    color: "#8e8e93",
+    bg: "#F2F2F7",
+    color: "#8E8E93",
     label: status || "-",
   };
 
@@ -31,6 +31,34 @@ const StatusBadge = ({ status }) => {
     </span>
   );
 };
+
+const UrgencyBadge = ({ urgencyMeta }) => (
+  <span
+    style={{
+      display: "inline-flex",
+      alignItems: "center",
+      gap: 6,
+      padding: "3px 8px",
+      borderRadius: "999px",
+      background: urgencyMeta?.bg || "#F3F4F6",
+      color: urgencyMeta?.color || "#6B7280",
+      border: `1px solid ${urgencyMeta?.border || "#E5E7EB"}`,
+      fontSize: "10px",
+      fontWeight: 700,
+      whiteSpace: "nowrap",
+    }}
+  >
+    <span
+      style={{
+        width: 6,
+        height: 6,
+        borderRadius: "999px",
+        background: urgencyMeta?.accent || "#9CA3AF",
+      }}
+    />
+    {urgencyMeta?.label || "Sem prioridade"}
+  </span>
+);
 
 export default function LabDashboardContent({
   dashboardStats,
@@ -107,6 +135,7 @@ export default function LabDashboardContent({
                 <th>#</th>
                 <th>Paciente</th>
                 <th>Exame</th>
+                <th>Urgência</th>
                 <th>Estado</th>
                 <th></th>
               </tr>
@@ -114,7 +143,11 @@ export default function LabDashboardContent({
             <tbody>
               {filteredPending.slice(0, 6).length > 0 ? (
                 filteredPending.slice(0, 6).map((visit) => (
-                  <tr key={visit.id} onClick={() => onOpenVisit(visit.id)}>
+                  <tr
+                    key={visit.id}
+                    onClick={() => onOpenVisit(visit.id)}
+                    style={{ boxShadow: `inset 3px 0 0 ${visit.urgencyMeta?.accent || "#9CA3AF"}` }}
+                  >
                     <td
                       style={{
                         fontSize: "11px",
@@ -131,9 +164,15 @@ export default function LabDashboardContent({
                       <div style={{ fontSize: "10px", color: "#aeaeb2", marginTop: "1px" }}>
                         {visit.clinical_code || "-"}
                       </div>
+                      <div style={{ fontSize: "10px", color: "#6B7280", marginTop: "4px" }}>
+                        {visit.requestingDoctorName || "-"}
+                      </div>
                     </td>
                     <td style={{ fontSize: "11px", color: "#8e8e93" }}>
                       {examLabel(visit.lab_exam_type, visit.lab_tests)}
+                    </td>
+                    <td>
+                      <UrgencyBadge urgencyMeta={visit.urgencyMeta} />
                     </td>
                     <td>
                       <StatusBadge status={visit.lab_result_status || "PENDING"} />
@@ -154,7 +193,7 @@ export default function LabDashboardContent({
               ) : (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={6}
                     style={{
                       padding: "36px 14px",
                       textAlign: "center",

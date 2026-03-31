@@ -59,7 +59,13 @@ export const buildDoctorLabExamUpdate = ({
   };
 };
 
-export const validateAndBuildDoctorLabOrder = ({ planDraft, labOrderDraft, labRequestSupport }) => {
+export const validateAndBuildDoctorLabOrder = ({
+  planDraft,
+  labOrderDraft,
+  labRequestSupport = {},
+}) => {
+  const primarySupport = labRequestSupport?.primary || null;
+
   if (!String(labOrderDraft.priority || "").trim()) {
     throw new Error("Defina a prioridade do exame.");
   }
@@ -70,14 +76,12 @@ export const validateAndBuildDoctorLabOrder = ({ planDraft, labOrderDraft, labRe
     throw new Error("Especifique o exame solicitado.");
   }
 
-  if (!String(labOrderDraft.clinicalReason || "").trim() && !labRequestSupport.primary) {
+  if (!String(labOrderDraft.clinicalReason || "").trim() && !primarySupport) {
     throw new Error("Descreva o motivo clínico do exame.");
   }
 
   const resolvedClinicalReason =
-    String(labOrderDraft.clinicalReason || "").trim() ||
-    labRequestSupport.primary?.reasonTemplate ||
-    "";
+    String(labOrderDraft.clinicalReason || "").trim() || primarySupport?.reasonTemplate || "";
 
   const summary = [
     isOtherExam ? `Exame solicitado: ${customExamDetail}` : null,

@@ -15,6 +15,7 @@ import {
   applyDoctorVisitBundleState,
   resetDoctorVisitWorkspace,
 } from "../doctor-operations/doctorVisitState";
+import { useClickOutside } from "../../../hooks/useClickOutside";
 
 export function useDoctorQueueAndVisitState({
   forcedView,
@@ -78,6 +79,12 @@ export function useDoctorQueueAndVisitState({
   shiftFeatureAvailable,
   setStartingShift,
 }) {
+  useClickOutside(
+    notificationsPreviewRef,
+    () => setNotificationsPreviewOpen(false),
+    true
+  );
+
   const stopIntervals = useCallback(
     () => stopDoctorIntervals(intervalRef, heartbeatRef),
     [heartbeatRef, intervalRef]
@@ -369,16 +376,6 @@ export function useDoctorQueueAndVisitState({
     document.addEventListener("mousedown", onDocMouseDown);
     return () => document.removeEventListener("mousedown", onDocMouseDown);
   }, [setOpenModernSelect]);
-
-  useEffect(() => {
-    const onDocMouseDown = (event) => {
-      if (!notificationsPreviewRef.current) return;
-      if (!notificationsPreviewRef.current.contains(event.target))
-        setNotificationsPreviewOpen(false);
-    };
-    document.addEventListener("mousedown", onDocMouseDown);
-    return () => document.removeEventListener("mousedown", onDocMouseDown);
-  }, [notificationsPreviewRef, setNotificationsPreviewOpen]);
 
   useEffect(() => {
     if (activeView !== "consultationForm" || consultFormStep !== 4 || !highlightLabOrderCard) {

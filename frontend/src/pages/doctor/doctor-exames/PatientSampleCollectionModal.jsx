@@ -1,3 +1,5 @@
+import DoctorModernSelect from "../doctor-consultation/DoctorModernSelect";
+
 export default function PatientSampleCollectionModal({
   open,
   shouldShow,
@@ -10,6 +12,8 @@ export default function PatientSampleCollectionModal({
   openModernSelect,
   setOpenModernSelect,
 }) {
+  const SelectComponent = DoctorModernSelect;
+
   if (!open || !shouldShow) return null;
 
   return (
@@ -87,7 +91,7 @@ export default function PatientSampleCollectionModal({
               <label className="text-xs font-semibold text-gray-600 mb-1 block">
                 Condição da amostra
               </label>
-              <ModernSelect
+              <SelectComponent
                 selectId="sample-condition-modal"
                 value={sampleCollectionDraft.sampleCondition || "ADEQUADA"}
                 openModernSelect={openModernSelect}
@@ -99,7 +103,7 @@ export default function PatientSampleCollectionModal({
                 <option value="ADEQUADA">Adequada</option>
                 <option value="LIMITE">Limítrofe</option>
                 <option value="INADEQUADA">Inadequada</option>
-              </ModernSelect>
+              </SelectComponent>
             </div>
             <div className="md:col-span-2">
               <label className="text-xs font-semibold text-gray-600 mb-1 block">

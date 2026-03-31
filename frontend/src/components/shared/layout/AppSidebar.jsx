@@ -92,7 +92,7 @@ export default function AppSidebar({
           {sections.map((section) => (
             <div key={section.title}>
               {open ? (
-                <div className="px-3 pb-1 pl-6 text-[10px] uppercase tracking-[0.08em] text-gray-200/80 font-semibold">
+                <div className="px-3 pb-1 pl-6 text-[10px] uppercase tracking-[0.08em] font-semibold text-white/35">
                   {section.title}
                 </div>
               ) : null}

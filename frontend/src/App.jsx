@@ -6,13 +6,14 @@ import DoctorPage from "./pages/doctor/DoctorPage.jsx";
 import LabTechnicianPage from "./pages/lab-technician/LabTechnicianPage.jsx";
 import { LAB_VIEW_ROUTES } from "./pages/lab-technician/lab-config/labNavigationConfig.js";
 import NursePage from "./pages/nurse/NursePage.jsx";
+import LandingPage from "../public/LandingPage.jsx";
 import Queue from "./pages/shared/Queue.jsx";
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
 
         <Route

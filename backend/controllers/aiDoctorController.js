@@ -309,6 +309,23 @@ const doctorAssistAI = async (req, res) => {
       });
     }
 
+    if (geminiService.isRetryableAiError?.(err)) {
+      const isLabExplanationOnly = !!req.body?.explain_lab_result_only;
+      if (isLabExplanationOnly) {
+        return res.status(503).json({
+          error:
+            "A IA está temporariamente indisponível para explicar este resultado laboratorial. Tente novamente em alguns segundos.",
+          retryable: true,
+        });
+      }
+
+      return res.status(503).json({
+        error:
+          "A IA está temporariamente indisponível devido a uma falha de ligação. Tente novamente em alguns segundos.",
+        retryable: true,
+      });
+    }
+
     console.error("AI DOCTOR ERROR:", err);
     return res.status(500).json({
       error: "Erro ao gerar sugestão de diagnóstico por IA",

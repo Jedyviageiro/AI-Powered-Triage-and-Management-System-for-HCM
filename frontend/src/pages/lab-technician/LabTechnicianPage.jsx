@@ -13,6 +13,8 @@ import { saveLocalLabNotificationReadMap } from "./lab-helpers/labNotificationHe
 import { useLabPageShellState } from "./lab-hooks/useLabPageShellState";
 import { useLabDerivedState } from "./lab-hooks/useLabDerivedState.jsx";
 import { LabLayout } from "./lab-layout/LabLayout";
+import ConfirmDialog from "../../components/shared/ConfirmDialog";
+import { useClickOutside } from "../../hooks/useClickOutside";
 
 const CSS = `
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -354,6 +356,8 @@ function ResultModal({ visit, protocol, fields, onClose, onSave, saving }) {
 export default function LabTechnicianPage({ forcedView = "dashboard" }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
+  const [logoutBusy, setLogoutBusy] = useState(false);
   const resolvedView =
     Object.entries(LAB_VIEW_ROUTES).find(([, path]) => path === location.pathname)?.[0] ||
     forcedView;
@@ -522,21 +526,29 @@ export default function LabTechnicianPage({ forcedView = "dashboard" }) {
     }
   };
 
-  const logout = () => {
+  const performLogout = () => {
     clearAuth();
     window.location.replace("/login");
   };
 
-  useEffect(() => {
-    if (!notificationsPreviewOpen) return undefined;
-    const handlePointerDown = (event) => {
-      if (!notificationsPreviewRef.current?.contains(event.target)) {
-        setNotificationsPreviewOpen(false);
-      }
-    };
-    window.addEventListener("mousedown", handlePointerDown);
-    return () => window.removeEventListener("mousedown", handlePointerDown);
-  }, [notificationsPreviewOpen, notificationsPreviewRef, setNotificationsPreviewOpen]);
+  const logout = () => {
+    setLogoutConfirmOpen(true);
+  };
+
+  const confirmLogout = async () => {
+    setLogoutBusy(true);
+    try {
+      performLogout();
+    } finally {
+      setLogoutBusy(false);
+    }
+  };
+
+  useClickOutside(
+    notificationsPreviewRef,
+    () => setNotificationsPreviewOpen(false),
+    notificationsPreviewOpen
+  );
 
   useEffect(() => {
     saveLocalLabNotificationReadMap(notificationReadMap);
@@ -584,5 +596,20 @@ export default function LabTechnicianPage({ forcedView = "dashboard" }) {
     ResultModal,
   };
 
-  return <LabLayout {...layoutProps} />;
+  return (
+    <>
+      <LabLayout {...layoutProps} />
+      <ConfirmDialog
+        open={logoutConfirmOpen}
+        title="Confirmar logout"
+        message="Tem a certeza de que deseja terminar a sessão e voltar ao ecrã de login?"
+        confirmLabel="Terminar sessão"
+        busy={logoutBusy}
+        onClose={() => {
+          if (!logoutBusy) setLogoutConfirmOpen(false);
+        }}
+        onConfirm={confirmLogout}
+      />
+    </>
+  );
 }

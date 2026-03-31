@@ -106,8 +106,8 @@ export function NurseQueueView({
                   "Status",
                   "Espera",
                   "Alerta",
-                  "M?dico",
-                  "A??es",
+                  "Médico",
+                  "Ações",
                 ].map((h) => (
                   <th
                     key={h}
@@ -227,7 +227,7 @@ export function NurseQueueView({
                               color: "white",
                             }}
                           >
-                            Cr?tico
+                            Crítico
                           </span>
                         )}
                       </td>

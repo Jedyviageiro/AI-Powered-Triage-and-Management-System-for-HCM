@@ -5,6 +5,34 @@ const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 // Melhor opção para triagem (rápido e atual)
 const MODEL = "gemini-2.5-flash";
+const RETRYABLE_AI_ERROR_PATTERN =
+  /fetch failed|socket|UND_ERR_SOCKET|ECONNRESET|ETIMEDOUT|EAI_AGAIN|ECONNREFUSED|other side closed/i;
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function isRetryableAiError(error) {
+  const message = String(error?.message || "");
+  const causeMessage = String(error?.cause?.message || "");
+  const code = String(error?.code || error?.cause?.code || "");
+  return RETRYABLE_AI_ERROR_PATTERN.test(`${message} ${causeMessage} ${code}`);
+}
+
+async function generateContentWithRetry({ model, contents }, options = {}) {
+  const maxAttempts = Math.max(1, Number(options.maxAttempts) || 3);
+  const baseDelayMs = Math.max(100, Number(options.baseDelayMs) || 700);
+
+  let lastError = null;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      return await ai.models.generateContent({ model, contents });
+    } catch (error) {
+      lastError = error;
+      if (attempt >= maxAttempts || !isRetryableAiError(error)) throw error;
+      await sleep(baseDelayMs * attempt);
+    }
+  }
+  throw lastError;
+}
 
 function extractJson(text) {
   if (!text) throw new Error("Resposta vazia da IA");
@@ -42,7 +70,7 @@ DADOS DO PACIENTE:
 
   const fullPrompt = basePrompt + "\n\n" + dynamicData;
 
-  const resp = await ai.models.generateContent({
+  const resp = await generateContentWithRetry({
     model: MODEL,
     contents: [{ role: "user", parts: [{ text: fullPrompt }] }],
   });
@@ -90,7 +118,7 @@ ${questionnaireBlock || "  - n/a"}
 
   const fullPrompt = `${basePrompt}\n\n${followUpPrompt}\n\n${dynamicData}`;
 
-  const resp = await ai.models.generateContent({
+  const resp = await generateContentWithRetry({
     model: MODEL, // continua gemini-2.5-flash
     contents: [{ role: "user", parts: [{ text: fullPrompt }] }],
   });
@@ -125,7 +153,7 @@ DADOS DO CASO:
 - prioridade: ${payload.priority ?? "n/a"}
 `;
 
-  const resp = await ai.models.generateContent({
+  const resp = await generateContentWithRetry({
     model: MODEL,
     contents: [{ role: "user", parts: [{ text: prompt }] }],
   });
@@ -156,7 +184,7 @@ ${structuredResultJson}
 `;
 
   const fullPrompt = `${basePrompt}\n\n${dynamicData}`;
-  const resp = await ai.models.generateContent({
+  const resp = await generateContentWithRetry({
     model: MODEL,
     contents: [{ role: "user", parts: [{ text: fullPrompt }] }],
   });
@@ -170,4 +198,5 @@ module.exports = {
   doctorDiagnosisSuggestion,
   doctorQuestionsSuggestion,
   labResultExplanationSuggestion,
+  isRetryableAiError,
 };

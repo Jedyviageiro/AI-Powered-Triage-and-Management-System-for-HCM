@@ -304,10 +304,10 @@ export function useDoctorConsultationState({
   );
 
   const updateReturnVisitDateByIndex = useCallback(
-    (index, value, returnVisitCount, setReturnVisitDates) => {
+    (index, value) => {
       setReturnVisitDates((prev) => {
-        const base = Array.isArray(prev) ? [...prev] : [""];
-        while (base.length < returnVisitCount) base.push("");
+        const base = Array.isArray(prev) && prev.length > 0 ? [...prev] : [""];
+        while (base.length <= index) base.push("");
         base[index] = value;
         return base;
       });
@@ -316,7 +316,7 @@ export function useDoctorConsultationState({
       }
       setPlanAccepted(false);
     },
-    [setPlanAccepted, setPlanDraft]
+    [setPlanAccepted, setPlanDraft, setReturnVisitDates]
   );
 
   const buildFinishPayloadArgs = useMemo(

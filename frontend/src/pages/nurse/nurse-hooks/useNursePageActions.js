@@ -112,11 +112,19 @@ export function useNursePageActions({
   setHoldInWaitingLine,
   setBypassToER,
   setPatientEditModal,
+  openConfirmPopup,
 }) {
   const logout = useCallback(() => {
-    clearAuth();
-    window.location.replace("/login");
-  }, []);
+    openConfirmPopup({
+      title: "Confirmar logout",
+      message: "Tem a certeza de que deseja terminar a sessão e voltar ao ecrã de login?",
+      confirmLabel: "Terminar sessão",
+      onConfirm: async () => {
+        clearAuth();
+        window.location.replace("/login");
+      },
+    });
+  }, [openConfirmPopup]);
 
   const closePatientEditModal = useCallback(() => {
     setPatientEditModal(makeClosedPatientEditModal());

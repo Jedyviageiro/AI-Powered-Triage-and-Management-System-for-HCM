@@ -8,6 +8,7 @@ import {
 export function useNursePageShellState() {
   const navListRef = useRef(null);
   const navItemRefs = useRef({});
+  const notificationsPreviewRef = useRef(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeView, setActiveView] = useState("home");
   const [navIndicator, setNavIndicator] = useState({ top: 0, height: 0, opacity: 0 });
@@ -178,6 +179,7 @@ export function useNursePageShellState() {
   return {
     navListRef,
     navItemRefs,
+    notificationsPreviewRef,
     sidebarOpen,
     setSidebarOpen,
     activeView,

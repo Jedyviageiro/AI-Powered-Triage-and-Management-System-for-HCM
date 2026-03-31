@@ -8,5 +8,9 @@
     "format:check:frontend": "npm --prefix frontend run format:check",
     "format:check:backend": "npm --prefix backend run format:check",
     "format:check": "npm run format:check:frontend && npm run format:check:backend"
+  },
+  "dependencies": {
+    "framer-motion": "^12.38.0",
+    "lucide-react": "^0.577.0"
   }
 }

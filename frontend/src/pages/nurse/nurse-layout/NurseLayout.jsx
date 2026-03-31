@@ -11,6 +11,7 @@ import { NursePatientsView } from "../nurse-patients/NursePatients";
 import { NurseQuickSearchView } from "../nurse-triage/NurseQuickSearch";
 import { NurseRoomsAvailableView } from "../nurse-rooms/NurseRoomsAvailable";
 import { PastVisitHistoryModal } from "../nurse-patients/PastVisitHistoryModal";
+import ConfirmDialog from "../../../components/shared/ConfirmDialog";
 
 export function NurseLayout(props) {
   const {
@@ -25,6 +26,7 @@ export function NurseLayout(props) {
     navIndicator,
     openView,
     loadingShift,
+    notificationsPreviewRef,
     shiftMenuBusy,
     shiftMenuOpen,
     setShiftMenuOpen,
@@ -584,7 +586,7 @@ export function NurseLayout(props) {
             {navSections.map((section) => (
               <div key={section.title}>
                 {sidebarOpen && (
-                  <div className="px-3 pb-1 text-[11px] uppercase tracking-[0.08em] text-gray-400 font-semibold">
+                  <div className="px-3 pb-1 text-[11px] uppercase tracking-[0.08em] font-semibold text-white/35">
                     {section.title}
                   </div>
                 )}
@@ -891,7 +893,7 @@ export function NurseLayout(props) {
                   </div>
                 </div>
               )}
-              <div style={{ position: "relative" }}>
+              <div ref={notificationsPreviewRef} style={{ position: "relative" }}>
                 <button
                   type="button"
                   onClick={() => {
@@ -1519,68 +1521,15 @@ export function NurseLayout(props) {
         </div>
       )}
 
-      {confirmPopup.open && (
-        <div className="alert-popup-overlay">
-          <div className="alert-popup-card">
-            <div className="alert-popup-handle" />
-            <div className="alert-popup-head">
-              <div
-                style={{
-                  fontSize: "17px",
-                  fontWeight: "700",
-                  color: "#1c1c1e",
-                  letterSpacing: "-.3px",
-                }}
-              >
-                {confirmPopup.title}
-              </div>
-            </div>
-            <div className="alert-popup-body">
-              <div className="popup-icon popup-icon-warning">
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <circle cx="12" cy="12" r="10" />
-                  <line x1="12" y1="8" x2="12" y2="12" />
-                  <line x1="12" y1="16" x2="12.01" y2="16" />
-                </svg>
-              </div>
-              <div style={{ flex: 1 }}>
-                <p style={{ margin: 0, fontSize: "13px", color: "#636366", lineHeight: 1.5 }}>
-                  {confirmPopup.message}
-                </p>
-              </div>
-            </div>
-            <div className="alert-popup-footer">
-              <button
-                type="button"
-                onClick={closeConfirmPopup}
-                className="btn-secondary"
-                style={{ width: "auto", padding: "10px 16px", borderRadius: "999px" }}
-                disabled={confirmPopup.busy}
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={confirmPopupAction}
-                className="btn-primary"
-                style={{ width: "auto", padding: "10px 16px", borderRadius: "999px" }}
-                disabled={confirmPopup.busy}
-              >
-                {confirmPopup.busy ? "A processar..." : confirmPopup.confirmLabel}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={confirmPopup.open}
+        title={confirmPopup.title}
+        message={confirmPopup.message}
+        confirmLabel={confirmPopup.confirmLabel}
+        busy={confirmPopup.busy}
+        onClose={closeConfirmPopup}
+        onConfirm={confirmPopupAction}
+      />
 
       <PastVisitHistoryModal
         modal={pastVisitModal}

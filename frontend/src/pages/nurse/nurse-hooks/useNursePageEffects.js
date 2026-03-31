@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { api } from "../../../lib/api";
 import { saveLocalNotificationReadMap } from "../nurse-helpers/nurseHelpers";
+import { useClickOutside } from "../../../hooks/useClickOutside";
 
 export function useNursePageEffects({
   forcedView,
@@ -16,6 +17,9 @@ export function useNursePageEffects({
   patient,
   setPatientHistory,
   activeView,
+  notificationsPreviewOpen,
+  notificationsPreviewRef,
+  setNotificationsPreviewOpen,
   err,
   queueErr,
   showPopup,
@@ -26,6 +30,12 @@ export function useNursePageEffects({
   hasRoomAvailable,
   setHoldInWaitingLine,
 }) {
+  useClickOutside(
+    notificationsPreviewRef,
+    () => setNotificationsPreviewOpen(false),
+    notificationsPreviewOpen
+  );
+
   useEffect(() => {
     if (forcedView) {
       setActiveView(forcedView);

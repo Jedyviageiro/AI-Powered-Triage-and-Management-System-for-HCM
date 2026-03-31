@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { getUser } from "../../lib/auth";
 import AppSidebar from "../../components/shared/layout/AppSidebar";
@@ -51,11 +51,14 @@ import { useDoctorConsultationActions } from "./doctor-hooks/useDoctorConsultati
 import { doctorPageStyles } from "./doctor-helpers/doctorPageStyles";
 import DoctorPageContent from "./doctor-layout/DoctorLayout";
 import { useDoctorPageShellState } from "./doctor-hooks/useDoctorPageShellState";
+import ConfirmDialog from "../../components/shared/ConfirmDialog";
 
 export default function DoctorPage({ forcedView = "dashboard" }) {
   const navigate = useNavigate();
   const location = useLocation();
   const me = getUser();
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
+  const [logoutBusy, setLogoutBusy] = useState(false);
   const resolvedView =
     Object.entries(DOCTOR_VIEW_ROUTES).find(([, path]) => path === location.pathname)?.[0] ||
     forcedView;
@@ -544,12 +547,25 @@ export default function DoctorPage({ forcedView = "dashboard" }) {
     [location.pathname, navigate, setActiveView]
   );
 
-  const logout = async () => {
+  const performLogout = async () => {
     await logoutDoctorSession({ intervalRef, heartbeatRef });
   };
 
+  const logout = () => {
+    setLogoutConfirmOpen(true);
+  };
+
+  const confirmLogout = async () => {
+    setLogoutBusy(true);
+    try {
+      await performLogout();
+    } finally {
+      setLogoutBusy(false);
+    }
+  };
+
   useEffect(() => {
-    if (err) showPopup("warning", "Aten??o", err);
+    if (err) showPopup("warning", "Atenção", err);
   }, [err, showPopup]);
 
   return (
@@ -763,6 +779,18 @@ export default function DoctorPage({ forcedView = "dashboard" }) {
         aiSuggestionOpen={aiSuggestionOpen}
         aiResult={aiResult}
         setAiSuggestionOpen={setAiSuggestionOpen}
+      />
+
+      <ConfirmDialog
+        open={logoutConfirmOpen}
+        title="Confirmar logout"
+        message="Tem a certeza de que deseja terminar a sessão e voltar ao ecrã de login?"
+        confirmLabel="Terminar sessão"
+        busy={logoutBusy}
+        onClose={() => {
+          if (!logoutBusy) setLogoutConfirmOpen(false);
+        }}
+        onConfirm={confirmLogout}
       />
     </div>
   );

@@ -272,7 +272,6 @@ export default function DoctorLayout(props) {
                       border: `1px solid ${shiftButtonMeta.border}`,
                       background: shiftButtonMeta.background,
                       color: shiftButtonMeta.color,
-                      fontSize: "0",
                       fontWeight: "700",
                       cursor:
                         loadingShift || shiftMenuBusy || !shiftFeatureAvailable
@@ -281,18 +280,15 @@ export default function DoctorLayout(props) {
                       opacity: loadingShift || shiftMenuBusy || !shiftFeatureAvailable ? 0.7 : 1,
                       display: "inline-flex",
                       alignItems: "center",
-                      gap: "10px",
-                      justifyContent: "space-between",
-                      minWidth: "170px",
+                      justifyContent: "flex-start",
                     }}
                     title="Abrir menu do turno"
                   >
-                    Ações do Turno
                     <span
                       style={{
                         display: "inline-flex",
                         alignItems: "center",
-                        gap: "8px",
+                        gap: "10px",
                         minWidth: 0,
                         fontSize: "12px",
                       }}
@@ -812,7 +808,7 @@ export default function DoctorLayout(props) {
                   buildFollowUpInstructionsText={buildFollowUpInstructionsText}
                   selectedReturnDate={selectedReturnDate}
                   selectedFollowUpTime={selectedFollowUpTime}
-                  updateReturnVisitDateByIndex={updateReturnVisitDateByIndex}
+                  _updateReturnVisitDateByIndex={updateReturnVisitDateByIndex}
                   followUpTimeWithinShift={followUpTimeWithinShift}
                   FOLLOW_UP_RULE_OPTIONS={FOLLOW_UP_RULE_OPTIONS}
                   followUpRuleMeta={followUpRuleMeta}

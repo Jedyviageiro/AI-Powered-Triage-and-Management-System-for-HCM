@@ -32,6 +32,7 @@ export default function NursePage({ forcedView = "home" }) {
   const {
     navListRef,
     navItemRefs,
+    notificationsPreviewRef,
     sidebarOpen,
     setSidebarOpen,
     activeView,
@@ -366,6 +367,7 @@ export default function NursePage({ forcedView = "home" }) {
     setHoldInWaitingLine,
     setBypassToER,
     setPatientEditModal,
+    openConfirmPopup,
   });
 
   const {
@@ -412,6 +414,9 @@ export default function NursePage({ forcedView = "home" }) {
     patient,
     setPatientHistory,
     activeView,
+    notificationsPreviewOpen,
+    notificationsPreviewRef,
+    setNotificationsPreviewOpen,
     err,
     queueErr,
     showPopup,
@@ -497,6 +502,7 @@ export default function NursePage({ forcedView = "home" }) {
     navIndicator,
     openView,
     loadingShift,
+    notificationsPreviewRef,
     shiftMenuBusy,
     shiftMenuOpen,
     setShiftMenuOpen,
