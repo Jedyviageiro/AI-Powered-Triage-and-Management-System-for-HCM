@@ -23,7 +23,7 @@ export function NurseRoomsAvailableView({ loadQueue, loadingQueue, queue, roomIn
               margin: 0,
             }}
           >
-            Quartos disponíveis
+            Quartos disponiveis
           </h1>
           <p style={{ fontSize: "14px", color: "#6b7280", marginTop: "4px", marginBottom: 0 }}>
             Estado atual da capacidade por tipo de sala
@@ -99,7 +99,7 @@ export function NurseRoomsAvailableView({ loadQueue, loadingQueue, queue, roomIn
                 }}
               />
               {type.available > 0
-                ? `${type.available} disponíve${type.available === 1 ? "l" : "is"}`
+                ? `${type.available} disponive${type.available === 1 ? "l" : "is"}`
                 : "Sem vagas"}
             </div>
           </div>
@@ -169,13 +169,30 @@ export function NurseRoomsAvailableView({ loadQueue, loadingQueue, queue, roomIn
                       </span>
                     </div>
                     <div style={{ fontSize: "12px", color: "#6b7280", marginTop: "3px" }}>
-                      {type.key === "urgent_room" &&
-                        "Para casos críticos com necessidade de monitorização contínua"}
-                      {type.key === "standard_room" &&
-                        "Para casos moderados sem necessidade de cuidados intensivos"}
-                      {type.key === "quick_room" &&
-                        "Para casos leves sem necessidade de monitorização ou IV"}
+                      {type.description || "Sem descricao configurada."}
                     </div>
+                    {Array.isArray(type.tags) && type.tags.length > 0 ? (
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "10px" }}>
+                        {type.tags.map((tag) => (
+                          <span
+                            key={`${type.key}-${tag}`}
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              fontSize: "11px",
+                              fontWeight: "600",
+                              color: "#0f766e",
+                              background: "#ecfeff",
+                              border: "0.5px solid #a5f3fc",
+                              borderRadius: "999px",
+                              padding: "4px 9px",
+                            }}
+                          >
+                            #{tag}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
                   </div>
                 </div>
 
@@ -226,7 +243,7 @@ export function NurseRoomsAvailableView({ loadQueue, loadingQueue, queue, roomIn
                             marginTop: "2px",
                           }}
                         >
-                          {room.status === "available" ? "Disponível" : "Ocupado"}
+                          {room.status === "available" ? "Disponivel" : "Ocupado"}
                         </div>
                       </div>
                     ))}
@@ -246,7 +263,7 @@ export function NurseRoomsAvailableView({ loadQueue, loadingQueue, queue, roomIn
                           marginBottom: "8px",
                         }}
                       >
-                        Indicações
+                        Indicacoes
                       </div>
                       <ul
                         style={{
@@ -299,7 +316,7 @@ export function NurseRoomsAvailableView({ loadQueue, loadingQueue, queue, roomIn
                           marginBottom: "8px",
                         }}
                       >
-                        Características
+                        Caracteristicas
                       </div>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
                         {type.features.map((item) => (

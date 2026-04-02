@@ -7,7 +7,15 @@ const nurseShiftModel = require("../models/nurseShiftModel");
 // ========================
 const createUser = async (req, res) => {
   try {
-    const { username, password, full_name, role, specialization } = req.body;
+    const {
+      username,
+      password,
+      full_name,
+      role,
+      specialization,
+      profile_photo_url,
+      profile_photo_public_id,
+    } = req.body;
 
     if (!username || !password || !full_name || !role) {
       return res.status(400).json({ error: "Preencha todos os campos" });
@@ -19,6 +27,8 @@ const createUser = async (req, res) => {
       full_name,
       role,
       specialization: specialization || null,
+      profile_photo_url: profile_photo_url || null,
+      profile_photo_public_id: profile_photo_public_id || null,
     });
 
     res.status(201).json(user);

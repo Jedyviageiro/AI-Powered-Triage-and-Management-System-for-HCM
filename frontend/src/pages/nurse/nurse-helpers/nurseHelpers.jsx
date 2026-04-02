@@ -239,7 +239,7 @@ export const ROOM_TYPES = [
     priority: "URGENT",
     title: "Sala de Observação - Urgente",
     shortTitle: "Sala de Observação",
-    total: 4,
+    defaultTotal: 4,
     indications: [
       "Infecção Respiratória grave (sibilância, SpO2 baixo, taquipneia)",
       "Diarreia + desidratação moderada-grave",
@@ -252,7 +252,7 @@ export const ROOM_TYPES = [
     priority: "LESS_URGENT",
     title: "Sala de Consulta Padrão - Pouco Urgente",
     shortTitle: "Sala de Consulta Padrão",
-    total: 4,
+    defaultTotal: 4,
     indications: [
       "Infecção Respiratória moderada (tosse + febre sem distress)",
       "Diarreia leve-moderada sem desidratação grave",
@@ -265,7 +265,7 @@ export const ROOM_TYPES = [
     priority: "NON_URGENT",
     title: "Quarto de Consulta Rápida - Não Urgente",
     shortTitle: "Quarto de Consulta Rápida",
-    total: 4,
+    defaultTotal: 4,
     indications: [
       "Doença da Pele leve (erupção localizada, só comichão)",
       "Diarreia leve sem desidratação",
@@ -274,6 +274,43 @@ export const ROOM_TYPES = [
     features: ["Cadeira/mesa simples", "Sem necessidade de monitor", "Sem necessidade de IV"],
   },
 ];
+
+export function DoctorAvatar({ doctor, size = 34, gradient = "linear-gradient(135deg, #165034, #2d6f4e)" }) {
+  const photoUrl = String(doctor?.profile_photo_url || "").trim();
+  const label = String(doctor?.full_name || doctor?.username || "Medico");
+  const initial = label.charAt(0).toUpperCase();
+
+  if (photoUrl) {
+    return (
+      <img
+        src={photoUrl}
+        alt={label}
+        style={{
+          width: size,
+          height: size,
+          borderRadius: "50%",
+          objectFit: "cover",
+          flexShrink: 0,
+          border: "1px solid rgba(255,255,255,0.55)",
+          background: "#fff",
+        }}
+      />
+    );
+  }
+
+  return (
+    <div
+      className="doc-avatar"
+      style={{
+        width: size,
+        height: size,
+        background: gradient,
+      }}
+    >
+      {initial}
+    </div>
+  );
+}
 
 export const priorityLabel = (value) =>
   PRIORITIES.find((p) => p.value === value)?.label || "Não classificado";

@@ -428,6 +428,13 @@ export default function LabTechnicianPage({ forcedView = "dashboard" }) {
     loadAll();
   }, [loadAll]);
 
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      loadAll();
+    }, 15 * 1000);
+    return () => clearInterval(intervalId);
+  }, [loadAll]);
+
   const {
     dashboardStats,
     modalVisit,

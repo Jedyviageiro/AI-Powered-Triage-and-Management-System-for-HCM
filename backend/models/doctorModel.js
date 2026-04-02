@@ -12,6 +12,7 @@ const listDoctorsWithAvailability = async () => {
       u.username,
       u.full_name,
       COALESCE(u.specialization, '') AS specialization,
+      u.profile_photo_url,
       u.is_available,
       u.is_active,
 
@@ -19,13 +20,8 @@ const listDoctorsWithAvailability = async () => {
         SELECT 1
         FROM visits v
         WHERE v.doctor_id = u.id
-          AND (
-            v.status = 'WAITING_DOCTOR'
-            OR (
-              v.status = 'IN_CONSULTATION'
-              AND v.consultation_ended_at IS NULL
-            )
-          )
+          AND v.status = 'IN_CONSULTATION'
+          AND v.consultation_ended_at IS NULL
       ) AS is_busy,
 
       (
@@ -33,11 +29,8 @@ const listDoctorsWithAvailability = async () => {
         FROM visits v
         WHERE v.doctor_id = u.id
           AND (
-            v.status = 'WAITING_DOCTOR'
-            OR (
-              v.status = 'IN_CONSULTATION'
-              AND v.consultation_ended_at IS NULL
-            )
+            v.status = 'IN_CONSULTATION'
+            OR v.status = 'WAITING_DOCTOR'
           )
         ORDER BY
           CASE

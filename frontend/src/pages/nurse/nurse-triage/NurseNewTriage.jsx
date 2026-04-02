@@ -1,4 +1,15 @@
 import NursePage from "../NursePage";
+import { DoctorAvatar } from "../nurse-helpers/nurseHelpers";
+
+const formatEtaLabel = (minutes) => {
+  const safeMinutes = Math.max(0, Number(minutes) || 0);
+  if (!safeMinutes) return "Atendimento pode iniciar agora";
+  if (safeMinutes < 60) return `Paciente tera que esperar cerca de ${safeMinutes} minutos na fila`;
+  const hours = Math.floor(safeMinutes / 60);
+  const remainingMinutes = safeMinutes % 60;
+  if (!remainingMinutes) return `Paciente tera que esperar cerca de ${hours}h na fila`;
+  return `Paciente tera que esperar cerca de ${hours}h ${remainingMinutes}min na fila`;
+};
 
 export function NurseNewTriageView({
   viewMode = "newTriage",
@@ -83,11 +94,14 @@ export function NurseNewTriageView({
   recommendedRoomLabel,
   bypassToER,
   hasRoomAvailable,
-  availableDoctors,
+  assignableDoctors,
+  doctorQueueEtaById,
   selectedDoctorId,
   assignDoctor,
   assigning,
   hasDoctorAvailable,
+  erBypassRecommended,
+  erBypassReasons,
   holdInWaitingLine,
   setHoldInWaitingLine,
   setBypassToER,
@@ -466,9 +480,11 @@ export function NurseNewTriageView({
               <input
                 className="triage-input"
                 value={pClinicalCode}
-                onChange={(e) => setPClinicalCode(e.target.value)}
-                placeholder="P0002"
-                required
+                readOnly
+                disabled
+                placeholder="A gerar automaticamente"
+                title="Codigo clinico gerado automaticamente"
+                style={{ background: "#f8fafc", color: "#0f172a", cursor: "not-allowed" }}
               />
             </div>
             <div>
@@ -928,6 +944,9 @@ export function NurseNewTriageView({
                     >
                       <div className={`priority-radio ${radioClass}`}>
                         {isSelected && <div className="priority-radio-dot" />}
+                        <div style={{ fontSize: "10px", color: isBusyDoctor ? "#b45309" : "#166534", marginTop: "6px", fontWeight: "700" }}>
+                          {isBusyDoctor ? "Medico ocupado" : "Medico livre"} · {formatEtaLabel(etaMinutes)}
+                        </div>
                       </div>
                       <div style={{ flex: 1 }}>
                         <div
@@ -1059,11 +1078,57 @@ export function NurseNewTriageView({
 
           <hr className="section-divider" />
 
+          {erBypassRecommended && !bypassToER && (
+            <div
+              style={{
+                marginBottom: "18px",
+                padding: "14px 16px",
+                borderRadius: "12px",
+                border: "1px solid #fecaca",
+                background: "#fef2f2",
+              }}
+            >
+              <div style={{ fontSize: "13px", fontWeight: "800", color: "#991b1b" }}>
+                Sinais de risco de vida detectados
+              </div>
+              <div style={{ fontSize: "12px", color: "#7f1d1d", marginTop: "4px" }}>
+                Este paciente pode seguir diretamente para a Sala de Reanimacao / ER sem aguardar
+                a fila do medico.
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "10px" }}>
+                {erBypassReasons.map((reason) => (
+                  <span
+                    key={reason}
+                    style={{
+                      fontSize: "11px",
+                      fontWeight: "700",
+                      color: "#991b1b",
+                      background: "#fee2e2",
+                      border: "1px solid #fecaca",
+                      borderRadius: "999px",
+                      padding: "4px 8px",
+                    }}
+                  >
+                    {reason}
+                  </span>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={() => setBypassToER(true)}
+                className="btn-primary"
+                style={{ marginTop: "12px", width: "auto", padding: "10px 16px" }}
+              >
+                Encaminhar direto para ER
+              </button>
+            </div>
+          )}
+
           <div style={{ marginBottom: "20px" }}>
             <label className="triage-label" style={{ marginBottom: "10px" }}>
               Atribuir Médico
             </label>
-            {availableDoctors.length === 0 ? (
+            {assignableDoctors.length === 0 ? (
               <div
                 style={{
                   padding: "16px",
@@ -1087,15 +1152,19 @@ export function NurseNewTriageView({
                   overflowY: "auto",
                 }}
               >
-                {availableDoctors.map((d) => {
+                {assignableDoctors.map((d) => {
                   const isDocSelected = selectedDoctorId === String(d.id);
+                  const doctorQueueMeta = doctorQueueEtaById?.get?.(Number(d.id)) || null;
+                  const etaMinutes = Number(doctorQueueMeta?.etaMinutes || 0);
+                  const isBusyDoctor = !!d?.is_busy;
                   return (
                     <div
                       key={d.id}
                       className={`doctor-card ${isDocSelected ? "selected" : ""}`}
+                      title={`${isBusyDoctor ? "Medico ocupado" : "Medico livre"} - ${formatEtaLabel(etaMinutes)}`}
                       onClick={() => !visit?.doctor_id && setSelectedDoctorId(String(d.id))}
                     >
-                      <div className="doc-avatar">{(d.full_name || d.username || "M")[0]}</div>
+                      <DoctorAvatar doctor={d} size={34} />
                       <div style={{ flex: 1 }}>
                         <div style={{ fontWeight: "600", fontSize: "13px", color: "#111827" }}>
                           {d.full_name || d.username || `Médico #${d.id}`}
@@ -1109,7 +1178,7 @@ export function NurseNewTriageView({
                           width: "8px",
                           height: "8px",
                           borderRadius: "50%",
-                          background: "#165034",
+                          background: isBusyDoctor ? "#f59e0b" : "#165034",
                           flexShrink: 0,
                         }}
                       />
@@ -1138,6 +1207,28 @@ export function NurseNewTriageView({
               </div>
             )}
           </div>
+
+          {selectedDoctorId && doctorQueueEtaById?.get?.(Number(selectedDoctorId)) && (
+            <div
+              style={{
+                marginBottom: "20px",
+                fontSize: "11px",
+                color: "#4b5563",
+                background: "#f8fafc",
+                border: "1px solid #e2e8f0",
+                borderRadius: "10px",
+                padding: "8px 10px",
+                lineHeight: 1.45,
+              }}
+            >
+              {assignableDoctors.some(
+                (doctor) => Number(doctor?.id) === Number(selectedDoctorId) && Boolean(doctor?.is_busy)
+              )
+                ? "Medico ocupado, mas o paciente sera adicionado na fila deste medico. "
+                : "Medico livre. "}
+              {formatEtaLabel(doctorQueueEtaById.get(Number(selectedDoctorId)).etaMinutes)}.
+            </div>
+          )}
 
           <div style={{ marginBottom: "20px", display: "grid", gap: "8px" }}>
             <label

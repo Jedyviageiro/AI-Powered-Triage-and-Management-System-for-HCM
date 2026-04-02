@@ -1,25 +1,70 @@
 const pool = require("../config/db");
 
+const formatClinicalCode = (value) => `P${String(value).padStart(4, "0")}`;
+
+const listClinicalCodeNumbers = async (db = pool) => {
+  const result = await db.query(
+    `SELECT NULLIF(SUBSTRING(clinical_code FROM '[0-9]+$'), '')::INTEGER AS code_number
+     FROM patients
+     WHERE clinical_code ~ '[0-9]+$'
+     ORDER BY code_number ASC`
+  );
+  return result.rows
+    .map((row) => Number(row?.code_number))
+    .filter((value) => Number.isInteger(value) && value > 0);
+};
+
+const getSmallestMissingClinicalCodeNumber = async (db = pool) => {
+  const numbers = await listClinicalCodeNumbers(db);
+  let expected = 1;
+
+  for (const value of numbers) {
+    if (value < expected) continue;
+    if (value > expected) break;
+    expected += 1;
+  }
+
+  return expected;
+};
+
+const getNextClinicalCode = async () => {
+  const nextNumber = await getSmallestMissingClinicalCodeNumber();
+  return formatClinicalCode(nextNumber);
+};
+
 // ========================
 // CREATE PATIENT
 // ========================
 const createPatient = async ({
-  clinical_code,
   full_name,
   sex,
   birth_date,
   guardian_name,
   guardian_phone,
 }) => {
-  const result = await pool.query(
-    `INSERT INTO patients
-        (clinical_code, full_name, sex, birth_date, guardian_name, guardian_phone)
-        VALUES ($1, $2, $3, $4, $5, $6)
-        RETURNING *`,
-    [clinical_code, full_name, sex, birth_date, guardian_name, guardian_phone]
-  );
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query("LOCK TABLE patients IN SHARE ROW EXCLUSIVE MODE");
 
-  return result.rows[0];
+    const nextNumber = await getSmallestMissingClinicalCodeNumber(client);
+    const clinical_code = formatClinicalCode(nextNumber);
+    const result = await client.query(
+      `INSERT INTO patients
+          (clinical_code, full_name, sex, birth_date, guardian_name, guardian_phone)
+          VALUES ($1, $2, $3, $4, $5, $6)
+          RETURNING *`,
+      [clinical_code, full_name, sex, birth_date, guardian_name, guardian_phone]
+    );
+
+    await client.query("COMMIT");
+    return result.rows[0];
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
 };
 
 // ========================
@@ -217,6 +262,7 @@ const getPatientHistory = async (patientId) => {
 // ========================
 module.exports = {
   createPatient,
+  getNextClinicalCode,
   getPatientById,
   getPatientByCode,
   searchPatients,

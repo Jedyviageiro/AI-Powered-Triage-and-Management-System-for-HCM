@@ -24,6 +24,7 @@ export function useNurseDerivedState({
   localNotificationReads,
   notifications,
   preferences,
+  roomSettings,
   priority,
   bypassToER,
   doctors,
@@ -49,8 +50,69 @@ export function useNurseDerivedState({
   );
 
   const selectedPriority = useMemo(() => PRIORITIES.find((p) => p.value === priority), [priority]);
-  const availableDoctors = useMemo(() => doctors.filter((d) => d?.is_busy === false), [doctors]);
-  const busyDoctors = useMemo(() => doctors.filter((d) => d?.is_busy === true), [doctors]);
+  const availableDoctors = useMemo(
+    () => doctors.filter((d) => d?.is_available !== false && d?.is_busy === false),
+    [doctors]
+  );
+  const busyDoctors = useMemo(
+    () => doctors.filter((d) => d?.is_available !== false && d?.is_busy === true),
+    [doctors]
+  );
+  const assignableDoctors = useMemo(
+    () =>
+      doctors.filter((d) => d?.is_available !== false).sort((a, b) => {
+        if (Boolean(a?.is_busy) !== Boolean(b?.is_busy)) {
+          return a?.is_busy ? 1 : -1;
+        }
+        return String(a?.full_name || a?.username || "").localeCompare(
+          String(b?.full_name || b?.username || "")
+        );
+      }),
+    [doctors]
+  );
+  const doctorQueueEtaById = useMemo(() => {
+    const map = new Map();
+    queue.forEach((visit) => {
+      const doctorId = Number(visit?.doctor_id);
+      if (!Number.isFinite(doctorId) || doctorId <= 0) return;
+      const status = String(visit?.status || "").toUpperCase();
+      if (!["WAITING_DOCTOR", "IN_CONSULTATION"].includes(status)) return;
+
+      const current = map.get(doctorId) || {
+        inConsultationCount: 0,
+        waitingCount: 0,
+      };
+
+      if (status === "IN_CONSULTATION") current.inConsultationCount += 1;
+      if (status === "WAITING_DOCTOR") current.waitingCount += 1;
+      map.set(doctorId, current);
+    });
+
+    const ETA_MINUTES_PER_CONSULTATION = 30;
+    const ETA_MINUTES_CURRENT_CONSULTATION = 20;
+
+    doctors.forEach((doctor) => {
+      const doctorId = Number(doctor?.id);
+      if (!Number.isFinite(doctorId) || doctorId <= 0) return;
+      const counts = map.get(doctorId) || { inConsultationCount: 0, waitingCount: 0 };
+      const etaMinutes =
+        counts.waitingCount * ETA_MINUTES_PER_CONSULTATION +
+        counts.inConsultationCount * ETA_MINUTES_CURRENT_CONSULTATION;
+
+      map.set(doctorId, {
+        ...counts,
+        etaMinutes,
+        statusLabel:
+          counts.inConsultationCount > 0
+            ? "Medico ocupado"
+            : counts.waitingCount > 0
+              ? "Fila em espera"
+              : "Medico livre",
+      });
+    });
+
+    return map;
+  }, [doctors, queue]);
   const urgentQueue = useMemo(() => queue.filter((v) => v?.priority === "URGENT"), [queue]);
   const nonUrgentQueue = useMemo(() => queue.filter((v) => v?.priority !== "URGENT"), [queue]);
   const triageQueueRows = useMemo(
@@ -241,23 +303,38 @@ export function useNurseDerivedState({
   const roomInventory = useMemo(
     () =>
       ROOM_TYPES.map((type) => {
-        const occupied = Math.min(type.total, Number(roomOccupancy[type.key] || 0));
-        const rooms = Array.from({ length: type.total }, (_, idx) => {
+        const configuredTotal = Math.max(
+          1,
+          Number(roomSettings?.[`${type.key}_total`] || type.defaultTotal || 1)
+        );
+        const configuredLabels = Array.isArray(roomSettings?.[`${type.key}_labels`])
+          ? roomSettings[`${type.key}_labels`]
+              .map((label) => String(label || "").trim())
+              .filter(Boolean)
+          : [];
+        const occupied = Math.min(configuredTotal, Number(roomOccupancy[type.key] || 0));
+        const rooms = Array.from({ length: configuredTotal }, (_, idx) => {
           const available = idx >= occupied;
           return {
             roomNumber: idx + 1,
-            label: `${type.shortTitle} ${idx + 1}`,
+            label: configuredLabels[idx] || `${type.shortTitle} ${idx + 1}`,
             status: available ? "available" : "occupied",
           };
         });
         return {
           ...type,
+          total: configuredTotal,
+          description: String(roomSettings?.[`${type.key}_description`] || ""),
+          tags: Array.isArray(roomSettings?.[`${type.key}_tags`])
+            ? roomSettings[`${type.key}_tags`]
+            : [],
+          labels: configuredLabels,
           occupied,
-          available: Math.max(0, type.total - occupied),
+          available: Math.max(0, configuredTotal - occupied),
           rooms,
         };
       }),
-    [roomOccupancy]
+    [roomOccupancy, roomSettings]
   );
   const recommendedRoomType = useMemo(() => {
     if (bypassToER) return null;
@@ -276,7 +353,7 @@ export function useNurseDerivedState({
     if (bypassToER) return true;
     return !!recommendedRoomLabel;
   }, [bypassToER, recommendedRoomLabel]);
-  const hasDoctorAvailable = availableDoctors.length > 0;
+  const hasDoctorAvailable = assignableDoctors.length > 0;
 
   const latestRecordedWeight = useMemo(() => {
     if (!Array.isArray(patientHistory)) return null;
@@ -362,6 +439,56 @@ export function useNurseDerivedState({
     if (!triageValidation.okWeight) errors.push("Peso inválido (0.5 a 300 kg).");
     return errors;
   }, [triageValidation]);
+  const erBypassReasons = useMemo(() => {
+    const reasons = [];
+    const spo2Number = Number(spo2);
+    const tempNumber = Number(temperature);
+    const hrNumber = Number(heartRate);
+    const rrNumber = Number(respRate);
+    const state = String(generalState || "").toUpperCase();
+
+    if (Number.isFinite(spo2Number) && spo2Number <= 89) {
+      reasons.push("SpO2 criticamente baixa");
+    }
+    if (state === "UNCONSCIOUS_UNRESPONSIVE") {
+      reasons.push("Paciente inconsciente ou sem resposta");
+    }
+    if (historySyncopeCollapse) {
+      reasons.push("Historia recente de sincope ou colapso");
+    }
+    if (needsOxygen && Number.isFinite(spo2Number) && spo2Number <= 92) {
+      reasons.push("Necessidade de oxigenio com saturacao baixa");
+    }
+    if (excessiveLethargy && difficultyMaintainingSitting) {
+      reasons.push("Letargia importante com dificuldade para se manter sentado");
+    }
+    if (suspectedSevereDehydration && excessiveLethargy) {
+      reasons.push("Suspeita de desidratacao grave com comprometimento clinico");
+    }
+    if (Number.isFinite(rrNumber) && rrNumber >= 50) {
+      reasons.push("Frequencia respiratoria muito elevada");
+    }
+    if (Number.isFinite(hrNumber) && hrNumber >= 180) {
+      reasons.push("Frequencia cardiaca muito elevada");
+    }
+    if (Number.isFinite(tempNumber) && tempNumber >= 40.5 && excessiveLethargy) {
+      reasons.push("Febre muito alta associada a letargia");
+    }
+
+    return reasons;
+  }, [
+    difficultyMaintainingSitting,
+    excessiveLethargy,
+    generalState,
+    heartRate,
+    historySyncopeCollapse,
+    needsOxygen,
+    respRate,
+    spo2,
+    suspectedSevereDehydration,
+    temperature,
+  ]);
+  const erBypassRecommended = erBypassReasons.length > 0;
   const aiShortReason = useMemo(() => {
     if (!aiSuggestion) return "";
     if (Array.isArray(aiSuggestion?.reasons) && aiSuggestion.reasons.length > 0) {
@@ -728,6 +855,7 @@ export function useNurseDerivedState({
     selectedPriority,
     availableDoctors,
     busyDoctors,
+    assignableDoctors,
     urgentQueue,
     nonUrgentQueue,
     triageQueueRows,
@@ -754,12 +882,15 @@ export function useNurseDerivedState({
     recommendedRoomLabel,
     hasRoomAvailable,
     hasDoctorAvailable,
+    doctorQueueEtaById,
     latestRecordedWeight,
     patientLabFollowup,
     skipTriageReturnEligible,
     triageValidation,
     triageFieldsOk,
     triageValidationErrors,
+    erBypassRecommended,
+    erBypassReasons,
     aiShortReason,
     getQueueRowBg,
     inTriageCount,

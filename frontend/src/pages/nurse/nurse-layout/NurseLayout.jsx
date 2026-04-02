@@ -161,10 +161,14 @@ export function NurseLayout(props) {
     recommendedRoomLabel,
     bypassToER,
     hasRoomAvailable,
+    assignableDoctors,
+    doctorQueueEtaById,
     selectedDoctorId,
     assignDoctor,
     assigning,
     hasDoctorAvailable,
+    erBypassRecommended,
+    erBypassReasons,
     holdInWaitingLine,
     setHoldInWaitingLine,
     setBypassToER,
@@ -1082,9 +1086,17 @@ export function NurseLayout(props) {
                   justifyContent: "center",
                 }}
               >
-                <span style={{ fontSize: "13px", fontWeight: "700", color: "white" }}>
-                  {me?.full_name?.trim()?.[0]?.toUpperCase() || "D"}
-                </span>
+                {String(me?.profile_photo_url || "").trim() ? (
+                  <img
+                    src={me.profile_photo_url}
+                    alt={me?.full_name || "Utilizador"}
+                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  />
+                ) : (
+                  <span style={{ fontSize: "13px", fontWeight: "700", color: "white" }}>
+                    {me?.full_name?.trim()?.[0]?.toUpperCase() || "D"}
+                  </span>
+                )}
               </button>
             </div>
           </div>
@@ -1263,11 +1275,14 @@ export function NurseLayout(props) {
                 recommendedRoomLabel={recommendedRoomLabel}
                 bypassToER={bypassToER}
                 hasRoomAvailable={hasRoomAvailable}
-                availableDoctors={availableDoctors}
+                assignableDoctors={assignableDoctors}
+                doctorQueueEtaById={doctorQueueEtaById}
                 selectedDoctorId={selectedDoctorId}
                 assignDoctor={assignDoctor}
                 assigning={assigning}
                 hasDoctorAvailable={hasDoctorAvailable}
+                erBypassRecommended={erBypassRecommended}
+                erBypassReasons={erBypassReasons}
                 holdInWaitingLine={holdInWaitingLine}
                 setHoldInWaitingLine={setHoldInWaitingLine}
                 setBypassToER={setBypassToER}
@@ -1357,11 +1372,14 @@ export function NurseLayout(props) {
                 recommendedRoomLabel={recommendedRoomLabel}
                 bypassToER={bypassToER}
                 hasRoomAvailable={hasRoomAvailable}
-                availableDoctors={availableDoctors}
+                assignableDoctors={assignableDoctors}
+                doctorQueueEtaById={doctorQueueEtaById}
                 selectedDoctorId={selectedDoctorId}
                 assignDoctor={assignDoctor}
                 assigning={assigning}
                 hasDoctorAvailable={hasDoctorAvailable}
+                erBypassRecommended={erBypassRecommended}
+                erBypassReasons={erBypassReasons}
                 holdInWaitingLine={holdInWaitingLine}
                 setHoldInWaitingLine={setHoldInWaitingLine}
                 setBypassToER={setBypassToER}

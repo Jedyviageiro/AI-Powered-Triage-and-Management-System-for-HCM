@@ -23,6 +23,103 @@ import {
 } from "../doctor-operations/doctorLabPlanOperations";
 import { clearDoctorConsultationWorkspace } from "../doctor-operations/doctorVisitState";
 
+const buildDoctorPlanPersistencePayload = ({ planDraft, selectedVisit, overrides = {} }) => ({
+  likely_diagnosis:
+    overrides.likely_diagnosis ?? planDraft?.likely_diagnosis ?? selectedVisit?.likely_diagnosis ?? "",
+  clinical_reasoning:
+    overrides.clinical_reasoning ??
+    planDraft?.clinical_reasoning ??
+    selectedVisit?.clinical_reasoning ??
+    "",
+  prescription_text:
+    overrides.prescription_text ??
+    planDraft?.prescription_text ??
+    selectedVisit?.prescription_text ??
+    "",
+  disposition_plan:
+    overrides.disposition_plan ?? planDraft?.disposition_plan ?? selectedVisit?.disposition_plan ?? "",
+  disposition_reason:
+    overrides.disposition_reason ??
+    planDraft?.disposition_reason ??
+    selectedVisit?.disposition_reason ??
+    "",
+  follow_up_when:
+    overrides.follow_up_when ?? planDraft?.follow_up_when ?? selectedVisit?.follow_up_when ?? "",
+  follow_up_instructions:
+    overrides.follow_up_instructions ??
+    planDraft?.follow_up_instructions ??
+    selectedVisit?.follow_up_instructions ??
+    "",
+  follow_up_return_if:
+    overrides.follow_up_return_if ??
+    planDraft?.follow_up_return_if ??
+    selectedVisit?.follow_up_return_if ??
+    "",
+  no_charge_chronic:
+    overrides.no_charge_chronic ??
+    planDraft?.no_charge_chronic ??
+    selectedVisit?.no_charge_chronic ??
+    false,
+  no_charge_reason:
+    overrides.no_charge_reason ?? planDraft?.no_charge_reason ?? selectedVisit?.no_charge_reason ?? "",
+  return_visit_date:
+    overrides.return_visit_date ??
+    planDraft?.return_visit_date ??
+    selectedVisit?.return_visit_date ??
+    "",
+  return_visit_reason:
+    overrides.return_visit_reason ??
+    planDraft?.return_visit_reason ??
+    selectedVisit?.return_visit_reason ??
+    "",
+  lab_requested:
+    overrides.lab_requested ?? planDraft?.lab_requested ?? selectedVisit?.lab_requested ?? false,
+  lab_exam_type:
+    overrides.lab_exam_type ?? planDraft?.lab_exam_type ?? selectedVisit?.lab_exam_type ?? "",
+  lab_sample_type:
+    overrides.lab_sample_type ?? planDraft?.lab_sample_type ?? selectedVisit?.lab_sample_type ?? "",
+  lab_tests: overrides.lab_tests ?? planDraft?.lab_tests ?? selectedVisit?.lab_tests ?? "",
+  lab_sample_collected_at:
+    overrides.lab_sample_collected_at ??
+    planDraft?.lab_sample_collected_at ??
+    selectedVisit?.lab_sample_collected_at ??
+    "",
+  lab_result_text:
+    overrides.lab_result_text ?? planDraft?.lab_result_text ?? selectedVisit?.lab_result_text ?? "",
+  lab_result_json:
+    overrides.lab_result_json ?? planDraft?.lab_result_json ?? selectedVisit?.lab_result_json ?? null,
+  lab_result_status:
+    overrides.lab_result_status ??
+    planDraft?.lab_result_status ??
+    selectedVisit?.lab_result_status ??
+    "",
+  lab_result_ready_at:
+    overrides.lab_result_ready_at ??
+    planDraft?.lab_result_ready_at ??
+    selectedVisit?.lab_result_ready_at ??
+    "",
+  hospital_status:
+    overrides.hospital_status ?? planDraft?.hospital_status ?? selectedVisit?.hospital_status ?? "",
+  vital_status:
+    overrides.vital_status ?? planDraft?.vital_status ?? selectedVisit?.vital_status ?? "",
+  is_bedridden:
+    overrides.is_bedridden ?? planDraft?.is_bedridden ?? selectedVisit?.is_bedridden ?? false,
+  inpatient_unit:
+    overrides.inpatient_unit ?? planDraft?.inpatient_unit ?? selectedVisit?.inpatient_unit ?? "",
+  inpatient_bed:
+    overrides.inpatient_bed ?? planDraft?.inpatient_bed ?? selectedVisit?.inpatient_bed ?? "",
+  discharged_at:
+    overrides.discharged_at ?? planDraft?.discharged_at ?? selectedVisit?.discharged_at ?? "",
+  death_note: overrides.death_note ?? selectedVisit?.death_note ?? "",
+  doctor_questionnaire_json:
+    overrides.doctor_questionnaire_json ??
+    selectedVisit?.doctor_questionnaire_json ??
+    null,
+  accepted:
+    overrides.accepted ??
+    !!(planDraft?.accepted || selectedVisit?.plan_accepted_at || selectedVisit?.accepted),
+});
+
 export function useDoctorConsultationActions(args) {
   const {
     me,
@@ -620,9 +717,27 @@ export function useDoctorConsultationActions(args) {
         labOrderDraft,
         labRequestSupport,
       });
-      setPlanDraft((prev) => ({ ...prev, lab_tests: summary }));
+      const nextPlanDraft = { ...planDraft, lab_tests: summary, lab_requested: true };
+      setPlanDraft(nextPlanDraft);
       setLabOrderDraft((prev) => ({ ...prev, clinicalReason: resolvedClinicalReason }));
       setLabOrderConfirmed(true);
+      if (selectedVisit?.id) {
+        api
+          .saveVisitMedicalPlan(
+            selectedVisit.id,
+            buildDoctorPlanPersistencePayload({
+              planDraft: nextPlanDraft,
+              selectedVisit,
+              overrides: {
+                lab_requested: true,
+                lab_tests: summary,
+              },
+            })
+          )
+          .catch((error) => {
+            setErr(error?.message || "Nao foi possivel enviar o pedido ao laboratorio.");
+          });
+      }
       if (selectedLabProtocol?.sameDayCollection && !selectedLabCollectionRule) {
         setSampleCollectionModalOpen(true);
       }
@@ -672,11 +787,33 @@ export function useDoctorConsultationActions(args) {
   ]);
 
   const cancelSampleCollectionRequest = useCallback(() => {
-    setPlanDraft((prev) => buildDoctorCancelledSampleCollection({ planDraft: prev }));
+    const nextPlanDraft = buildDoctorCancelledSampleCollection({ planDraft });
+    setPlanDraft(nextPlanDraft);
     setLabOrderConfirmed(false);
     setSampleCollectionModalOpen(false);
     setPlanAccepted(false);
-  }, [setLabOrderConfirmed, setPlanAccepted, setPlanDraft, setSampleCollectionModalOpen]);
+    if (selectedVisit?.id) {
+      api
+        .saveVisitMedicalPlan(
+          selectedVisit.id,
+          buildDoctorPlanPersistencePayload({
+            planDraft: nextPlanDraft,
+            selectedVisit,
+            overrides: {
+              lab_requested: false,
+              lab_exam_type: "",
+              lab_tests: "",
+              lab_sample_collected_at: "",
+              lab_result_text: "",
+              lab_result_status: "",
+              lab_result_ready_at: "",
+              lab_result_json: null,
+            },
+          })
+        )
+        .catch(() => {});
+    }
+  }, [planDraft, selectedVisit, setLabOrderConfirmed, setPlanAccepted, setPlanDraft, setSampleCollectionModalOpen, setErr]);
 
   const updateQuestionAnswer = useCallback(
     (question, answer) => {

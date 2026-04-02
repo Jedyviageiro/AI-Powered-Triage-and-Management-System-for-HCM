@@ -29,6 +29,7 @@ app.use("/nurse-shift", require("./routes/nurseShiftRoutes"));
 app.use("/doctor-shift", require("./routes/doctorShiftRoutes"));
 app.use("/notifications", require("./routes/notificationRoutes"));
 app.use("/preferences", require("./routes/preferenceRoutes"));
+app.use("/room-settings", require("./routes/roomSettingsRoutes"));
 
 app.get("/health", (req, res) => res.json({ ok: true }));
 

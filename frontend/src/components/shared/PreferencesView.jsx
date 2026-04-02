@@ -330,23 +330,39 @@ export default function PreferencesView({
           <Card style={{ borderRadius: "22px 22px 8px 8px" }}>
             <Label>Perfil</Label>
             <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 18 }}>
-              <div
-                style={{
-                  width: 56,
-                  height: 56,
-                  borderRadius: "50%",
-                  background: `linear-gradient(135deg,${GDARK},#2d6f4e)`,
-                  color: "#fff",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 20,
-                  fontWeight: 800,
-                  flexShrink: 0,
-                }}
-              >
-                {ini(me?.full_name)}
-              </div>
+              {String(me?.profile_photo_url || "").trim() ? (
+                <img
+                  src={me.profile_photo_url}
+                  alt={me?.full_name || "Utilizador"}
+                  style={{
+                    width: 56,
+                    height: 56,
+                    borderRadius: "50%",
+                    objectFit: "cover",
+                    border: "1px solid rgba(15, 23, 42, 0.08)",
+                    flexShrink: 0,
+                    background: "#fff",
+                  }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: 56,
+                    height: 56,
+                    borderRadius: "50%",
+                    background: `linear-gradient(135deg,${GDARK},#2d6f4e)`,
+                    color: "#fff",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 20,
+                    fontWeight: 800,
+                    flexShrink: 0,
+                  }}
+                >
+                  {ini(me?.full_name)}
+                </div>
+              )}
               <div>
                 <div
                   style={{

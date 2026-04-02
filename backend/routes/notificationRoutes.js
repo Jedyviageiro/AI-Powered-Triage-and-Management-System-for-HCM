@@ -3,7 +3,7 @@ const requireAuth = require("../middleware/requireAuth");
 const requireRole = require("../middleware/requireRole");
 const notificationController = require("../controllers/notificationController");
 
-router.use(requireAuth, requireRole("ADMIN", "DOCTOR", "NURSE"));
+router.use(requireAuth, requireRole("ADMIN", "DOCTOR", "NURSE", "LAB_TECHNICIAN"));
 
 router.get("/", notificationController.listNotifications);
 router.get("/latest", notificationController.getLatestNotification);

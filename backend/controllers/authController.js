@@ -44,4 +44,23 @@ const login = async (req, res) => {
   }
 };
 
-module.exports = { login };
+const me = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: "Sessao invalida" });
+    }
+
+    const user = await userModel.getUserById(userId);
+    if (!user) {
+      return res.status(404).json({ error: "Utilizador nao encontrado" });
+    }
+
+    return res.status(200).json(user);
+  } catch (err) {
+    console.error("AUTH ME ERROR:", err);
+    return res.status(500).json({ error: "Erro ao obter perfil atual" });
+  }
+};
+
+module.exports = { login, me };

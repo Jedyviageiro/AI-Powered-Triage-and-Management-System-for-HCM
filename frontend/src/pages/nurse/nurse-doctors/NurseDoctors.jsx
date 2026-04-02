@@ -1,4 +1,5 @@
 import NursePage from "../NursePage";
+import { DoctorAvatar } from "../nurse-helpers/nurseHelpers";
 
 export function NurseDoctorsView({
   doctors,
@@ -93,12 +94,11 @@ export function NurseDoctorsView({
                             border: `1px solid ${color}20`,
                           }}
                         >
-                          <div
-                            className="doc-avatar"
-                            style={{ background: `linear-gradient(135deg, ${color}, ${color}aa)` }}
-                          >
-                            {(d.full_name || d.username || "M")[0]}
-                          </div>
+                          <DoctorAvatar
+                            doctor={d}
+                            size={34}
+                            gradient={`linear-gradient(135deg, ${color}, ${color}aa)`}
+                          />
                           <div style={{ flex: 1 }}>
                             <div style={{ fontWeight: "600", fontSize: "13px", color: "#111827" }}>
                               {d.full_name || d.username || `Médico #${d.id}`}

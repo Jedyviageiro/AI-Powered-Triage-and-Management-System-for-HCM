@@ -1,4 +1,5 @@
 const notificationModel = require("../models/notificationModel");
+const userModel = require("../models/userModel");
 const visitModel = require("../models/visitModel");
 const { notifyParentAboutLabResult } = require("../services/labNotificationService");
 
@@ -35,10 +36,63 @@ const parsePositiveInt = (value) => {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
 };
 
+const normalizeText = (value) => {
+  const text = String(value || "").trim();
+  return text || null;
+};
+
 const normalizeUpper = (value) =>
   String(value || "")
     .trim()
     .toUpperCase();
+
+const notifyLabTechniciansAboutRequest = async ({
+  visitBefore,
+  visitAfter,
+  actorName = null,
+}) => {
+  const hadLabRequest = !!visitBefore?.lab_requested;
+  const hasLabRequest = !!visitAfter?.lab_requested;
+  if (!hasLabRequest) return;
+
+  const examType =
+    normalizeText(visitAfter?.lab_tests) ||
+    normalizeText(visitAfter?.lab_exam_type) ||
+    "exame laboratorial";
+
+  const shouldNotify =
+    !hadLabRequest ||
+    normalizeText(visitBefore?.lab_exam_type) !== normalizeText(visitAfter?.lab_exam_type) ||
+    normalizeText(visitBefore?.lab_tests) !== normalizeText(visitAfter?.lab_tests);
+
+  if (!shouldNotify) return;
+
+  const labTechnicians = await userModel.listUsersByRole("LAB_TECHNICIAN");
+  if (!Array.isArray(labTechnicians) || labTechnicians.length === 0) return;
+
+  const patientLabel =
+    normalizeText(visitAfter?.patient_full_name) ||
+    normalizeText(visitAfter?.full_name) ||
+    `paciente da visita #${visitAfter.id}`;
+
+  const doctorLabel =
+    normalizeText(actorName) ||
+    normalizeText(visitAfter?.doctor_full_name) ||
+    "medico responsavel";
+
+  await Promise.all(
+    labTechnicians.map((user) =>
+      notificationModel.createNotification({
+        user_id: user.id,
+        title: "Novo pedido laboratorial",
+        message: `${doctorLabel} solicitou ${examType} para ${patientLabel}.`,
+        level: "INFO",
+        source: "LAB",
+        visit_id: visitAfter.id,
+      })
+    )
+  );
+};
 
 const sendServerError = (res, context, error, message) => {
   console.error(`${context}:`, error);
@@ -323,6 +377,11 @@ const editVisitPriority = async (req, res) => {
 
 const saveMedicalPlan = async (req, res) => {
   try {
+    const visitId = parsePositiveInt(req.params.id);
+    if (!visitId) {
+      return res.status(400).json({ error: "id invalido" });
+    }
+
     const {
       likely_diagnosis,
       clinical_reasoning,
@@ -356,6 +415,11 @@ const saveMedicalPlan = async (req, res) => {
       accepted,
     } = req.body || {};
 
+    const existingVisit = await visitModel.getVisitById(visitId);
+    if (!existingVisit) {
+      return res.status(404).json({ error: "Visita nao encontrada" });
+    }
+
     const disposition = disposition_plan || "";
     if (!ALLOWED_DISPOSITIONS.has(disposition)) {
       return res.status(400).json({ error: "disposition_plan invalido" });
@@ -372,7 +436,7 @@ const saveMedicalPlan = async (req, res) => {
     }
 
     const updated = await visitModel.saveMedicalPlan(
-      req.params.id,
+      visitId,
       {
         likely_diagnosis,
         clinical_reasoning,
@@ -412,6 +476,16 @@ const saveMedicalPlan = async (req, res) => {
       return res.status(404).json({
         error: "Visita nao encontrada, finalizada/cancelada, ou sem permissao para salvar plano.",
       });
+    }
+
+    try {
+      await notifyLabTechniciansAboutRequest({
+        visitBefore: existingVisit,
+        visitAfter: updated,
+        actorName: normalizeText(req.user?.full_name),
+      });
+    } catch (notifyError) {
+      console.error("LAB REQUEST NOTIFICATION ERROR:", notifyError);
     }
 
     return res.json(updated);

@@ -2,18 +2,58 @@ const pool = require("../config/db");
 const bcrypt = require("bcrypt");
 
 const SALT_ROUNDS = 10;
+let ensureUserProfilePhotoColumnsPromise = null;
+
+const ensureUserProfilePhotoColumns = async () => {
+  if (!ensureUserProfilePhotoColumnsPromise) {
+    ensureUserProfilePhotoColumnsPromise = pool.query(`
+      ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS profile_photo_url TEXT;
+
+      ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS profile_photo_public_id TEXT;
+    `);
+  }
+
+  return ensureUserProfilePhotoColumnsPromise;
+};
 
 // ========================
 // CREATE USER
 // ========================
-const createUser = async ({ username, password, full_name, role, specialization = null }) => {
+const createUser = async ({
+  username,
+  password,
+  full_name,
+  role,
+  specialization = null,
+  profile_photo_url = null,
+  profile_photo_public_id = null,
+}) => {
+  await ensureUserProfilePhotoColumns();
   const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
 
   const result = await pool.query(
-    `INSERT INTO users (username, password_hash, full_name, role, specialization)
-         VALUES ($1, $2, $3, $4, $5)
-         RETURNING id, username, full_name, specialization, role, is_active, created_at, updated_at, last_login_at`,
-    [username, passwordHash, full_name, role, specialization]
+    `INSERT INTO users (
+        username,
+        password_hash,
+        full_name,
+        role,
+        specialization,
+        profile_photo_url,
+        profile_photo_public_id
+      )
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         RETURNING id, username, full_name, specialization, role, is_active, profile_photo_url, profile_photo_public_id, created_at, updated_at, last_login_at`,
+    [
+      username,
+      passwordHash,
+      full_name,
+      role,
+      specialization,
+      profile_photo_url,
+      profile_photo_public_id,
+    ]
   );
 
   return result.rows[0];
@@ -23,8 +63,9 @@ const createUser = async ({ username, password, full_name, role, specialization 
 // GET USER BY ID
 // ========================
 const getUserById = async (id) => {
+  await ensureUserProfilePhotoColumns();
   const result = await pool.query(
-    `SELECT id, username, full_name, specialization, role, is_active, created_at, updated_at, last_login_at
+    `SELECT id, username, full_name, specialization, role, is_active, profile_photo_url, profile_photo_public_id, created_at, updated_at, last_login_at
          FROM users WHERE id = $1`,
     [id]
   );
@@ -35,8 +76,9 @@ const getUserById = async (id) => {
 // GET USER BY USERNAME (login)
 // ========================
 const getUserByUsername = async (username) => {
+  await ensureUserProfilePhotoColumns();
   const result = await pool.query(
-    `SELECT id, username, password_hash, full_name, specialization, role, is_active, created_at, updated_at, last_login_at
+    `SELECT id, username, password_hash, full_name, specialization, role, is_active, profile_photo_url, profile_photo_public_id, created_at, updated_at, last_login_at
      FROM users
      WHERE username = $1`,
     [username]
@@ -48,6 +90,7 @@ const getUserByUsername = async (username) => {
 // LIST USERS
 // ========================
 const listUsers = async () => {
+  await ensureUserProfilePhotoColumns();
   const result = await pool.query(
     `SELECT
             u.id,
@@ -56,6 +99,8 @@ const listUsers = async () => {
             u.specialization,
             u.role,
             u.is_active,
+            u.profile_photo_url,
+            u.profile_photo_public_id,
             u.created_at,
             u.updated_at,
             u.last_login_at,
@@ -74,10 +119,44 @@ const listUsers = async () => {
   return result.rows;
 };
 
+const listUsersByRole = async (role, { onlyActive = true } = {}) => {
+  await ensureUserProfilePhotoColumns();
+  const normalizedRole = String(role || "")
+    .trim()
+    .toUpperCase();
+  if (!normalizedRole) return [];
+
+  const result = await pool.query(
+    `SELECT
+        id,
+        username,
+        full_name,
+        specialization,
+        role,
+        is_active,
+        profile_photo_url,
+        profile_photo_public_id,
+        created_at,
+        updated_at,
+        last_login_at
+     FROM users
+     WHERE role = $1
+       AND ($2::boolean = FALSE OR is_active = TRUE)
+     ORDER BY full_name ASC, id ASC`,
+    [normalizedRole, !!onlyActive]
+  );
+
+  return result.rows;
+};
+
 // ========================
 // UPDATE USER (dados)
 // ========================
-const updateUser = async (id, { username, full_name, role, is_active, specialization }) => {
+const updateUser = async (
+  id,
+  { username, full_name, role, is_active, specialization, profile_photo_url, profile_photo_public_id }
+) => {
+  await ensureUserProfilePhotoColumns();
   const result = await pool.query(
     `UPDATE users
      SET username   = COALESCE($1, username),
@@ -85,15 +164,19 @@ const updateUser = async (id, { username, full_name, role, is_active, specializa
          role       = COALESCE($3, role),
          is_active  = COALESCE($4, is_active),
          specialization = COALESCE($5, specialization),
+         profile_photo_url = COALESCE($6, profile_photo_url),
+         profile_photo_public_id = COALESCE($7, profile_photo_public_id),
          updated_at = NOW()
-     WHERE id = $6
-     RETURNING id, username, full_name, specialization, role, is_active, created_at, updated_at, last_login_at`,
+     WHERE id = $8
+     RETURNING id, username, full_name, specialization, role, is_active, profile_photo_url, profile_photo_public_id, created_at, updated_at, last_login_at`,
     [
       username ?? null,
       full_name ?? null,
       role ?? null,
       is_active ?? null,
       specialization ?? null,
+      profile_photo_url ?? null,
+      profile_photo_public_id ?? null,
       id,
     ]
   );
@@ -105,13 +188,14 @@ const updateUser = async (id, { username, full_name, role, is_active, specializa
 // UPDATE PASSWORD (admin reset)
 // ========================
 const updatePassword = async (id, newPassword) => {
+  await ensureUserProfilePhotoColumns();
   const passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
 
   const result = await pool.query(
     `UPDATE users
          SET password_hash = $1, updated_at = NOW()
          WHERE id = $2
-         RETURNING id, username, full_name, specialization, role, is_active`,
+         RETURNING id, username, full_name, specialization, role, is_active, profile_photo_url, profile_photo_public_id`,
     [passwordHash, id]
   );
 
@@ -158,6 +242,7 @@ module.exports = {
   getUserById,
   getUserByUsername,
   listUsers,
+  listUsersByRole,
   updateUser,
   updatePassword,
   deleteUser,

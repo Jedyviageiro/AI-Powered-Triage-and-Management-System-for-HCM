@@ -5,6 +5,7 @@ import { api } from "../../../lib/api";
 import { clearAuth } from "../../../lib/auth";
 import {
   DEFAULT_PREFERENCES,
+  calculateAgeYears,
   escapeHtml,
   normalizeDoctorsResponse,
   statusLabel,
@@ -74,6 +75,8 @@ export function useNursePageActions({
   setLoadingPreferences,
   setPreferences,
   setSavingPreferences,
+  setLoadingRoomSettings,
+  setRoomSettings,
   setLoadingShift,
   setShiftStatus,
   setStartingShift,
@@ -325,6 +328,15 @@ export function useNursePageActions({
     setWeight,
   ]);
 
+  const loadNextClinicalCode = useCallback(async () => {
+    try {
+      const data = await api.getNextClinicalCode();
+      setPClinicalCode(String(data?.clinical_code || ""));
+    } catch (e) {
+      setErr(e.message);
+    }
+  }, [setErr, setPClinicalCode]);
+
   const loadDoctors = useCallback(
     async (signal) => {
       setErr("");
@@ -454,6 +466,31 @@ export function useNursePageActions({
     }
   }, [setLoadingPreferences, setPreferences, setQueueErr]);
 
+  const loadRoomSettings = useCallback(async () => {
+    setLoadingRoomSettings(true);
+    try {
+      const data = await api.getRoomSettings();
+      setRoomSettings({
+        urgent_room_total: Number(data?.urgent_room_total || 4),
+        standard_room_total: Number(data?.standard_room_total || 4),
+        quick_room_total: Number(data?.quick_room_total || 4),
+        urgent_room_description: String(data?.urgent_room_description || "Para casos criticos com necessidade de monitorizacao continua."),
+        standard_room_description: String(data?.standard_room_description || "Para casos moderados sem necessidade de cuidados intensivos."),
+        quick_room_description: String(data?.quick_room_description || "Para casos leves sem necessidade de monitorizacao ou acesso IV."),
+        urgent_room_tags: Array.isArray(data?.urgent_room_tags) ? data.urgent_room_tags : ["monitor", "oxigenio", "iv"],
+        standard_room_tags: Array.isArray(data?.standard_room_tags) ? data.standard_room_tags : ["consulta", "observacao", "avaliacao"],
+        quick_room_tags: Array.isArray(data?.quick_room_tags) ? data.quick_room_tags : ["rapido", "leve", "sem-iv"],
+        urgent_room_labels: Array.isArray(data?.urgent_room_labels) ? data.urgent_room_labels : [],
+        standard_room_labels: Array.isArray(data?.standard_room_labels) ? data.standard_room_labels : [],
+        quick_room_labels: Array.isArray(data?.quick_room_labels) ? data.quick_room_labels : [],
+      });
+    } catch (e) {
+      setQueueErr(e.message);
+    } finally {
+      setLoadingRoomSettings(false);
+    }
+  }, [setLoadingRoomSettings, setQueueErr, setRoomSettings]);
+
   const savePreferences = useCallback(
     async (payload) => {
       setSavingPreferences(true);
@@ -563,10 +600,30 @@ export function useNursePageActions({
     async (e) => {
       e.preventDefault();
       setErr("");
+      const ageYears = calculateAgeYears(pBirthDate);
+      if (!Number.isInteger(ageYears) || ageYears < 0) {
+        showPopup("warning", "Data invalida", "Informe uma data de nascimento valida.");
+        return;
+      }
+      if (ageYears < 6) {
+        showPopup(
+          "warning",
+          "Faixa etaria nao suportada",
+          "A triagem nao e para recem-nascidos, lactentes ou criancas menores de 6 anos."
+        );
+        return;
+      }
+      if (ageYears > 17) {
+        showPopup(
+          "warning",
+          "Faixa etaria nao suportada",
+          "O sistema e somente para triagem pediatrica, nao para adultos."
+        );
+        return;
+      }
       setCreatingPatient(true);
       try {
         const created = await api.createPatient({
-          clinical_code: pClinicalCode.trim(),
           full_name: pFullName.trim(),
           sex: pSex,
           birth_date: pBirthDate,
@@ -579,6 +636,7 @@ export function useNursePageActions({
         setVisit(null);
         setSelectedDoctorId("");
         setForceTriageForLabFollowup(false);
+        await loadNextClinicalCode();
       } catch (e2) {
         setErr(e2.message);
       } finally {
@@ -592,6 +650,7 @@ export function useNursePageActions({
       pGuardianName,
       pGuardianPhone,
       pSex,
+      showPopup,
       setAiSuggestion,
       setCreatingPatient,
       setErr,
@@ -600,6 +659,7 @@ export function useNursePageActions({
       setSearchResults,
       setSelectedDoctorId,
       setVisit,
+      loadNextClinicalCode,
     ]
   );
 
@@ -637,6 +697,7 @@ export function useNursePageActions({
     downloadVisitPdf,
     downloadDischargeSummaryPdf,
     resetAll,
+    loadNextClinicalCode,
     loadDoctors,
     loadQueue,
     loadPastVisits,
@@ -644,6 +705,7 @@ export function useNursePageActions({
     markNotificationRead,
     markAllNotificationsRead,
     loadPreferences,
+    loadRoomSettings,
     savePreferences,
     previewPreferences,
     loadShiftStatus,

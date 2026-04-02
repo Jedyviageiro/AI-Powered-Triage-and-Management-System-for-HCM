@@ -4,8 +4,10 @@ import { useNurseClinicalActions } from "./nurse-hooks/useNurseClinicalActions";
 import { useNurseTriageActions } from "./nurse-hooks/useNurseTriageActions";
 import { NurseLayout } from "./nurse-layout/NurseLayout";
 import { useNursePageShellState } from "./nurse-hooks/useNursePageShellState";
+import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { getUser } from "../../lib/auth";
+import { getUser, saveUser } from "../../lib/auth";
+import { api } from "../../lib/api";
 
 import {
   NURSE_VIEW_ROUTES,
@@ -24,10 +26,32 @@ import { useNurseDerivedState } from "./nurse-hooks/useNurseDerivedState.jsx";
 export default function NursePage({ forcedView = "home" }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const me = getUser();
+  const [me, setMe] = useState(() => getUser());
   const resolvedView =
     Object.entries(NURSE_VIEW_ROUTES).find(([, path]) => path === location.pathname)?.[0] ||
     forcedView;
+
+  useEffect(() => {
+    let active = true;
+    const syncCurrentUser = async () => {
+      try {
+        const freshUser = await api.getMe();
+        if (!active || !freshUser) return;
+        setMe(freshUser);
+        saveUser(freshUser);
+      } catch {
+        // Keep current local session snapshot if refresh fails.
+      }
+    };
+
+    syncCurrentUser();
+    const intervalId = setInterval(syncCurrentUser, 60 * 1000);
+
+    return () => {
+      active = false;
+      clearInterval(intervalId);
+    };
+  }, []);
 
   const {
     navListRef,
@@ -166,6 +190,10 @@ export default function NursePage({ forcedView = "home" }) {
     setLoadingPreferences,
     savingPreferences,
     setSavingPreferences,
+    roomSettings,
+    setRoomSettings,
+    loadingRoomSettings,
+    setLoadingRoomSettings,
     popup,
     showPopup,
     closePopup,
@@ -190,6 +218,7 @@ export default function NursePage({ forcedView = "home" }) {
     selectedPriority,
     availableDoctors,
     busyDoctors,
+    assignableDoctors,
     urgentQueue,
     nonUrgentQueue,
     triageQueueRows,
@@ -216,11 +245,14 @@ export default function NursePage({ forcedView = "home" }) {
     recommendedRoomLabel,
     hasRoomAvailable,
     hasDoctorAvailable,
+    doctorQueueEtaById,
     latestRecordedWeight,
     patientLabFollowup,
     skipTriageReturnEligible,
     triageFieldsOk,
     triageValidationErrors,
+    erBypassRecommended,
+    erBypassReasons,
     aiShortReason,
     getQueueRowBg,
     inTriageCount,
@@ -249,6 +281,7 @@ export default function NursePage({ forcedView = "home" }) {
     localNotificationReads,
     notifications,
     preferences,
+    roomSettings,
     priority,
     bypassToER,
     doctors,
@@ -284,6 +317,7 @@ export default function NursePage({ forcedView = "home" }) {
     downloadVisitPdf,
     downloadDischargeSummaryPdf,
     resetAll,
+    loadNextClinicalCode,
     loadDoctors,
     loadQueue,
     loadPastVisits,
@@ -291,6 +325,7 @@ export default function NursePage({ forcedView = "home" }) {
     markNotificationRead,
     markAllNotificationsRead,
     loadPreferences,
+    loadRoomSettings,
     savePreferences,
     previewPreferences,
     loadShiftStatus,
@@ -329,6 +364,8 @@ export default function NursePage({ forcedView = "home" }) {
     setLoadingPreferences,
     setPreferences,
     setSavingPreferences,
+    setLoadingRoomSettings,
+    setRoomSettings,
     setLoadingShift,
     setShiftStatus,
     setStartingShift,
@@ -404,10 +441,12 @@ export default function NursePage({ forcedView = "home" }) {
     forcedView: resolvedView,
     setActiveView,
     loadDoctors,
+    loadNextClinicalCode,
     loadQueue,
     loadPastVisits,
     loadNotifications,
     loadPreferences,
+    loadRoomSettings,
     loadShiftStatus,
     setNowTs,
     localNotificationReads,
@@ -520,6 +559,7 @@ export default function NursePage({ forcedView = "home" }) {
     weeklyData,
     availableDoctors,
     busyDoctors,
+    assignableDoctors,
     loadingDoctors,
     inTriageCount,
     recentQueueItems,
@@ -639,16 +679,21 @@ export default function NursePage({ forcedView = "home" }) {
     recommendedRoomLabel,
     bypassToER,
     hasRoomAvailable,
+    doctorQueueEtaById,
     selectedDoctorId,
     assignDoctor,
     assigning,
     hasDoctorAvailable,
+    erBypassRecommended,
+    erBypassReasons,
     holdInWaitingLine,
     setHoldInWaitingLine,
     setBypassToER,
     saveTriage,
     savingTriage,
     roomInventory,
+    roomSettings,
+    loadingRoomSettings,
     doctors,
     patientByVisitId,
     triageQueueRows,

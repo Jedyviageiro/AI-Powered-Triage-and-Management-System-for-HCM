@@ -87,6 +87,21 @@ export function useNursePageShellState() {
   const [preferences, setPreferences] = useState(DEFAULT_PREFERENCES);
   const [loadingPreferences, setLoadingPreferences] = useState(false);
   const [savingPreferences, setSavingPreferences] = useState(false);
+  const [roomSettings, setRoomSettings] = useState({
+    urgent_room_total: 4,
+    standard_room_total: 4,
+    quick_room_total: 4,
+    urgent_room_description: "Para casos criticos com necessidade de monitorizacao continua.",
+    standard_room_description: "Para casos moderados sem necessidade de cuidados intensivos.",
+    quick_room_description: "Para casos leves sem necessidade de monitorizacao ou acesso IV.",
+    urgent_room_tags: ["monitor", "oxigenio", "iv"],
+    standard_room_tags: ["consulta", "observacao", "avaliacao"],
+    quick_room_tags: ["rapido", "leve", "sem-iv"],
+    urgent_room_labels: [],
+    standard_room_labels: [],
+    quick_room_labels: [],
+  });
+  const [loadingRoomSettings, setLoadingRoomSettings] = useState(false);
 
   const [popup, setPopup] = useState({ open: false, type: "warning", title: "", message: "" });
   const [confirmPopup, setConfirmPopup] = useState({
@@ -313,6 +328,10 @@ export function useNursePageShellState() {
     setLoadingPreferences,
     savingPreferences,
     setSavingPreferences,
+    roomSettings,
+    setRoomSettings,
+    loadingRoomSettings,
+    setLoadingRoomSettings,
     popup,
     setPopup,
     showPopup,

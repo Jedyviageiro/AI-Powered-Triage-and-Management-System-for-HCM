@@ -7,10 +7,12 @@ export function useNursePageEffects({
   forcedView,
   setActiveView,
   loadDoctors,
+  loadNextClinicalCode,
   loadQueue,
   loadPastVisits,
   loadNotifications,
   loadPreferences,
+  loadRoomSettings,
   loadShiftStatus,
   setNowTs,
   localNotificationReads,
@@ -45,13 +47,10 @@ export function useNursePageEffects({
   useEffect(() => {
     const controller = new AbortController();
     loadDoctors(controller.signal);
-    const interval = setInterval(
-      () => {
-        const ctrl = new AbortController();
-        loadDoctors(ctrl.signal);
-      },
-      30 * 60 * 1000
-    );
+    const interval = setInterval(() => {
+      const ctrl = new AbortController();
+      loadDoctors(ctrl.signal);
+    }, 60 * 1000);
     return () => {
       controller.abort();
       clearInterval(interval);
@@ -63,26 +62,35 @@ export function useNursePageEffects({
     loadPastVisits();
     loadNotifications();
     loadPreferences();
-    const interval = setInterval(
-      () => {
-        loadQueue();
-        loadPastVisits();
-        loadNotifications();
-        loadPreferences();
-      },
-      30 * 60 * 1000
-    );
+    loadRoomSettings();
+    loadNextClinicalCode();
+    const interval = setInterval(() => {
+      loadQueue();
+      loadPastVisits();
+      loadNotifications();
+      loadPreferences();
+      loadRoomSettings();
+      loadNextClinicalCode();
+    }, 30 * 60 * 1000);
     return () => clearInterval(interval);
-  }, [loadNotifications, loadPastVisits, loadPreferences, loadQueue]);
+  }, [
+    loadNextClinicalCode,
+    loadNotifications,
+    loadPastVisits,
+    loadPreferences,
+    loadQueue,
+    loadRoomSettings,
+  ]);
 
   useEffect(() => {
     const interval = setInterval(() => {
       loadQueue();
+      loadDoctors();
       loadShiftStatus();
       loadNotifications();
     }, 60 * 1000);
     return () => clearInterval(interval);
-  }, [loadNotifications, loadQueue, loadShiftStatus]);
+  }, [loadDoctors, loadNotifications, loadQueue, loadShiftStatus]);
 
   useEffect(() => {
     loadShiftStatus();
@@ -119,22 +127,36 @@ export function useNursePageEffects({
 
   useEffect(() => {
     if (activeView === "doctors") loadDoctors();
+    if (activeView === "newTriage" || activeView === "quickSearch") {
+      loadDoctors();
+      loadNextClinicalCode();
+    }
     if (activeView === "patients") loadPastVisits();
     if (activeView === "notifications") loadNotifications();
     if (activeView === "preferences") loadPreferences();
     if (activeView === "roomsAvailable") {
       loadQueue();
       loadDoctors();
+      loadRoomSettings();
     }
     if (activeView === "destination") loadQueue();
-  }, [activeView, loadDoctors, loadNotifications, loadPastVisits, loadPreferences, loadQueue]);
+  }, [
+    activeView,
+    loadDoctors,
+    loadNextClinicalCode,
+    loadNotifications,
+    loadPastVisits,
+    loadPreferences,
+    loadQueue,
+    loadRoomSettings,
+  ]);
 
   useEffect(() => {
-    if (err) showPopup("warning", "Atenção", err);
+    if (err) showPopup("warning", "Atencao", err);
   }, [err, showPopup]);
 
   useEffect(() => {
-    if (queueErr) showPopup("warning", "Atenção", queueErr);
+    if (queueErr) showPopup("warning", "Atencao", queueErr);
   }, [queueErr, showPopup]);
 
   useEffect(() => {

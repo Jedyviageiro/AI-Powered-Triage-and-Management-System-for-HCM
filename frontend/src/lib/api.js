@@ -58,6 +58,7 @@ export const api = {
       method: "POST",
       body: { username, password },
     }),
+  getMe: () => request("/auth/me"),
 
   // ================= QUEUE =================
   getQueue: (scope = "") => request(scope ? `/queue?scope=${encodeURIComponent(scope)}` : "/queue"),
@@ -102,6 +103,7 @@ export const api = {
 
   getPatientById: (id) => request(`/patients/${id}`),
   getPatientHistory: (id) => request(`/patients/${id}/history`),
+  getNextClinicalCode: () => request("/patients/next-clinical-code"),
 
   createPatient: (payload) => request("/patients", { method: "POST", body: payload }),
 
@@ -234,6 +236,8 @@ export const api = {
   // ================= PREFERENCES =================
   getMyPreferences: () => request("/preferences/me"),
   updateMyPreferences: (payload) => request("/preferences/me", { method: "PATCH", body: payload }),
+  getRoomSettings: () => request("/room-settings"),
+  updateRoomSettings: (payload) => request("/room-settings", { method: "PATCH", body: payload }),
 
   // aliases usados na UI
   listDoctors: () => api.listDoctorsAvailability(),
