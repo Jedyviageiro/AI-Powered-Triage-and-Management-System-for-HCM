@@ -304,7 +304,7 @@ export function useDoctorDashboardState({
   }, [agenda]);
 
   const agendaTodayCount = agendaAssignedTodayCount + agendaReturnsTodayCount;
-  const departmentQueue = useMemo(() => filteredQueue, [filteredQueue]);
+  const departmentQueue = useMemo(() => (Array.isArray(queue) ? queue : []), [queue]);
   const myAssignedQueue = useMemo(
     () => filteredQueue.filter((visit) => Number(visit?.doctor_id) === Number(meId)),
     [filteredQueue, meId]

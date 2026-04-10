@@ -98,6 +98,11 @@ router.patch(
   requireRole("DOCTOR", "ADMIN"),
   visitController.notifyPatientLabReady
 );
+router.patch(
+  "/:id/lab-result-delivered",
+  requireRole("DOCTOR", "ADMIN"),
+  visitController.markPatientLabResultDelivered
+);
 
 router.patch(
   "/:id/return-schedule",

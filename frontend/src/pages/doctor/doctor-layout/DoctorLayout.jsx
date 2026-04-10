@@ -66,9 +66,11 @@ export default function DoctorLayout(props) {
     readyDoctorLabRows,
     loadingQueue,
     notifyingPatientVisitId,
+    markingDeliveredVisitId,
     openLabResult,
     openLabTrackingFlow,
     notifyPatientExamReady,
+    markPatientResultDelivered,
     filteredQueue,
     activeAlertRows,
     formatPriorityPt,
@@ -632,10 +634,12 @@ export default function DoctorLayout(props) {
                   readyRows={readyDoctorLabRows}
                   loading={loadingQueue}
                   notifyingPatientVisitId={notifyingPatientVisitId}
+                  markingDeliveredVisitId={markingDeliveredVisitId}
                   onRefresh={loadQueue}
                   onOpenLabResult={openLabResult}
                   onOpenLabTracking={openLabTrackingFlow}
                   onNotifyPatient={notifyPatientExamReady}
+                  onMarkDelivered={markPatientResultDelivered}
                 />
               </div>
             )}

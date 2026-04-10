@@ -187,12 +187,14 @@ export default function DoctorPage({ forcedView = "dashboard" }) {
     loadingPreferences,
     savingPreferences,
     notifyingPatientVisitId,
+    markingDeliveredVisitId,
     loadNotifications,
     markNotificationRead,
     markAllNotificationsRead,
     loadPreferences,
     savePreferences,
     notifyPatientExamReady,
+    markPatientResultDelivered,
     filteredNotifications,
     notificationsUnread,
     latestNotification,
@@ -646,9 +648,11 @@ export default function DoctorPage({ forcedView = "dashboard" }) {
         readyDoctorLabRows={readyDoctorLabRows}
         loadingQueue={loadingQueue}
         notifyingPatientVisitId={notifyingPatientVisitId}
+        markingDeliveredVisitId={markingDeliveredVisitId}
         openLabResult={openLabResult}
         openLabTrackingFlow={openLabTrackingFlow}
         notifyPatientExamReady={notifyPatientExamReady}
+        markPatientResultDelivered={markPatientResultDelivered}
         filteredQueue={filteredQueue}
         activeAlertRows={activeAlertRows}
         formatPriorityPt={formatPriorityPt}

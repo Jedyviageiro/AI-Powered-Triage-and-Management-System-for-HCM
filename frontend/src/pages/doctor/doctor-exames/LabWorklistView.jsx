@@ -131,9 +131,11 @@ export default function LabWorklistView({
   readyRows = [],
   loading = false,
   notifyingPatientVisitId = null,
+  markingDeliveredVisitId = null,
   onRefresh,
   onOpenLabResult,
   onNotifyPatient,
+  onMarkDelivered,
 }) {
   const [tab, setTab] = useState("pending");
   const [selectedId, setSelectedId] = useState(null);
@@ -581,6 +583,36 @@ export default function LabWorklistView({
                                     ? "A avisar..."
                                     : "Avisar paciente"}
                               </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onMarkDelivered?.(row);
+                                }}
+                                disabled={
+                                  row.patient_notified || markingDeliveredVisitId === row.id
+                                }
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  borderRadius: 999,
+                                  padding: "6px 14px",
+                                  fontSize: 12,
+                                  fontWeight: 600,
+                                  border: `1px solid ${BORDER}`,
+                                  cursor: row.patient_notified ? "default" : "pointer",
+                                  background: row.patient_notified ? "#F0FDF4" : "#fff",
+                                  color: row.patient_notified ? "#065F46" : "#374151",
+                                  opacity: markingDeliveredVisitId === row.id ? 0.6 : 1,
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
+                                {row.patient_notified
+                                  ? "Entregue ?"
+                                  : markingDeliveredVisitId === row.id
+                                    ? "A registar..."
+                                    : "Resultado entregue"}
+                              </button>
                             </>
                           ) : null}
                         </div>
@@ -763,6 +795,32 @@ export default function LabWorklistView({
                 Fechar
               </button>
               {selectedRow.is_ready ? (
+                <>
+                <button
+                  type="button"
+                  onClick={() => onMarkDelivered?.(selectedRow)}
+                  disabled={
+                    selectedRow.patient_notified || markingDeliveredVisitId === selectedRow.id
+                  }
+                  style={{
+                    borderRadius: 999,
+                    border: `1px solid ${BORDER}`,
+                    background: selectedRow.patient_notified ? "#F0FDF4" : "#fff",
+                    padding: "8px 18px",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: selectedRow.patient_notified ? "#065F46" : "#374151",
+                    cursor: selectedRow.patient_notified ? "default" : "pointer",
+                    fontFamily: "'IBM Plex Sans', system-ui, sans-serif",
+                    opacity: markingDeliveredVisitId === selectedRow.id ? 0.6 : 1,
+                  }}
+                >
+                  {selectedRow.patient_notified
+                    ? "Resultado Entregue ✓"
+                    : markingDeliveredVisitId === selectedRow.id
+                      ? "A registar..."
+                      : "Marcar Entregue"}
+                </button>
                 <button
                   type="button"
                   onClick={() => onOpenLabResult?.(selectedRow)}
@@ -780,6 +838,7 @@ export default function LabWorklistView({
                 >
                   Abrir Resultado
                 </button>
+              </>
               ) : null}
             </div>
           </div>

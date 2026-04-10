@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import {
   DEFAULT_PREFERENCES,
   createPastVisitModalState,
@@ -148,15 +148,18 @@ export function useNursePageShellState() {
   const [pdfLoadingId, setPdfLoadingId] = useState(null);
   const [triageStep, setTriageStep] = useState(1);
 
-  const showPopup = (type, title, message) => setPopup({ open: true, type, title, message });
-  const closePopup = () => {
+  const showPopup = useCallback((type, title, message) => {
+    setPopup({ open: true, type, title, message });
+  }, []);
+  const closePopup = useCallback(() => {
     setPopup({ open: false, type: "warning", title: "", message: "" });
     setErr("");
     setQueueErr("");
-  };
-  const openConfirmPopup = ({ title, message, confirmLabel = "Confirmar", onConfirm }) =>
+  }, []);
+  const openConfirmPopup = useCallback(({ title, message, confirmLabel = "Confirmar", onConfirm }) => {
     setConfirmPopup({ open: true, title, message, confirmLabel, onConfirm, busy: false });
-  const closeConfirmPopup = () =>
+  }, []);
+  const closeConfirmPopup = useCallback(() =>
     setConfirmPopup({
       open: false,
       title: "",
@@ -164,10 +167,12 @@ export function useNursePageShellState() {
       confirmLabel: "Confirmar",
       onConfirm: null,
       busy: false,
-    });
-  const openPastVisitModal = (visitRow) =>
-    setPastVisitModal(createPastVisitModalState(visitRow || null));
-  const closePastVisitModal = () => setPastVisitModal(createPastVisitModalState());
+    }), []);
+  const openPastVisitModal = useCallback(
+    (visitRow) => setPastVisitModal(createPastVisitModalState(visitRow || null)),
+    []
+  );
+  const closePastVisitModal = useCallback(() => setPastVisitModal(createPastVisitModalState()), []);
 
   useLayoutEffect(() => {
     const updateNavIndicator = () => {

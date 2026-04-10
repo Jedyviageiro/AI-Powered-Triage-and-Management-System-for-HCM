@@ -779,6 +779,61 @@ const notifyPatientLabReady = async (req, res) => {
   }
 };
 
+const markPatientLabResultDelivered = async (req, res) => {
+  try {
+    const visitId = parsePositiveInt(req.params.id);
+    if (!visitId) return res.status(400).json({ error: "id invalido" });
+
+    const context = await visitModel.getLabNotificationContextByVisitId(visitId);
+    if (!context) {
+      return res.status(404).json({
+        error: "Visita nao encontrada ou sem resultado laboratorial pronto.",
+      });
+    }
+
+    const hasReadyResult =
+      !!String(context.lab_result_text || "").trim() ||
+      ["READY", "RESULTED", "VERIFIED"].includes(
+        String(context.lab_result_status || "")
+          .trim()
+          .toUpperCase()
+      );
+
+    if (!hasReadyResult) {
+      return res.status(400).json({ error: "O resultado laboratorial ainda nao esta pronto." });
+    }
+
+    const userNote =
+      typeof req.body?.note === "string" && req.body.note.trim() ? req.body.note.trim() : null;
+    const note = userNote
+      ? `Resultado entregue presencialmente. ${userNote}`
+      : "Resultado entregue presencialmente.";
+
+    const updated = await visitModel.markLabPatientNotified(visitId, {
+      actorId: req.user?.id || null,
+      note,
+    });
+
+    if (!updated) {
+      return res.status(404).json({
+        error: "Visita nao encontrada ou sem resultado laboratorial pronto.",
+      });
+    }
+
+    return res.json({
+      ...updated,
+      delivery_mode: "MANUAL_HANDOFF",
+    });
+  } catch (error) {
+    return sendServerError(
+      res,
+      "MARK PATIENT LAB RESULT DELIVERED ERROR",
+      error,
+      "Erro ao registar entrega do resultado"
+    );
+  }
+};
+
 module.exports = {
   assignDoctor,
   cancelVisit,
@@ -792,6 +847,7 @@ module.exports = {
   listLabPendingRequests,
   listLabReadyResults,
   listPastVisits,
+  markPatientLabResultDelivered,
   notifyPatientLabReady,
   removeVisitTriage,
   saveLabResult,

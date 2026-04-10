@@ -628,7 +628,8 @@ const listLabPendingRequests = async () => {
          COALESCE(TRIM(v.lab_result_text), '') = ''
          OR UPPER(COALESCE(TRIM(v.lab_result_status), '')) <> 'READY'
        )
-     ORDER BY COALESCE(v.lab_sample_collected_at, v.updated_at, v.arrival_time) ASC`
+     ORDER BY COALESCE(v.updated_at, v.arrival_time) DESC,
+              COALESCE(v.lab_sample_collected_at, v.arrival_time) DESC`
   );
   return result.rows;
 };
@@ -1024,24 +1025,6 @@ const saveMedicalPlan = async (id, payload, { actorId = null, isAdmin = false } 
   const updated = result.rows[0];
   if (!updated) return null;
 
-  const hasReadyLabResult =
-    !!String(payload?.lab_result_text || "").trim() ||
-    String(payload?.lab_result_status || "").toUpperCase() === "READY";
-
-  if (hasReadyLabResult && updated.status === "WAITING_DOCTOR" && updated.lab_requested) {
-    const resume = await pool.query(
-      `UPDATE visits
-       SET status = 'IN_CONSULTATION',
-           consultation_started_at = COALESCE(consultation_started_at, NOW()),
-           updated_at = NOW()
-       WHERE id = $1
-         AND status = 'WAITING_DOCTOR'
-       RETURNING *`,
-      [updated.id]
-    );
-    if (resume.rows[0]) return resume.rows[0];
-  }
-
   const shouldMarkDeceased = String(payload?.vital_status || "").toUpperCase() === "DECEASED";
   const shouldMarkAlive = String(payload?.vital_status || "").toUpperCase() === "ALIVE";
   if (shouldMarkDeceased) {
@@ -1233,20 +1216,6 @@ const saveLabResultByLabTechnician = async (
   );
   const updated = result.rows[0];
   if (!updated) return null;
-
-  if (updated.status === "WAITING_DOCTOR" && updated.doctor_id) {
-    const resume = await pool.query(
-      `UPDATE visits
-       SET status = 'IN_CONSULTATION',
-           consultation_started_at = COALESCE(consultation_started_at, NOW()),
-           updated_at = NOW()
-       WHERE id = $1
-         AND status = 'WAITING_DOCTOR'
-       RETURNING *`,
-      [updated.id]
-    );
-    if (resume.rows[0]) return resume.rows[0];
-  }
 
   return updated;
 };

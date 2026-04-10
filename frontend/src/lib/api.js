@@ -165,6 +165,11 @@ export const api = {
       method: "PATCH",
       body: payload,
     }),
+  markLabResultDelivered: (visitId, payload = {}) =>
+    request(`/visits/${visitId}/lab-result-delivered`, {
+      method: "PATCH",
+      body: payload,
+    }),
 
   scheduleVisitReturn: (visitId, payload) =>
     request(`/visits/${visitId}/return-schedule`, {

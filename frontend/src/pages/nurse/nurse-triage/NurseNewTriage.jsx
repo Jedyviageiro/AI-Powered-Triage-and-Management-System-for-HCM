@@ -944,9 +944,7 @@ export function NurseNewTriageView({
                     >
                       <div className={`priority-radio ${radioClass}`}>
                         {isSelected && <div className="priority-radio-dot" />}
-                        <div style={{ fontSize: "10px", color: isBusyDoctor ? "#b45309" : "#166534", marginTop: "6px", fontWeight: "700" }}>
-                          {isBusyDoctor ? "Medico ocupado" : "Medico livre"} · {formatEtaLabel(etaMinutes)}
-                        </div>
+                        
                       </div>
                       <div style={{ flex: 1 }}>
                         <div

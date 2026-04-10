@@ -38,6 +38,7 @@ export function useDoctorNotificationsAndPreferences({
     loadLocalDoctorNotificationReadMap()
   );
   const [notifyingPatientVisitId, setNotifyingPatientVisitId] = useState(null);
+  const [markingDeliveredVisitId, setMarkingDeliveredVisitId] = useState(null);
 
   const loadNotifications = useCallback(async () => {
     setLoadingNotifications(true);
@@ -216,6 +217,50 @@ export function useDoctorNotificationsAndPreferences({
     ]
   );
 
+  const markPatientResultDelivered = useCallback(
+    async (row) => {
+      if (!row?.id || markingDeliveredVisitId === row.id) return;
+      setMarkingDeliveredVisitId(row.id);
+      try {
+        const updated = await api.markLabResultDelivered(row.id);
+        setLabReadyResults((prev) =>
+          (Array.isArray(prev) ? prev : []).map((item) =>
+            Number(item?.id) === Number(row.id) ? { ...item, ...updated } : item
+          )
+        );
+        setQueue((prev) =>
+          (Array.isArray(prev) ? prev : []).map((item) =>
+            Number(item?.id) === Number(row.id) ? { ...item, ...updated } : item
+          )
+        );
+        if (Number(selectedVisit?.id) === Number(row.id)) {
+          setSelectedVisit((prev) => (prev ? { ...prev, ...updated } : prev));
+        }
+        showPopup(
+          "success",
+          "Resultado entregue",
+          "O sistema registou que o resultado laboratorial ja foi entregue ao paciente."
+        );
+      } catch (e) {
+        showPopup(
+          "warning",
+          "Atencao",
+          e?.message || "Nao foi possivel registar a entrega do resultado."
+        );
+      } finally {
+        setMarkingDeliveredVisitId(null);
+      }
+    },
+    [
+      markingDeliveredVisitId,
+      selectedVisit?.id,
+      setLabReadyResults,
+      setQueue,
+      setSelectedVisit,
+      showPopup,
+    ]
+  );
+
   useEffect(() => {
     saveLocalDoctorNotificationReadMap(localNotificationReads);
   }, [localNotificationReads]);
@@ -240,12 +285,14 @@ export function useDoctorNotificationsAndPreferences({
     savingPreferences,
     localNotificationReads,
     notifyingPatientVisitId,
+    markingDeliveredVisitId,
     loadNotifications,
     markNotificationRead,
     markAllNotificationsRead,
     loadPreferences,
     savePreferences,
     notifyPatientExamReady,
+    markPatientResultDelivered,
     filteredNotifications,
     notificationsUnread,
     latestNotification,
