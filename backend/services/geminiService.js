@@ -8,6 +8,8 @@ const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 const MODEL = "gemini-2.5-flash";
 const RETRYABLE_AI_ERROR_PATTERN =
   /fetch failed|socket|UND_ERR_SOCKET|ECONNRESET|ETIMEDOUT|EAI_AGAIN|ECONNREFUSED|other side closed/i;
+const TEMPORARILY_UNAVAILABLE_AI_ERROR_PATTERN =
+  /unavailable|high demand|overloaded|try again later|503/i;
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -16,6 +18,19 @@ function isRetryableAiError(error) {
   const causeMessage = String(error?.cause?.message || "");
   const code = String(error?.code || error?.cause?.code || "");
   return RETRYABLE_AI_ERROR_PATTERN.test(`${message} ${causeMessage} ${code}`);
+}
+
+function isTemporarilyUnavailableAiError(error) {
+  const message = String(error?.message || "");
+  const causeMessage = String(error?.cause?.message || "");
+  const code = String(error?.code || error?.cause?.code || "");
+  const status = Number(error?.status || error?.cause?.status || 0);
+  return (
+    status === 503 ||
+    TEMPORARILY_UNAVAILABLE_AI_ERROR_PATTERN.test(
+      `${message} ${causeMessage} ${code} ${status || ""}`
+    )
+  );
 }
 
 async function generateContentWithRetry({ model, contents }, options = {}) {
@@ -216,4 +231,5 @@ module.exports = {
   doctorQuestionsSuggestion,
   labResultExplanationSuggestion,
   isRetryableAiError,
+  isTemporarilyUnavailableAiError,
 };

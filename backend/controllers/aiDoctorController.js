@@ -323,6 +323,34 @@ const doctorAssistAI = async (req, res) => {
       });
     }
 
+    if (geminiService.isTemporarilyUnavailableAiError?.(err) && isQuestionGenerationOnly) {
+      return res.json({
+        disclaimer:
+          "IA temporariamente indisponível por alta procura. A mostrar perguntas base para continuar a consulta.",
+        ...normalizeDoctorResult({
+          questions_to_clarify: fallbackQuestionsByComplaint(req.body?.chief_complaint).slice(0, 5),
+          confidence: 0.2,
+        }),
+      });
+    }
+
+    if (geminiService.isTemporarilyUnavailableAiError?.(err)) {
+      const isLabExplanationOnly = !!req.body?.explain_lab_result_only;
+      if (isLabExplanationOnly) {
+        return res.status(503).json({
+          error:
+            "A IA está temporariamente indisponível por alta procura para explicar este resultado laboratorial. Tente novamente em alguns segundos.",
+          retryable: true,
+        });
+      }
+
+      return res.status(503).json({
+        error:
+          "A IA está temporariamente indisponível por alta procura. Tente novamente em alguns segundos.",
+        retryable: true,
+      });
+    }
+
     if (geminiService.isRetryableAiError?.(err)) {
       const isLabExplanationOnly = !!req.body?.explain_lab_result_only;
       if (isLabExplanationOnly) {
