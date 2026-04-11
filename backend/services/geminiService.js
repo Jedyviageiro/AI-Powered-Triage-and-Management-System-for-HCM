@@ -1,5 +1,6 @@
 const { GoogleGenAI } = require("@google/genai");
 const { loadPrompt } = require("../utils/promptLoader");
+const { getWhoMedicationGuidance } = require("./firecrawlWhoService");
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
@@ -82,6 +83,7 @@ DADOS DO PACIENTE:
 async function doctorDiagnosisSuggestion(payload) {
   const basePrompt = loadPrompt("doctorDiagnosis.txt");
   const followUpPrompt = loadPrompt("doctorFollowUpDecision.txt");
+  const whoMedicationGuidance = await getWhoMedicationGuidance(payload);
   const questionnaireBlock = Array.isArray(payload.questionnaire_answers)
     ? payload.questionnaire_answers
         .map((qa) => {
@@ -114,9 +116,20 @@ ${questionnaireBlock || "  - n/a"}
 - comparacao_profissional_de_seguimento: ${payload.follow_up_comparison_context ? JSON.stringify(payload.follow_up_comparison_context) : "n/a"}
 - contexto_de_retorno: ${payload.follow_up_context ? JSON.stringify(payload.follow_up_context) : "n/a"}
 - contexto_de_pedido_laboratorial: ${payload.lab_request_context ? JSON.stringify(payload.lab_request_context) : "n/a"}
+- referencias_who_medicacao:
+${whoMedicationGuidance.groundingBlock}
 `;
 
-  const fullPrompt = `${basePrompt}\n\n${followUpPrompt}\n\n${dynamicData}`;
+  const fullPrompt = `${basePrompt}
+
+INSTRUCOES ADICIONAIS DE FONTES:
+- Se houver referencias_who_medicacao abaixo, use-as como apoio prioritario para sugestoes de medicacao e manejo.
+- Nao cite nem finja suporte da WHO quando referencias_who_medicacao estiver sem referencias relevantes.
+- Se a referencia WHO for geral e nao trouxer dose especifica para este caso, explicite a incerteza em vez de inventar.
+
+${followUpPrompt}
+
+${dynamicData}`;
 
   const resp = await generateContentWithRetry({
     model: MODEL, // continua gemini-2.5-flash
@@ -124,7 +137,11 @@ ${questionnaireBlock || "  - n/a"}
   });
 
   const text = resp.text?.trim?.() || "";
-  return extractJson(text);
+  return {
+    ...extractJson(text),
+    who_references: whoMedicationGuidance.references,
+    who_grounding_used: whoMedicationGuidance.used,
+  };
 }
 
 async function doctorQuestionsSuggestion(payload) {

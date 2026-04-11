@@ -227,6 +227,30 @@ export default function DoctorAISuggestionModal({ open, loading, aiResult, onClo
                     </div>
                   </div>
                 )}
+              {Array.isArray(aiResult.who_references) && aiResult.who_references.length > 0 && (
+                <div className="bg-white border border-sky-200 rounded-xl p-4">
+                  <div className="text-xs font-semibold text-sky-700 uppercase tracking-wide mb-2">
+                    Referências WHO para medicação
+                  </div>
+                  <div className="space-y-3">
+                    {aiResult.who_references.map((item, index) => (
+                      <div key={`${item.url}-${index}`} className="text-sm text-sky-950">
+                        <a
+                          href={item.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="font-semibold text-sky-800 hover:text-sky-950 underline underline-offset-2"
+                        >
+                          {item.title || item.url}
+                        </a>
+                        {item.summary && (
+                          <p className="text-xs text-sky-900 mt-1">{item.summary}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div className="pt-2 border-t border-gray-100 text-xs text-gray-600">
                 Revise esta sugestão e preencha o formulário manualmente de acordo com a sua
                 avaliação clínica.

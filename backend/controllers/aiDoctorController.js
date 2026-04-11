@@ -28,6 +28,17 @@ const clipEnum = (value, allowed = []) => {
   return allowed.includes(normalized) ? normalized : "";
 };
 
+const normalizeWhoReferences = (value) => {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => ({
+      title: clip(item?.title || "", 140),
+      url: clip(item?.url || "", 240),
+      summary: clip(item?.summary || "", 280),
+    }))
+    .filter((item) => item.url);
+};
+
 const normalizeDoctorResult = (result = {}) => {
   const prescription_plan = normalizePrescriptionPlan(
     result.prescription_plan || result.prescription_suggestions
@@ -279,11 +290,14 @@ const doctorAssistAI = async (req, res) => {
     const result = isQuestionGenerationOnly
       ? await geminiService.doctorQuestionsSuggestion(payload)
       : await geminiService.doctorDiagnosisSuggestion(payload);
+    const normalizedResult = normalizeDoctorResult(result);
 
     return res.json({
       disclaimer:
         "Sugestão gerada por IA. Não substitui avaliação/decisão médica. Validar por protocolo local.",
-      ...normalizeDoctorResult(result),
+      who_references: normalizeWhoReferences(result?.who_references).slice(0, 3),
+      who_grounding_used: !!result?.who_grounding_used,
+      ...normalizedResult,
     });
   } catch (err) {
     const isQuestionGenerationOnly = !!req.body?.generate_questions_only;

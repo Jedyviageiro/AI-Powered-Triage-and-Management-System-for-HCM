@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../lib/api";
 import { saveAuth } from "../../lib/auth";
-import loginImage from "../../assets/webiste-images/foto-de-médico-enfermeiro-pediátrico.png";
+const loginImage = "/assets/foto-de-medico-enfermeiro-pediatrico.png";
 
 export default function Login() {
   const navigate = useNavigate();
