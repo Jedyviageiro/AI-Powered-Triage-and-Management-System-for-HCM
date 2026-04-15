@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { api } from "../../../lib/api";
 import { parseNumberish } from "../nurse-helpers/nurseHelpers";
 
@@ -6,6 +6,7 @@ export function useNurseTriageActions({
   visit,
   patient,
   selectedDoctorId,
+  aiSuggestion,
   topNavSearch,
   searchMode,
   triageStep,
@@ -34,6 +35,7 @@ export function useNurseTriageActions({
   customMaxWait,
   selectedPriority,
   priority,
+  assignableDoctors,
   loadDoctors,
   loadQueue,
   resetAll,
@@ -57,31 +59,61 @@ export function useNurseTriageActions({
   setForceTriageForLabFollowup,
   setSavingTriage,
 }) {
+  const lastAiRequestKeyRef = useRef("");
+  const lastAiSuccessKeyRef = useRef("");
+  const applySuggestedDoctor = useCallback(
+    (suggestion) => {
+      const suggestedId = Number(suggestion?.suggested_doctor?.id);
+      if (!suggestedId || selectedDoctorId) return;
+      const isSuggestedDoctorAssignable = (Array.isArray(assignableDoctors) ? assignableDoctors : []).some(
+        (doctor) => Number(doctor?.id) === suggestedId
+      );
+      if (isSuggestedDoctorAssignable) {
+        setSelectedDoctorId(String(suggestedId));
+      }
+    },
+    [assignableDoctors, selectedDoctorId, setSelectedDoctorId]
+  );
+
   const requestAISuggestion = useCallback(async () => {
     if (!triageFieldsOk) {
       return;
     }
+    const payload = {
+      age_years: patientAgeYears,
+      chief_complaint: chiefComplaint.trim(),
+      clinical_notes: clinicalNotes.trim() || null,
+      temperature: parseNumberish(temperature),
+      heart_rate: parseNumberish(heartRate),
+      respiratory_rate: parseNumberish(respRate),
+      oxygen_saturation: parseNumberish(spo2),
+      weight: parseNumberish(weight),
+    };
+    const requestKey = JSON.stringify(payload);
+    if (
+      requestKey === lastAiRequestKeyRef.current ||
+      requestKey === lastAiSuccessKeyRef.current
+    ) {
+      return;
+    }
+    lastAiRequestKeyRef.current = requestKey;
     setErr("");
     setAiLoading(true);
-    setAiSuggestion(null);
     try {
-      const res = await api.aiTriageSuggest({
-        age_years: patientAgeYears,
-        chief_complaint: chiefComplaint.trim(),
-        clinical_notes: clinicalNotes.trim() || null,
-        temperature: parseNumberish(temperature),
-        heart_rate: parseNumberish(heartRate),
-        respiratory_rate: parseNumberish(respRate),
-        oxygen_saturation: parseNumberish(spo2),
-        weight: parseNumberish(weight),
-      });
+      const res = await api.aiTriageSuggest(payload);
       setAiSuggestion(res);
+      applySuggestedDoctor(res);
+      lastAiSuccessKeyRef.current = requestKey;
       if (res?.suggested_priority) {
         setPriority(String(res.suggested_priority).toUpperCase());
       }
     } catch (e) {
+      lastAiRequestKeyRef.current = "";
       setErr(e.message);
     } finally {
+      if (lastAiRequestKeyRef.current === requestKey) {
+        lastAiRequestKeyRef.current = "";
+      }
       setAiLoading(false);
     }
   }, [
@@ -98,16 +130,25 @@ export function useNurseTriageActions({
     temperature,
     triageFieldsOk,
     weight,
+    applySuggestedDoctor,
   ]);
 
   useEffect(() => {
+    applySuggestedDoctor(aiSuggestion);
+  }, [aiSuggestion, applySuggestedDoctor]);
+
+  useEffect(() => {
     if (triageStep !== 2 || !visit?.id || !triageFieldsOk) {
-      if (!triageFieldsOk) setAiSuggestion(null);
+      if (!triageFieldsOk) {
+        setAiSuggestion(null);
+        lastAiRequestKeyRef.current = "";
+        lastAiSuccessKeyRef.current = "";
+      }
       return undefined;
     }
     const timer = setTimeout(() => {
       requestAISuggestion();
-    }, 450);
+    }, 1200);
     return () => clearTimeout(timer);
   }, [requestAISuggestion, setAiSuggestion, triageFieldsOk, triageStep, visit?.id]);
 

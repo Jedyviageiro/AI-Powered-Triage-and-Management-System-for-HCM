@@ -745,7 +745,7 @@ const notifyPatientLabReady = async (req, res) => {
 
     const userNote =
       typeof req.body?.note === "string" && req.body.note.trim() ? req.body.note.trim() : null;
-    const autoNote = `Notificacao enviada por ${delivery.successfulChannels.join(", ")} para ${delivery.phone}.`;
+    const autoNote = `Notificacao enviada com sucesso para ${delivery.phone}.`;
     const note = userNote ? `${autoNote} ${userNote}` : autoNote;
 
     const updated = await visitModel.markLabPatientNotified(visitId, {

@@ -29,6 +29,8 @@ export function useNursePageShellState() {
   const [pBirthDate, setPBirthDate] = useState("");
   const [pGuardianName, setPGuardianName] = useState("");
   const [pGuardianPhone, setPGuardianPhone] = useState("");
+  const [pAltPhone, setPAltPhone] = useState("");
+  const [pAddress, setPAddress] = useState("");
   const [creatingPatient, setCreatingPatient] = useState(false);
 
   const [visit, setVisit] = useState(null);
@@ -126,6 +128,8 @@ export function useNursePageShellState() {
     birth_date: "",
     guardian_name: "",
     guardian_phone: "",
+    alt_phone: "",
+    address: "",
     triageLoading: false,
     triageSaving: false,
     triageId: null,
@@ -235,6 +239,10 @@ export function useNursePageShellState() {
     setPGuardianName,
     pGuardianPhone,
     setPGuardianPhone,
+    pAltPhone,
+    setPAltPhone,
+    pAddress,
+    setPAddress,
     creatingPatient,
     setCreatingPatient,
     visit,

@@ -40,7 +40,6 @@ export function NurseNewTriageView({
   createVisit,
   creatingVisit,
   pClinicalCode,
-  setPClinicalCode,
   pFullName,
   setPFullName,
   pSex,
@@ -51,6 +50,10 @@ export function NurseNewTriageView({
   setPGuardianName,
   pGuardianPhone,
   setPGuardianPhone,
+  pAltPhone,
+  setPAltPhone,
+  pAddress,
+  setPAddress,
   createPatient,
   creatingPatient,
   skipTriageReturnEligible,
@@ -396,7 +399,7 @@ export function NurseNewTriageView({
                   </div>
                 )}
                 <div style={{ gridColumn: "1/-1" }}>
-                  Responsável: <strong>{patient.guardian_name}</strong>
+                  Acompanhante: <strong>{patient.guardian_name}</strong>
                 </div>
               </div>
               {!!patientLabFollowup && !visit && (
@@ -447,7 +450,7 @@ export function NurseNewTriageView({
                 style={{ fontSize: "13px", padding: "9px 16px", borderRadius: "8px" }}
               >
                 {visit
-                  ? `? Visita #${visit.id} Criada`
+                  ? `Visita #${visit.id} Criada`
                   : creatingVisit
                     ? "Criando..."
                     : forceTriageForLabFollowup
@@ -521,7 +524,7 @@ export function NurseNewTriageView({
               </div>
             </div>
             <div>
-              <label className="triage-label">Responsável</label>
+              <label className="triage-label">Acompanhante</label>
               <input
                 className="triage-input"
                 value={pGuardianName}
@@ -530,13 +533,31 @@ export function NurseNewTriageView({
               />
             </div>
             <div>
-              <label className="triage-label">Telefone do Responsável</label>
+              <label className="triage-label">Telefone do Acompanhante</label>
               <input
                 className="triage-input"
                 value={pGuardianPhone}
                 onChange={(e) => setPGuardianPhone(e.target.value)}
                 placeholder="84 XXX XXXX"
                 required
+              />
+            </div>
+            <div>
+              <label className="triage-label">Contacto alternativo</label>
+              <input
+                className="triage-input"
+                value={pAltPhone}
+                onChange={(e) => setPAltPhone(e.target.value)}
+                placeholder="Opcional"
+              />
+            </div>
+            <div>
+              <label className="triage-label">Morada</label>
+              <input
+                className="triage-input"
+                value={pAddress}
+                onChange={(e) => setPAddress(e.target.value)}
+                placeholder="Opcional"
               />
             </div>
             <button disabled={creatingPatient} className="btn-secondary">
@@ -550,7 +571,7 @@ export function NurseNewTriageView({
               disabled={!patient || !visit}
               className="btn-primary"
             >
-              Próximo: Triagem ?
+              Próximo: Triagem
             </button>
           </div>
         </div>
@@ -867,10 +888,10 @@ export function NurseNewTriageView({
                 className="btn-ghost"
                 style={{ width: "auto", padding: "10px 20px" }}
               >
-                ? Voltar
+                Voltar
               </button>
               <button type="submit" disabled={!chiefComplaint.trim()} className="btn-primary">
-                Próximo: Fila de Espera ?
+                Próximo: Fila de Espera
               </button>
             </div>
           </form>
@@ -1032,6 +1053,21 @@ export function NurseNewTriageView({
                       >
                         Prioridade aplicada automaticamente com base nos sinais vitais e sintomas.
                       </div>
+                      {aiSuggestion?.suggested_doctor && (
+                        <div
+                          style={{
+                            fontSize: "11px",
+                            color: "#0f172a",
+                            marginTop: "6px",
+                            fontWeight: 600,
+                          }}
+                        >
+                          Medico recomendado:{" "}
+                          {aiSuggestion.suggested_doctor.full_name ||
+                            aiSuggestion.suggested_doctor.username ||
+                            `Medico #${aiSuggestion.suggested_doctor.id}`}
+                        </div>
+                      )}
                     </div>
                     {aiLoading && (
                       <span style={{ fontSize: "11px", color: "#6b7280", fontWeight: 600 }}>
@@ -1192,7 +1228,7 @@ export function NurseNewTriageView({
               style={{ marginTop: "10px", fontSize: "13px" }}
             >
               {visit?.doctor_id
-                ? "? Médico já atribuído"
+                ? "Médico já atribuído"
                 : assigning
                   ? "Atribuindo..."
                   : "Confirmar Atribuição"}
@@ -1290,14 +1326,14 @@ export function NurseNewTriageView({
               className="btn-ghost"
               style={{ width: "auto", padding: "10px 20px" }}
             >
-              ? Voltar
+              Voltar
             </button>
             <button
               onClick={saveTriage}
               disabled={savingTriage || !visit?.id}
               className="btn-primary"
             >
-              {savingTriage ? "Salvando..." : "Concluir Triagem ?"}
+              {savingTriage ? "Salvando..." : "Concluir Triagem"}
             </button>
           </div>
         </div>

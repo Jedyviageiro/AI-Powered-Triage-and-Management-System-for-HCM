@@ -66,6 +66,7 @@ export const applyDoctorVisitBundleState = ({
   setters.setSelectedVisit({
     ...visit,
     is_lab_followup: !!previewVisit?.is_lab_followup,
+    is_followup_visit: !!previewVisit?.is_followup_visit,
     lab_followup_note: previewVisit?.lab_followup_note || "",
   });
 

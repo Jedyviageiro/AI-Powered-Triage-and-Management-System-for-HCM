@@ -37,7 +37,10 @@ export const startDoctorConsultationAction = async (visitId) => {
 };
 
 export const prepareDoctorQueueVisit = async ({ visitId, row, meId, loadQueue }) => {
-  if (row?.status === "WAITING_DOCTOR" && !row?.is_lab_followup) {
+  if (row?.doctor_id && Number(row?.doctor_id) !== Number(meId)) {
+    throw new Error("Este paciente ja foi atribuido a outro medico.");
+  }
+  if (row?.status === "WAITING_DOCTOR") {
     if (row?.doctor_id && Number(row?.doctor_id) !== Number(meId)) {
       throw new Error("Este paciente já foi atribuído a outro médico.");
     }

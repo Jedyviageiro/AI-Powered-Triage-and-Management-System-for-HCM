@@ -1,8 +1,24 @@
 const pool = require("../config/db");
 
 const formatClinicalCode = (value) => `P${String(value).padStart(4, "0")}`;
+let ensurePatientProfileColumnsPromise = null;
+
+const ensurePatientProfileColumns = async () => {
+  if (!ensurePatientProfileColumnsPromise) {
+    ensurePatientProfileColumnsPromise = pool.query(`
+      ALTER TABLE patients
+      ADD COLUMN IF NOT EXISTS alt_phone VARCHAR(30) NULL;
+
+      ALTER TABLE patients
+      ADD COLUMN IF NOT EXISTS address TEXT NULL;
+    `);
+  }
+
+  return ensurePatientProfileColumnsPromise;
+};
 
 const listClinicalCodeNumbers = async (db = pool) => {
+  await ensurePatientProfileColumns();
   const result = await db.query(
     `SELECT NULLIF(SUBSTRING(clinical_code FROM '[0-9]+$'), '')::INTEGER AS code_number
      FROM patients
@@ -41,7 +57,10 @@ const createPatient = async ({
   birth_date,
   guardian_name,
   guardian_phone,
+  alt_phone,
+  address,
 }) => {
+  await ensurePatientProfileColumns();
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
@@ -51,10 +70,19 @@ const createPatient = async ({
     const clinical_code = formatClinicalCode(nextNumber);
     const result = await client.query(
       `INSERT INTO patients
-          (clinical_code, full_name, sex, birth_date, guardian_name, guardian_phone)
-          VALUES ($1, $2, $3, $4, $5, $6)
+          (clinical_code, full_name, sex, birth_date, guardian_name, guardian_phone, alt_phone, address)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
           RETURNING *`,
-      [clinical_code, full_name, sex, birth_date, guardian_name, guardian_phone]
+      [
+        clinical_code,
+        full_name,
+        sex,
+        birth_date,
+        guardian_name,
+        guardian_phone,
+        alt_phone || null,
+        address || null,
+      ]
     );
 
     await client.query("COMMIT");
@@ -71,6 +99,7 @@ const createPatient = async ({
 // GET PATIENT BY ID
 // ========================
 const getPatientById = async (id) => {
+  await ensurePatientProfileColumns();
   const result = await pool.query(`SELECT * FROM patients WHERE id = $1`, [id]);
   return result.rows[0];
 };
@@ -79,6 +108,7 @@ const getPatientById = async (id) => {
 // GET BY CLINICAL CODE
 // ========================
 const getPatientByCode = async (clinical_code) => {
+  await ensurePatientProfileColumns();
   const result = await pool.query(
     `SELECT
             p.*,
@@ -123,6 +153,7 @@ const getPatientByCode = async (clinical_code) => {
             WHERE v.patient_id = p.id
               AND v.status = 'FINISHED'
               AND v.lab_requested = TRUE
+              AND v.lab_patient_notified_at IS NULL
             ORDER BY COALESCE(v.updated_at, v.consultation_ended_at, v.arrival_time) DESC
             LIMIT 1
          ) lf ON TRUE
@@ -136,6 +167,7 @@ const getPatientByCode = async (clinical_code) => {
 // SEARCH PATIENT (name)
 // ========================
 const searchPatients = async (name) => {
+  await ensurePatientProfileColumns();
   const result = await pool.query(
     `SELECT
             p.*,
@@ -180,6 +212,7 @@ const searchPatients = async (name) => {
             WHERE v.patient_id = p.id
               AND v.status = 'FINISHED'
               AND v.lab_requested = TRUE
+              AND v.lab_patient_notified_at IS NULL
             ORDER BY COALESCE(v.updated_at, v.consultation_ended_at, v.arrival_time) DESC
             LIMIT 1
          ) lf ON TRUE
@@ -193,7 +226,11 @@ const searchPatients = async (name) => {
 // ========================
 // UPDATE PATIENT
 // ========================
-const updatePatient = async (id, { full_name, sex, birth_date, guardian_name, guardian_phone }) => {
+const updatePatient = async (
+  id,
+  { full_name, sex, birth_date, guardian_name, guardian_phone, alt_phone, address }
+) => {
+  await ensurePatientProfileColumns();
   const result = await pool.query(
     `UPDATE patients
          SET full_name = $1,
@@ -201,10 +238,12 @@ const updatePatient = async (id, { full_name, sex, birth_date, guardian_name, gu
              birth_date = $3,
              guardian_name = $4,
              guardian_phone = $5,
+             alt_phone = $6,
+             address = $7,
              updated_at = NOW()
-         WHERE id = $6
+         WHERE id = $8
          RETURNING *`,
-    [full_name, sex, birth_date, guardian_name, guardian_phone, id]
+    [full_name, sex, birth_date, guardian_name, guardian_phone, alt_phone || null, address || null, id]
   );
 
   return result.rows[0];
@@ -219,6 +258,7 @@ const deletePatient = async (id) => {
 };
 
 const getPatientHistory = async (patientId) => {
+  await ensurePatientProfileColumns();
   const result = await pool.query(
     `SELECT
             v.id,

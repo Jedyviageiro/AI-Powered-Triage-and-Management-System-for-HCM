@@ -1,5 +1,8 @@
 const pool = require("../config/db");
 
+const STALE_CONSULTATION_OFFLINE_MINUTES = 10;
+const STALE_CONSULTATION_MAX_MINUTES = 180;
+
 let ensureVisitMotiveColumnsPromise = null;
 const ensureVisitMotiveColumns = async () => {
   if (!ensureVisitMotiveColumnsPromise) {
@@ -121,6 +124,37 @@ const ensureVisitHistoryColumns = async () => {
 
   await ensureLabStructuredResultColumns();
   return ensureVisitHistoryColumnsPromise;
+};
+
+const recoverStaleConsultations = async () => {
+  await pool.query(
+    `
+    UPDATE visits v
+    SET status = 'WAITING_DOCTOR',
+        consultation_started_at = NULL,
+        updated_at = NOW()
+    FROM users u
+    WHERE v.doctor_id = u.id
+      AND v.status = 'IN_CONSULTATION'
+      AND v.consultation_ended_at IS NULL
+      AND (
+        (
+          (
+            u.is_online = FALSE
+            OR u.last_seen IS NULL
+            OR u.last_seen < NOW() - ($1::int * INTERVAL '1 minute')
+          )
+          AND COALESCE(v.updated_at, v.consultation_started_at, v.arrival_time)
+            < NOW() - ($1::int * INTERVAL '1 minute')
+        )
+        OR (
+          v.consultation_started_at IS NOT NULL
+          AND v.consultation_started_at < NOW() - ($2::int * INTERVAL '1 minute')
+        )
+      )
+    `,
+    [STALE_CONSULTATION_OFFLINE_MINUTES, STALE_CONSULTATION_MAX_MINUTES]
+  );
 };
 
 // ========================
@@ -253,11 +287,10 @@ const createVisitForLabFollowup = async (
       : "LAB_SAMPLE_COLLECTION");
   const result = await pool.query(
     `INSERT INTO visits (patient_id, status, arrival_time, doctor_id, priority, max_wait_minutes, return_visit_reason, visit_motive, visit_motive_other)
-     VALUES ($1, 'WAITING_DOCTOR', NOW(), $2, 'NON_URGENT', 120, $3, $4, $5)
+     VALUES ($1, 'WAITING', NOW(), NULL, NULL, NULL, $2, $3, $4)
      RETURNING *`,
     [
       patient_id,
-      null,
       return_visit_reason ||
         (sourceVisit?.id
           ? `Retorno laboratorial (origem visita #${sourceVisit.id})`
@@ -273,6 +306,7 @@ const createVisitForLabFollowup = async (
 // LIST ACTIVE VISITS (fila)
 // ========================
 const listActiveVisits = async () => {
+  await recoverStaleConsultations();
   const result = await pool.query(
     `SELECT
        v.*,
@@ -349,6 +383,7 @@ const listActiveVisits = async () => {
        WHERE v2.patient_id = v.patient_id
          AND v2.status = 'FINISHED'
          AND v2.lab_requested = TRUE
+         AND v2.lab_patient_notified_at IS NULL
        ORDER BY COALESCE(v2.updated_at, v2.consultation_ended_at, v2.arrival_time) DESC
        LIMIT 1
      ) lf ON TRUE
@@ -369,6 +404,7 @@ const listActiveVisits = async () => {
 };
 
 const listActiveVisitsByDoctor = async (doctorId) => {
+  await recoverStaleConsultations();
   const result = await pool.query(
     `SELECT
        v.*,
@@ -445,6 +481,7 @@ const listActiveVisitsByDoctor = async (doctorId) => {
        WHERE v2.patient_id = v.patient_id
          AND v2.status = 'FINISHED'
          AND v2.lab_requested = TRUE
+         AND v2.lab_patient_notified_at IS NULL
        ORDER BY COALESCE(v2.updated_at, v2.consultation_ended_at, v2.arrival_time) DESC
        LIMIT 1
      ) lf ON TRUE
@@ -570,7 +607,7 @@ const listDoctorAgenda = async (doctorId) => {
      JOIN patients p ON p.id = v.patient_id
      WHERE v.doctor_id = $1
        AND v.return_visit_date >= CURRENT_DATE
-       AND v.status NOT IN ('CANCELLED')
+       AND v.status NOT IN ('CANCELLED','FINISHED')
      ORDER BY v.return_visit_date ASC, COALESCE(v.follow_up_when, TO_CHAR(v.arrival_time, 'HH24:MI')) ASC, v.arrival_time ASC`,
     [doctorId]
   );

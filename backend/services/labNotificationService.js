@@ -41,16 +41,6 @@ const buildParentLabResultMessage = ({
   );
 };
 
-const formatChannelFailureSummary = (results = []) =>
-  results
-    .map((result) => {
-      const provider = String(result?.provider || "canal").toUpperCase();
-      if (result?.ok) return `${provider}: enviado com sucesso`;
-      if (result?.skipped) return `${provider}: nao configurado`;
-      return `${provider}: ${result?.error || "falha no envio"}`;
-    })
-    .join(" | ");
-
 const sendTwilioSms = async ({ to, body }) => {
   try {
     const result = await sendSms(to, body);
@@ -136,10 +126,10 @@ const notifyParentAboutLabResult = async (context) => {
 
   if (successful.length === 0) {
     const reason =
-      formatChannelFailureSummary(results) ||
       failed[0]?.error ||
-      skipped[0]?.reason ||
-      "Nenhum canal conseguiu enviar a notificacao.";
+      (skipped.length === results.length
+        ? "Os canais de notificacao nao estao configurados."
+        : "Nao foi possivel enviar a notificacao para o contacto registado.");
     const error = new Error(reason);
     error.statusCode = skipped.length === results.length ? 503 : 502;
     error.results = results;

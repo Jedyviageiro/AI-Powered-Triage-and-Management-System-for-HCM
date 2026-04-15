@@ -85,6 +85,99 @@ const recommendDoctor = ({ doctors, suggestedSpecialty, chiefComplaint, clinical
   return ranked[0] || null;
 };
 
+const toNumber = (value) => {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+};
+
+const buildTriageFallback = ({
+  chiefComplaint,
+  clinicalNotes,
+  temperature,
+  heartRate,
+  respiratoryRate,
+  oxygenSaturation,
+}) => {
+  const reasons = [];
+  const complaint = String(chiefComplaint || "").trim();
+  const notes = String(clinicalNotes || "").trim();
+  const combinedText = normalizeText(`${complaint} ${notes}`);
+  const temp = toNumber(temperature);
+  const hr = toNumber(heartRate);
+  const rr = toNumber(respiratoryRate);
+  const spo2 = toNumber(oxygenSaturation);
+
+  let suggested_priority = "NON_URGENT";
+  let suggested_specialization = "Pediatria Geral";
+  let red_flag = false;
+  let confidence = 0.45;
+
+  if (spo2 != null && spo2 <= 89) {
+    red_flag = true;
+    suggested_priority = "URGENT";
+    reasons.push("SpO2 criticamente baixa");
+  } else if (spo2 != null && spo2 <= 92) {
+    suggested_priority = "URGENT";
+    reasons.push("Saturacao de oxigenio reduzida");
+  }
+
+  if (temp != null && temp >= 39.5) {
+    suggested_priority = "URGENT";
+    reasons.push("Febre alta");
+  } else if (temp != null && temp >= 38) {
+    reasons.push("Febre");
+  }
+
+  if (hr != null && hr >= 160) {
+    suggested_priority = "URGENT";
+    reasons.push("Frequencia cardiaca elevada");
+  }
+
+  if (rr != null && rr >= 40) {
+    suggested_priority = "URGENT";
+    reasons.push("Frequencia respiratoria elevada");
+  }
+
+  if (
+    /(falta de ar|dificuldade respiratoria|dispne|chiado|convuls|desmaio|letarg|inconsciente)/.test(
+      combinedText
+    )
+  ) {
+    suggested_priority = "URGENT";
+    reasons.push("Sintomas com potencial gravidade");
+  } else if (
+    /(febre|tosse|vomito|v[oô]mito|diarre|dor abdominal|rash|erup)/.test(combinedText)
+  ) {
+    suggested_priority = suggested_priority === "URGENT" ? "URGENT" : "LESS_URGENT";
+    reasons.push("Queixa clinica requer avaliacao medica");
+  } else {
+    reasons.push("Sem sinais de alarme maiores nos dados informados");
+  }
+
+  if (/(respira|tosse|chiado|asma|pulm)/.test(combinedText)) {
+    suggested_specialization = "Pneumopediatra";
+  } else if (/(diarre|vomito|abd|barriga|refluxo)/.test(combinedText)) {
+    suggested_specialization = "Gastroenteropediatra";
+  } else if (/(convuls|cefale|desmaio|neurol)/.test(combinedText)) {
+    suggested_specialization = "Neuropediatra";
+  } else if (/(febre|infecc|otite|gripe|pneumonia)/.test(combinedText)) {
+    suggested_specialization = "Infectopediatra";
+  }
+
+  return {
+    suggested_priority,
+    suggested_specialization,
+    confidence,
+    red_flag,
+    reasons: [...new Set(reasons)].slice(0, 4),
+    questions_to_ask: [
+      "Quando os sintomas comecaram?",
+      "Os sintomas estao a piorar ou a melhorar?",
+      "A crianca consegue beber liquidos e manter-se ativa?",
+    ],
+  };
+};
+
 const nurseTriageAI = async (req, res) => {
   try {
     const {
@@ -137,14 +230,39 @@ const nurseTriageAI = async (req, res) => {
     });
   } catch (err) {
     console.error("AI TRIAGE ERROR:", err);
-    return res.status(500).json({
-      error: "Erro ao gerar sugestao de triagem por IA",
-      debug: {
-        message: err.message,
-        name: err.name,
-        stack: (err.stack || "").split("\n").slice(0, 6).join("\n"),
-      },
+    const fallback = buildTriageFallback({
+      chiefComplaint: req.body?.chief_complaint,
+      clinicalNotes: req.body?.clinical_notes,
+      temperature: req.body?.temperature,
+      heartRate: req.body?.heart_rate,
+      respiratoryRate: req.body?.respiratory_rate,
+      oxygenSaturation: req.body?.oxygen_saturation,
     });
+    try {
+      const doctors = await doctorModel.listDoctorsWithAvailability();
+      const suggestedDoctor = recommendDoctor({
+        doctors,
+        suggestedSpecialty: fallback.suggested_specialization,
+        chiefComplaint: req.body?.chief_complaint,
+        clinicalNotes: req.body?.clinical_notes,
+      });
+      return res.json({
+        disclaimer:
+          "Sugestao de contingencia gerada por regras locais porque a IA falhou. Confirmar clinicamente antes de decidir.",
+        suggested_doctor: suggestedDoctor,
+        fallback_used: true,
+        ...fallback,
+      });
+    } catch (doctorError) {
+      console.error("AI TRIAGE FALLBACK DOCTOR ERROR:", doctorError);
+      return res.json({
+        disclaimer:
+          "Sugestao de contingencia gerada por regras locais porque a IA falhou. Confirmar clinicamente antes de decidir.",
+        suggested_doctor: null,
+        fallback_used: true,
+        ...fallback,
+      });
+    }
   }
 };
 

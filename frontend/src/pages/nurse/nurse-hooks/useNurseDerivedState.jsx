@@ -56,25 +56,34 @@ export function useNurseDerivedState({
   );
 
   const selectedPriority = useMemo(() => PRIORITIES.find((p) => p.value === priority), [priority]);
-  const availableDoctors = useMemo(
-    () => doctors.filter((d) => d?.is_available !== false && d?.is_busy === false),
+  const activeDoctors = useMemo(
+    () => doctors.filter((d) => d?.is_active !== false),
     [doctors]
   );
+  const doctorHasActiveCase = useCallback((doctor) => {
+    if (!doctor) return false;
+    return Boolean(doctor?.is_busy);
+  }, []);
+  const availableDoctors = useMemo(
+    () =>
+      activeDoctors.filter((d) => d?.is_available !== false && !doctorHasActiveCase(d)),
+    [activeDoctors, doctorHasActiveCase]
+  );
   const busyDoctors = useMemo(
-    () => doctors.filter((d) => d?.is_available !== false && d?.is_busy === true),
-    [doctors]
+    () => activeDoctors.filter((d) => doctorHasActiveCase(d)),
+    [activeDoctors, doctorHasActiveCase]
   );
   const assignableDoctors = useMemo(
     () =>
-      doctors.filter((d) => d?.is_available !== false).sort((a, b) => {
-        if (Boolean(a?.is_busy) !== Boolean(b?.is_busy)) {
-          return a?.is_busy ? 1 : -1;
+      availableDoctors.slice().sort((a, b) => {
+        if (Boolean(a?.is_online_now) !== Boolean(b?.is_online_now)) {
+          return a?.is_online_now ? -1 : 1;
         }
         return String(a?.full_name || a?.username || "").localeCompare(
           String(b?.full_name || b?.username || "")
         );
       }),
-    [doctors]
+    [availableDoctors]
   );
   const doctorQueueEtaById = useMemo(() => {
     const map = new Map();
@@ -348,13 +357,12 @@ export function useNurseDerivedState({
   }, [bypassToER, priority, roomTypeByPriority]);
   const recommendedRoomLabel = useMemo(() => {
     if (bypassToER) return "Sala de Reanimação / ER";
-    if (availableDoctors.length === 0) return null;
     if (!recommendedRoomType) return null;
     const type = roomInventory.find((r) => r.key === recommendedRoomType.key);
     if (!type) return null;
     const firstAvailable = type.rooms.find((r) => r.status === "available");
     return firstAvailable?.label || null;
-  }, [bypassToER, availableDoctors.length, recommendedRoomType, roomInventory]);
+  }, [bypassToER, recommendedRoomType, roomInventory]);
   const hasRoomAvailable = useMemo(() => {
     if (bypassToER) return true;
     return !!recommendedRoomLabel;

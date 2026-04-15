@@ -182,22 +182,11 @@ export function useDoctorNotificationsAndPreferences({
           "success",
           "Paciente avisado",
           deliveredBy.length > 0
-            ? `Notificacao enviada por ${deliveredBy.join(" e ")}.`
+            ? "Notificacao enviada com sucesso para o contacto registado."
             : "O sistema registou que o paciente ja foi avisado de que o exame esta pronto."
         );
       } catch (e) {
-        const channelDetails = Array.isArray(e?.data?.channels)
-          ? e.data.channels
-              .map((channel) => {
-                if (!channel) return null;
-                const provider = String(channel.provider || "canal").toUpperCase();
-                if (channel.ok) return `${provider}: enviado com sucesso`;
-                if (channel.skipped) return `${provider}: nao configurado`;
-                return `${provider}: ${channel.error || "falha no envio"}`;
-              })
-              .filter(Boolean)
-              .join(" | ")
-          : "";
+        const channelDetails = "";
         showPopup(
           "warning",
           "Atenção",

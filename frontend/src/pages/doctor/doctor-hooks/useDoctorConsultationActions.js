@@ -645,7 +645,10 @@ export function useDoctorConsultationActions(args) {
       } catch (e) {
         safeSet(() => setErr(e.message || "Não foi possível preparar a reavaliação."));
       }
-      await openVisit(visitId, preview || sourceMeta);
+      await openVisit(visitId, {
+        ...(preview || sourceMeta || {}),
+        is_followup_visit: true,
+      });
       safeSet(() => {
         setReevaluationContext(buildReevaluationContext(sourceMeta || preview));
         setConsultFormStep(1);

@@ -51,6 +51,11 @@ export default function DoctorConsultationPlanStep(props) {
   } = props;
 
   const SelectComponent = ModernSelect;
+  const defaultReturnDate = (() => {
+    const date = new Date();
+    date.setDate(date.getDate() + 1);
+    return date.toISOString().slice(0, 10);
+  })();
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -585,8 +590,15 @@ export default function DoctorConsultationPlanStep(props) {
                   setReturnVisitDates([""]);
                   setFollowUpRuleKey("");
                   updatePlanField("follow_up_when", "");
-                } else if (!extractFollowUpTimeValue(planDraft.follow_up_when)) {
-                  const suggestedTime = parseShiftWindow(followUpShiftWindow)?.start || "";
+                } else {
+                  const suggestedTime = extractFollowUpTimeValue(planDraft.follow_up_when)
+                    ? planDraft.follow_up_when
+                    : parseShiftWindow(followUpShiftWindow)?.start || "";
+                  const suggestedDate = selectedReturnDate || defaultReturnDate;
+                  if (!selectedReturnDate) {
+                    setReturnVisitDates([suggestedDate]);
+                    updatePlanField("return_visit_date", suggestedDate);
+                  }
                   if (suggestedTime) updatePlanField("follow_up_when", suggestedTime);
                 }
                 if (nextDisposition !== "BED_REST" && nextDisposition !== "ADMIT_URGENT") {
@@ -625,22 +637,6 @@ export default function DoctorConsultationPlanStep(props) {
               A decisão clínica é do médico. O registo do internamento/repouso e a atribuição de
               leito ficam a cargo da enfermagem ou da equipa administrativa.
             </div>
-          </div>
-          <div>
-            <label className="cf-label">Estado vital</label>
-            <SelectComponent
-              selectId="vital-status"
-              value={planDraft.vital_status || ""}
-              openModernSelect={openModernSelect}
-              setOpenModernSelect={setOpenModernSelect}
-              onChange={(e) => updatePlanField("vital_status", e.target.value)}
-            >
-              {VITAL_STATUS_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </SelectComponent>
           </div>
         </div>
 

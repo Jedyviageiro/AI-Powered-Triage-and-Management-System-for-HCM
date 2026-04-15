@@ -118,6 +118,10 @@ export function NurseLayout(props) {
     setPGuardianName,
     pGuardianPhone,
     setPGuardianPhone,
+    pAltPhone,
+    setPAltPhone,
+    pAddress,
+    setPAddress,
     createPatient,
     creatingPatient,
     skipTriageReturnEligible,
@@ -1232,6 +1236,10 @@ export function NurseLayout(props) {
                 setPGuardianName={setPGuardianName}
                 pGuardianPhone={pGuardianPhone}
                 setPGuardianPhone={setPGuardianPhone}
+                pAltPhone={pAltPhone}
+                setPAltPhone={setPAltPhone}
+                pAddress={pAddress}
+                setPAddress={setPAddress}
                 createPatient={createPatient}
                 creatingPatient={creatingPatient}
                 skipTriageReturnEligible={skipTriageReturnEligible}
@@ -1329,6 +1337,10 @@ export function NurseLayout(props) {
                 setPGuardianName={setPGuardianName}
                 pGuardianPhone={pGuardianPhone}
                 setPGuardianPhone={setPGuardianPhone}
+                pAltPhone={pAltPhone}
+                setPAltPhone={setPAltPhone}
+                pAddress={pAddress}
+                setPAddress={setPAddress}
                 createPatient={createPatient}
                 creatingPatient={creatingPatient}
                 skipTriageReturnEligible={skipTriageReturnEligible}
@@ -1679,7 +1691,7 @@ export function NurseLayout(props) {
                       />
                     </div>
                     <div>
-                      <label className="triage-label">Responsável</label>
+                      <label className="triage-label">Acompanhante</label>
                       <input
                         className="triage-input"
                         value={patientEditModal.guardian_name}
@@ -1692,7 +1704,7 @@ export function NurseLayout(props) {
                       />
                     </div>
                     <div>
-                      <label className="triage-label">Telefone do Responsável</label>
+                      <label className="triage-label">Telefone do Acompanhante</label>
                       <input
                         className="triage-input"
                         value={patientEditModal.guardian_phone}
@@ -1700,6 +1712,32 @@ export function NurseLayout(props) {
                           setPatientEditModal((prev) => ({
                             ...prev,
                             guardian_phone: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+                    <div>
+                      <label className="triage-label">Contacto alternativo</label>
+                      <input
+                        className="triage-input"
+                        value={patientEditModal.alt_phone}
+                        onChange={(e) =>
+                          setPatientEditModal((prev) => ({
+                            ...prev,
+                            alt_phone: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+                    <div style={{ gridColumn: "1 / -1" }}>
+                      <label className="triage-label">Morada</label>
+                      <input
+                        className="triage-input"
+                        value={patientEditModal.address}
+                        onChange={(e) =>
+                          setPatientEditModal((prev) => ({
+                            ...prev,
+                            address: e.target.value,
                           }))
                         }
                       />

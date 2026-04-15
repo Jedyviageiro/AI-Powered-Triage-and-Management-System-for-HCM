@@ -50,6 +50,42 @@ async function generateContentWithRetry({ model, contents }, options = {}) {
   throw lastError;
 }
 
+async function generateJsonWithRetry({ model, contents }, options = {}) {
+  const maxAttempts = Math.max(1, Number(options.maxAttempts) || 3);
+  const baseDelayMs = Math.max(150, Number(options.baseDelayMs) || 500);
+  const reminderText =
+    "Responda SOMENTE com JSON valido, sem markdown, sem comentarios e sem texto extra.";
+
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      const attemptContents =
+        attempt === 1
+          ? contents
+          : [
+              ...contents,
+              {
+                role: "user",
+                parts: [{ text: reminderText }],
+              },
+            ];
+      const resp = await generateContentWithRetry(
+        { model, contents: attemptContents },
+        options
+      );
+      const text = resp.text?.trim?.() || "";
+      return extractJson(text);
+    } catch (error) {
+      lastError = error;
+      if (attempt >= maxAttempts) throw error;
+      await sleep(baseDelayMs * attempt);
+    }
+  }
+
+  throw lastError;
+}
+
 function extractJson(text) {
   if (!text) throw new Error("Resposta vazia da IA");
 
@@ -86,13 +122,10 @@ DADOS DO PACIENTE:
 
   const fullPrompt = basePrompt + "\n\n" + dynamicData;
 
-  const resp = await generateContentWithRetry({
+  return generateJsonWithRetry({
     model: MODEL,
     contents: [{ role: "user", parts: [{ text: fullPrompt }] }],
   });
-
-  const text = resp.text?.trim?.() || "";
-  return extractJson(text);
 }
 
 async function doctorDiagnosisSuggestion(payload) {
@@ -146,14 +179,12 @@ ${followUpPrompt}
 
 ${dynamicData}`;
 
-  const resp = await generateContentWithRetry({
+  const result = await generateJsonWithRetry({
     model: MODEL, // continua gemini-2.5-flash
     contents: [{ role: "user", parts: [{ text: fullPrompt }] }],
   });
-
-  const text = resp.text?.trim?.() || "";
   return {
-    ...extractJson(text),
+    ...result,
     who_references: whoMedicationGuidance.references,
     who_grounding_used: whoMedicationGuidance.used,
   };
@@ -185,13 +216,10 @@ DADOS DO CASO:
 - prioridade: ${payload.priority ?? "n/a"}
 `;
 
-  const resp = await generateContentWithRetry({
+  return generateJsonWithRetry({
     model: MODEL,
     contents: [{ role: "user", parts: [{ text: prompt }] }],
   });
-
-  const text = resp.text?.trim?.() || "";
-  return extractJson(text);
 }
 
 async function labResultExplanationSuggestion(payload) {
@@ -216,13 +244,10 @@ ${structuredResultJson}
 `;
 
   const fullPrompt = `${basePrompt}\n\n${dynamicData}`;
-  const resp = await generateContentWithRetry({
+  return generateJsonWithRetry({
     model: MODEL,
     contents: [{ role: "user", parts: [{ text: fullPrompt }] }],
   });
-
-  const text = resp.text?.trim?.() || "";
-  return extractJson(text);
 }
 
 module.exports = {

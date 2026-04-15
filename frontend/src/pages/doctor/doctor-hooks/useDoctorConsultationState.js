@@ -141,12 +141,7 @@ export function useDoctorConsultationState({
     planDraft.disposition_plan === "RETURN_VISIT" && !selectedLabCollectionRule;
 
   const isFollowUpConsultation = useMemo(
-    () =>
-      !!(
-        selectedVisit?.is_lab_followup ||
-        selectedVisit?.return_visit_date ||
-        String(selectedVisit?.return_visit_reason || "").trim()
-      ),
+    () => !!(selectedVisit?.is_lab_followup || selectedVisit?.is_followup_visit),
     [selectedVisit]
   );
 
@@ -219,10 +214,7 @@ export function useDoctorConsultationState({
       missing.push("especialista/departamento de referência");
     }
     if (planDraft.disposition_plan === "RETURN_VISIT") {
-      const hasAnyReturnDate = (Array.isArray(returnVisitDates) ? returnVisitDates : []).some((d) =>
-        String(d || "").trim()
-      );
-      if (!hasAnyReturnDate) missing.push("data de retorno");
+      if (!selectedReturnDate) missing.push("data de retorno");
       if (isClinicalReturnVisit) {
         if (!resolvedFollowUpRuleKey) missing.push("critério clínico do retorno");
         if (!selectedFollowUpTime) missing.push("hora do retorno");
@@ -264,8 +256,8 @@ export function useDoctorConsultationState({
     questionnaireAnswers,
     questionnaireExtraNote,
     resolvedFollowUpRuleKey,
-    returnVisitDates,
     sampleCollectionDraft,
+    selectedReturnDate,
     selectedFollowUpTime,
     shouldShowSampleCollectionStage,
     followUpTimeWithinShift,

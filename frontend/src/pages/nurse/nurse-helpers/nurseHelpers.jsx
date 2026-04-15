@@ -323,11 +323,25 @@ export function normalizeDoctorsResponse(resp) {
       : resp && Array.isArray(resp.data)
         ? resp.data
         : [];
+  const parseBooleanish = (value, fallback = false) => {
+    if (typeof value === "boolean") return value;
+    if (typeof value === "number") return value !== 0;
+    const normalized = String(value ?? "")
+      .trim()
+      .toLowerCase();
+    if (["true", "t", "1", "yes", "y"].includes(normalized)) return true;
+    if (["false", "f", "0", "no", "n"].includes(normalized)) return false;
+    return fallback;
+  };
   return raw.map((d) => ({
     ...d,
     specialization: String(
       d?.specialization ?? d?.doctor_specialization ?? d?.especializacao ?? ""
     ).trim(),
+    is_available: parseBooleanish(d?.is_available, true),
+    is_busy: parseBooleanish(d?.is_busy, false),
+    is_online: parseBooleanish(d?.is_online, false),
+    is_online_now: parseBooleanish(d?.is_online_now, false),
   }));
 }
 
@@ -477,6 +491,8 @@ export const createEmptyPastVisitForm = () => ({
   birth_date: "",
   guardian_name: "",
   guardian_phone: "",
+  alt_phone: "",
+  address: "",
   triage_id: null,
   triage_temperature: null,
   triage_heart_rate: null,
@@ -511,6 +527,8 @@ export const createPastVisitModalState = (visit = null) => ({
         birth_date: visit.birth_date || "",
         guardian_name: visit.guardian_name || "",
         guardian_phone: visit.guardian_phone || "",
+        alt_phone: visit.alt_phone || "",
+        address: visit.address || "",
         profile_photo_url: visit.profile_photo_url || null,
         photo_url: visit.photo_url || null,
         avatar_url: visit.avatar_url || null,

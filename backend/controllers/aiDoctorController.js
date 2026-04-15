@@ -183,6 +183,52 @@ const fallbackQuestionsByComplaint = (chiefComplaint = "") => {
   return [...base, "Há outro sintoma importante que queira relatar?"];
 };
 
+const buildDoctorFallbackSuggestion = (body = {}) => {
+  const complaint = clip(body?.chief_complaint || "", 140);
+  const doctorDiagnosis = clip(body?.doctor_likely_diagnosis || "", 160);
+  const doctorReasoning = clip(body?.doctor_clinical_reasoning || "", 220);
+  const doctorPrescription = clip(body?.doctor_prescription_text || "", 220);
+
+  return normalizeDoctorResult({
+    summary:
+      doctorDiagnosis ||
+      complaint ||
+      "Sem resposta da IA no momento; manter avaliacao clinica e conduta local.",
+    likely_diagnosis: doctorDiagnosis,
+    clinical_reasoning:
+      doctorReasoning ||
+      "A IA nao respondeu nesta tentativa. Considere os sinais vitais, a evolucao clinica e o exame objetivo para confirmar a conduta.",
+    suggested_management: [
+      "Reavaliar sinais vitais e estado geral.",
+      "Confirmar se ha criterios de urgencia antes da alta.",
+      "Seguir protocolo local e julgamento clinico.",
+    ],
+    questions_to_clarify: fallbackQuestionsByComplaint(body?.chief_complaint).slice(0, 5),
+    prescription_plan: doctorPrescription
+      ? [
+          {
+            medication: "",
+            dosage: "",
+            route: "",
+            frequency: "",
+            duration: "",
+            instructions: doctorPrescription,
+          },
+        ]
+      : [],
+    confidence: 0.2,
+  });
+};
+
+const buildLabExplanationFallback = (body = {}) => ({
+  summary: "Explicacao indisponivel no momento.",
+  lab_explanation:
+    "A IA nao conseguiu interpretar este resultado agora. Reveja o texto do exame, correlacione com o quadro clinico e siga o protocolo local.",
+  key_findings: [],
+  cautions: ["Validar manualmente os achados laboratoriais antes da decisao clinica."],
+  suggested_next_steps: ["Repetir a tentativa mais tarde ou interpretar manualmente o resultado."],
+});
+
 const doctorAssistAI = async (req, res) => {
   try {
     const {
@@ -317,6 +363,25 @@ const doctorAssistAI = async (req, res) => {
     }
 
     if (isQuotaError) {
+      const isLabExplanationOnly = !!req.body?.explain_lab_result_only;
+      if (isLabExplanationOnly) {
+        return res.json({
+          disclaimer:
+            "A IA atingiu o limite de quota nesta tentativa. A mostrar uma orientacao de contingencia.",
+          ...buildLabExplanationFallback(req.body),
+        });
+      }
+
+      if (!isQuestionGenerationOnly) {
+        return res.json({
+          disclaimer:
+            "A IA atingiu o limite de quota nesta tentativa. A mostrar uma sugestao de contingencia com base nos dados ja registados.",
+          who_references: [],
+          who_grounding_used: false,
+          ...buildDoctorFallbackSuggestion(req.body),
+        });
+      }
+
       return res.status(429).json({
         error:
           "IA temporariamente indisponível por limite de quota. Tente novamente em alguns segundos.",
@@ -337,34 +402,38 @@ const doctorAssistAI = async (req, res) => {
     if (geminiService.isTemporarilyUnavailableAiError?.(err)) {
       const isLabExplanationOnly = !!req.body?.explain_lab_result_only;
       if (isLabExplanationOnly) {
-        return res.status(503).json({
-          error:
-            "A IA está temporariamente indisponível por alta procura para explicar este resultado laboratorial. Tente novamente em alguns segundos.",
-          retryable: true,
+        return res.json({
+          disclaimer:
+            "A IA esta temporariamente indisponivel por alta procura. A mostrar uma orientacao de contingencia.",
+          ...buildLabExplanationFallback(req.body),
         });
       }
 
-      return res.status(503).json({
-        error:
-          "A IA está temporariamente indisponível por alta procura. Tente novamente em alguns segundos.",
-        retryable: true,
+      return res.json({
+        disclaimer:
+          "A IA esta temporariamente indisponivel por alta procura. A mostrar uma sugestao de contingencia com base nos dados ja registados.",
+        who_references: [],
+        who_grounding_used: false,
+        ...buildDoctorFallbackSuggestion(req.body),
       });
     }
 
     if (geminiService.isRetryableAiError?.(err)) {
       const isLabExplanationOnly = !!req.body?.explain_lab_result_only;
       if (isLabExplanationOnly) {
-        return res.status(503).json({
-          error:
-            "A IA está temporariamente indisponível para explicar este resultado laboratorial. Tente novamente em alguns segundos.",
-          retryable: true,
+        return res.json({
+          disclaimer:
+            "A IA esta temporariamente indisponivel por falha de ligacao. A mostrar uma orientacao de contingencia.",
+          ...buildLabExplanationFallback(req.body),
         });
       }
 
-      return res.status(503).json({
-        error:
-          "A IA está temporariamente indisponível devido a uma falha de ligação. Tente novamente em alguns segundos.",
-        retryable: true,
+      return res.json({
+        disclaimer:
+          "A IA esta temporariamente indisponivel devido a uma falha de ligacao. A mostrar uma sugestao de contingencia com base nos dados ja registados.",
+        who_references: [],
+        who_grounding_used: false,
+        ...buildDoctorFallbackSuggestion(req.body),
       });
     }
 

@@ -41,6 +41,8 @@ export function useNurseClinicalActions({
       birth_date: "",
       guardian_name: "",
       guardian_phone: "",
+      alt_phone: "",
+      address: "",
       triageLoading: true,
       triageSaving: false,
       triageId: null,
@@ -79,6 +81,8 @@ export function useNurseClinicalActions({
         birth_date: String(p?.birth_date || "").slice(0, 10),
         guardian_name: String(p?.guardian_name || ""),
         guardian_phone: String(p?.guardian_phone || ""),
+        alt_phone: String(p?.alt_phone || ""),
+        address: String(p?.address || ""),
         triageId: triageByVisit?.id ?? null,
         triage_temperature:
           triageByVisit?.temperature != null ? String(triageByVisit.temperature) : "",
@@ -115,6 +119,8 @@ export function useNurseClinicalActions({
       birth_date: patientEditModal.birth_date,
       guardian_name: patientEditModal.guardian_name.trim(),
       guardian_phone: patientEditModal.guardian_phone.trim(),
+      alt_phone: patientEditModal.alt_phone.trim(),
+      address: patientEditModal.address.trim(),
     };
 
     if (
@@ -228,6 +234,8 @@ export function useNurseClinicalActions({
           birth_date: String(p?.birth_date || "").slice(0, 10),
           guardian_name: String(p?.guardian_name || ""),
           guardian_phone: String(p?.guardian_phone || ""),
+          alt_phone: String(p?.alt_phone || ""),
+          address: String(p?.address || ""),
           triage_id: triage?.id ?? null,
           triage_temperature: triage?.temperature ?? null,
           triage_heart_rate: triage?.heart_rate ?? null,
@@ -273,6 +281,8 @@ export function useNurseClinicalActions({
       birth_date: String(pastVisitModal.patientForm.birth_date || ""),
       guardian_name: String(pastVisitModal.patientForm.guardian_name || "").trim(),
       guardian_phone: String(pastVisitModal.patientForm.guardian_phone || "").trim(),
+      alt_phone: String(pastVisitModal.patientForm.alt_phone || "").trim(),
+      address: String(pastVisitModal.patientForm.address || "").trim(),
     };
     if (
       !payload.clinical_code ||

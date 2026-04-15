@@ -24,9 +24,14 @@ CREATE TABLE IF NOT EXISTS patients (
   birth_date DATE NOT NULL,
   guardian_name VARCHAR(120) NOT NULL,
   guardian_phone VARCHAR(30) NOT NULL,
+  alt_phone VARCHAR(30) NULL,
+  address TEXT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE patients ADD COLUMN IF NOT EXISTS alt_phone VARCHAR(30) NULL;
+ALTER TABLE patients ADD COLUMN IF NOT EXISTS address TEXT NULL;
 
 -- VISITS
 CREATE TABLE IF NOT EXISTS visits (

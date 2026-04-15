@@ -669,7 +669,6 @@ const TabIdentificacao = ({ patient }) => (
         <InfoCard label="Idade" value={calcAge(patient.birth_date)} />
         <InfoCard label="Sexo" value={patient.gender || patient.sex} />
         <InfoCard label="ID / N.º do paciente" value={patient.clinical_code} mono accent />
-        <InfoCard label="N.º hospitalar" value={patient.hospital_number} mono />
       </div>
     </Section>
     <Divider />
@@ -687,11 +686,6 @@ const TabIdentificacao = ({ patient }) => (
         />
         <InfoCard label="Contacto alternativo" value={patient.alt_phone} mono />
         <InfoCard label="Morada" value={patient.address} full />
-        <InfoCard
-          label="Seguro / Pagamento"
-          value={patient.insurance_info || patient.payment_info}
-        />
-        <InfoCard label="N.º da apólice" value={patient.insurance_number} mono />
       </div>
     </Section>
   </div>
@@ -1423,11 +1417,9 @@ const TabConsulta = ({ visits }) => {
 
 const TABS = [
   { id: "identificacao", label: "Identificação" },
-  { id: "neonatal", label: "Neonatal" },
   { id: "vacinacao", label: "Vacinação" },
   { id: "crescimento", label: "Crescimento" },
   { id: "historico", label: "Histórico" },
-  { id: "familiar", label: "Família" },
   { id: "alergias", label: "Alergias" },
   { id: "consulta", label: "Consulta" },
 ];
@@ -1717,7 +1709,6 @@ export default function PatientHistoryModal({ modal, onClose }) {
             ) : (
               <div style={{ animation: "fadeUp 0.18s ease" }}>
                 {tab === "identificacao" ? <TabIdentificacao patient={patient} /> : null}
-                {tab === "neonatal" ? <TabNeonatal patient={patient} /> : null}
                 {tab === "vacinacao" ? <TabVacinacao patient={patient} /> : null}
                 {tab === "crescimento" ? (
                   <TabCrescimento patient={patient} visits={visits} />
@@ -1725,7 +1716,6 @@ export default function PatientHistoryModal({ modal, onClose }) {
                 {tab === "historico" ? (
                   <TabHistorialMedico patient={patient} visits={visits} />
                 ) : null}
-                {tab === "familiar" ? <TabFamiliar patient={patient} /> : null}
                 {tab === "alergias" ? <TabAlergias patient={patient} /> : null}
                 {tab === "consulta" ? <TabConsulta visits={visits} /> : null}
               </div>

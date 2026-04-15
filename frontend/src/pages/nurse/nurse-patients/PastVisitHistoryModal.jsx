@@ -382,7 +382,7 @@ export function PastVisitHistoryModal({
                                 patientForm: { ...prev.patientForm, guardian_name: e.target.value },
                               }))
                             }
-                            placeholder="Nome do responsável"
+                            placeholder="Nome do acompanhante"
                           />
                           <input
                             className="triage-input"
@@ -396,7 +396,35 @@ export function PastVisitHistoryModal({
                                 },
                               }))
                             }
-                            placeholder="Telefone do responsável"
+                            placeholder="Telefone do acompanhante"
+                          />
+                          <input
+                            className="triage-input"
+                            value={modal.patientForm.alt_phone}
+                            onChange={(e) =>
+                              setPastVisitModal((prev) => ({
+                                ...prev,
+                                patientForm: {
+                                  ...prev.patientForm,
+                                  alt_phone: e.target.value,
+                                },
+                              }))
+                            }
+                            placeholder="Contacto alternativo"
+                          />
+                          <input
+                            className="triage-input"
+                            value={modal.patientForm.address}
+                            onChange={(e) =>
+                              setPastVisitModal((prev) => ({
+                                ...prev,
+                                patientForm: {
+                                  ...prev.patientForm,
+                                  address: e.target.value,
+                                },
+                              }))
+                            }
+                            placeholder="Morada"
                           />
                         </div>
                       ) : (
@@ -415,7 +443,7 @@ export function PastVisitHistoryModal({
                                   ? `${profileAge} ano${profileAge === 1 ? "" : "s"}`
                                   : "Nao informado",
                             },
-                            { label: "Nome do responsável", value: profileGuardian },
+                            { label: "Nome do acompanhante", value: profileGuardian },
                             { label: "Telefone", value: profilePhone },
                             { label: "Morada", value: profileAddress },
                           ].map((item) => (

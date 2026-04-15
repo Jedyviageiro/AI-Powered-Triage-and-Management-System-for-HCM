@@ -28,7 +28,8 @@ const validatePediatricBirthDate = (birthDate) => {
 
 const createPatient = async (req, res) => {
   try {
-    const { full_name, sex, birth_date, guardian_name, guardian_phone } = req.body;
+    const { full_name, sex, birth_date, guardian_name, guardian_phone, alt_phone, address } =
+      req.body;
 
     if (!full_name || !sex || !birth_date || !guardian_name || !guardian_phone) {
       return res.status(400).json({ error: "Preencha todos os campos" });
@@ -45,6 +46,8 @@ const createPatient = async (req, res) => {
       birth_date,
       guardian_name,
       guardian_phone,
+      alt_phone,
+      address,
     });
 
     return res.status(201).json(patient);

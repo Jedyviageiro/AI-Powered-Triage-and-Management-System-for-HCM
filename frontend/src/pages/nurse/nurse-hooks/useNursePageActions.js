@@ -24,6 +24,8 @@ const makeClosedPatientEditModal = () => ({
   birth_date: "",
   guardian_name: "",
   guardian_phone: "",
+  alt_phone: "",
+  address: "",
   triageLoading: false,
   triageSaving: false,
   triageId: null,
@@ -57,6 +59,8 @@ export function useNursePageActions({
   pBirthDate,
   pGuardianName,
   pGuardianPhone,
+  pAltPhone,
+  pAddress,
   destinationNotes,
   showPopup,
   setPdfLoadingId,
@@ -96,6 +100,8 @@ export function useNursePageActions({
   setPBirthDate,
   setPGuardianName,
   setPGuardianPhone,
+  setPAltPhone,
+  setPAddress,
   setTemperature,
   setHeartRate,
   setRespRate,
@@ -273,6 +279,8 @@ export function useNursePageActions({
     setPBirthDate("");
     setPGuardianName("");
     setPGuardianPhone("");
+    setPAltPhone("");
+    setPAddress("");
     setTemperature("");
     setHeartRate("");
     setRespRate("");
@@ -314,6 +322,8 @@ export function useNursePageActions({
     setPFullName,
     setPGuardianName,
     setPGuardianPhone,
+    setPAltPhone,
+    setPAddress,
     setPSex,
     setPatient,
     setPriority,
@@ -629,6 +639,8 @@ export function useNursePageActions({
           birth_date: pBirthDate,
           guardian_name: pGuardianName.trim(),
           guardian_phone: pGuardianPhone.trim(),
+          alt_phone: pAltPhone.trim(),
+          address: pAddress.trim(),
         });
         setPatient(created);
         setSearchResults([]);
@@ -649,6 +661,8 @@ export function useNursePageActions({
       pFullName,
       pGuardianName,
       pGuardianPhone,
+      pAltPhone,
+      pAddress,
       pSex,
       showPopup,
       setAiSuggestion,

@@ -47,6 +47,8 @@ export const buildDoctorFinishPayload = ({
   const normalizedReturnDates = (Array.isArray(returnVisitDates) ? returnVisitDates : [])
     .map((date) => String(date || "").trim())
     .filter(Boolean);
+  const effectiveReturnDate =
+    normalizedReturnDates[0] || String(planDraft.return_visit_date || "").trim();
 
   const normalizedFollowUpRuleKey = isClinicalReturnVisit ? resolvedFollowUpRuleKey : "";
   const normalizedFollowUpTime = isClinicalReturnVisit
@@ -75,7 +77,7 @@ export const buildDoctorFinishPayload = ({
     follow_up_instructions: mergedFollowUpInstructions,
     return_visit_date:
       planDraft.disposition_plan === "RETURN_VISIT"
-        ? normalizedReturnDates[0] || ""
+        ? effectiveReturnDate
         : planDraft.return_visit_date,
     return_visit_reason: mergedReturnReason,
     inpatient_bed: selectedRoomCode || planDraft.inpatient_bed || "",
@@ -115,7 +117,7 @@ export const buildDoctorFinishPayload = ({
       follow_up_prescription_decision: followUpPrescriptionDecision || null,
       return_visit_count: planDraft.disposition_plan === "RETURN_VISIT" ? returnVisitCount : 0,
       return_visit_dates:
-        planDraft.disposition_plan === "RETURN_VISIT" ? normalizedReturnDates : [],
+        planDraft.disposition_plan === "RETURN_VISIT" ? [effectiveReturnDate].filter(Boolean) : [],
       assigned_room_code: selectedRoomCode || null,
       generated_at: new Date().toISOString(),
     },
