@@ -179,7 +179,7 @@ export function AdminRoomsView({ roomSettings, onSave, loading, saving }) {
                 padding: 16,
                 background: "#fbfdfb",
                 display: "grid",
-                gridTemplateColumns: "minmax(0, 1fr) 90px",
+                gridTemplateColumns: "minmax(0, 1fr) 68px",
                 gap: 16,
               }}
             >
@@ -281,7 +281,15 @@ export function AdminRoomsView({ roomSettings, onSave, loading, saving }) {
                 max="50"
                 value={draft[item.key]}
                 onChange={(event) => setDraft((current) => ({ ...current, [item.key]: event.target.value }))}
-                style={{ ...formInputStyle, width: 78, textAlign: "center", fontWeight: 700, justifySelf: "end" }}
+                style={{
+                  ...formInputStyle,
+                  width: 58,
+                  minWidth: 58,
+                  paddingInline: 8,
+                  textAlign: "center",
+                  fontWeight: 700,
+                  justifySelf: "end",
+                }}
                 disabled={loading || saving}
               />
             </div>

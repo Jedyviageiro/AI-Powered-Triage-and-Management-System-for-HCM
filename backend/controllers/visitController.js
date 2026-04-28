@@ -331,7 +331,7 @@ const startConsultation = async (req, res) => {
     if (!updated) {
       return res.status(400).json({
         error:
-          "Nao e possivel iniciar consulta: falta triagem ou a visita nao esta em WAITING_DOCTOR.",
+          "Não é possível iniciar consulta: falta triagem.",
       });
     }
 

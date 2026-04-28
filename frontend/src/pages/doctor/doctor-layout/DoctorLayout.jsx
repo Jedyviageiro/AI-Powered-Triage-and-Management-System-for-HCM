@@ -562,8 +562,7 @@ export default function DoctorLayout(props) {
                   formatStatus={formatStatus}
                   onOpenView={openView}
                   onOpenConsultation={(visit) => {
-                    setActiveView("consultationForm");
-                    openVisit(visit.id, visit);
+                    attendPatientFromQueue(visit.id, visit);
                   }}
                   dashboardHourSeries={dashboardHourSeries}
                   dashboardPriorityRows={dashboardPriorityRows}
@@ -651,8 +650,7 @@ export default function DoctorLayout(props) {
                   formatPriorityPt={formatPriorityPt}
                   formatStatus={formatStatus}
                   onOpenVisit={(visit) => {
-                    setActiveView("consultationForm");
-                    openVisit(visit.id, visit);
+                    attendPatientFromQueue(visit.id, visit);
                   }}
                 />
               </div>
@@ -692,15 +690,13 @@ export default function DoctorLayout(props) {
                   loading={loadingQueue}
                   onRefresh={loadQueue}
                   onOpenVisit={(visitId, previewVisit) => {
-                    setActiveView("consultationForm");
                     const preview =
                       previewVisit && Number(previewVisit.id) === Number(visitId)
                         ? previewVisit
                         : myAssignedQueue.find((v) => Number(v.id) === Number(visitId)) ||
                           filteredQueue.find((v) => Number(v.id) === Number(visitId)) ||
                           null;
-                    openVisit(visitId, preview);
-                    setConsultFormStep(1);
+                    attendPatientFromQueue(visitId, preview);
                   }}
                   onAttendVisit={attendPatientFromQueue}
                   onCreateNewConsultation={createNewConsultationFromFollowup}
@@ -716,15 +712,13 @@ export default function DoctorLayout(props) {
                   loading={loadingQueue}
                   onRefresh={loadQueue}
                   onOpenVisit={(visitId, previewVisit) => {
-                    setActiveView("consultationForm");
                     const preview =
                       previewVisit && Number(previewVisit.id) === Number(visitId)
                         ? previewVisit
                         : queueRowsForView.find((v) => Number(v.id) === Number(visitId)) ||
                           filteredQueue.find((v) => Number(v.id) === Number(visitId)) ||
                           null;
-                    openVisit(visitId, preview);
-                    setConsultFormStep(1);
+                    attendPatientFromQueue(visitId, preview);
                   }}
                   onAttendVisit={attendPatientFromQueue}
                   onCreateNewConsultation={createNewConsultationFromFollowup}

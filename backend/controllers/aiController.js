@@ -61,9 +61,18 @@ const scoreDoctorBySpecialtyFit = (doctor, contextTokens, suggestedSpecialty) =>
 };
 
 const recommendDoctor = ({ doctors, suggestedSpecialty, chiefComplaint, clinicalNotes }) => {
-  const available = (Array.isArray(doctors) ? doctors : []).filter(
-    (d) => d && d.is_busy === false && d.is_available !== false
+  const pool = Array.isArray(doctors) ? doctors.filter(Boolean) : [];
+  const preferred = pool.filter(
+    (d) =>
+      d &&
+      d.is_busy === false &&
+      d.is_available !== false &&
+      d.is_online_now !== false
   );
+  const secondary = pool.filter((d) => d && d.is_busy === false && d.is_available !== false);
+  const fallback = pool.filter((d) => d && d.is_available !== false);
+  const available =
+    preferred.length > 0 ? preferred : secondary.length > 0 ? secondary : fallback;
   if (available.length === 0) return null;
 
   const contextTokens = tokenize(`${chiefComplaint || ""} ${clinicalNotes || ""}`);

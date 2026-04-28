@@ -336,6 +336,12 @@ const listActiveVisits = async () => {
            ELSE NULL
          END
        ) AS chief_complaint,
+       t.clinical_notes AS triage_clinical_notes,
+       t.temperature,
+       t.heart_rate,
+       t.respiratory_rate,
+       t.oxygen_saturation,
+       t.weight,
        (lf.id IS NOT NULL AND t.chief_complaint IS NULL) AS is_lab_followup,
        CASE
          WHEN lf.id IS NULL THEN NULL
@@ -371,7 +377,15 @@ const listActiveVisits = async () => {
      FROM visits v
      JOIN patients p ON p.id = v.patient_id
      LEFT JOIN LATERAL (
-       SELECT t1.chief_complaint, t1.nurse_id
+       SELECT
+         t1.chief_complaint,
+         t1.clinical_notes,
+         t1.temperature,
+         t1.heart_rate,
+         t1.respiratory_rate,
+         t1.oxygen_saturation,
+         t1.weight,
+         t1.nurse_id
        FROM triage t1
        WHERE t1.visit_id = v.id
        ORDER BY t1.created_at DESC
@@ -434,6 +448,12 @@ const listActiveVisitsByDoctor = async (doctorId) => {
            ELSE NULL
          END
        ) AS chief_complaint,
+       t.clinical_notes AS triage_clinical_notes,
+       t.temperature,
+       t.heart_rate,
+       t.respiratory_rate,
+       t.oxygen_saturation,
+       t.weight,
        (lf.id IS NOT NULL AND t.chief_complaint IS NULL) AS is_lab_followup,
        CASE
          WHEN lf.id IS NULL THEN NULL
@@ -469,7 +489,15 @@ const listActiveVisitsByDoctor = async (doctorId) => {
      FROM visits v
      JOIN patients p ON p.id = v.patient_id
      LEFT JOIN LATERAL (
-       SELECT t1.chief_complaint, t1.nurse_id
+       SELECT
+         t1.chief_complaint,
+         t1.clinical_notes,
+         t1.temperature,
+         t1.heart_rate,
+         t1.respiratory_rate,
+         t1.oxygen_saturation,
+         t1.weight,
+         t1.nurse_id
        FROM triage t1
        WHERE t1.visit_id = v.id
        ORDER BY t1.created_at DESC

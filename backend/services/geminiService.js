@@ -2,7 +2,7 @@ const { GoogleGenAI } = require("@google/genai");
 const { loadPrompt } = require("../utils/promptLoader");
 const { getWhoMedicationGuidance } = require("./firecrawlWhoService");
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+let aiClient = null;
 
 // Melhor opção para triagem (rápido e atual)
 const MODEL = "gemini-2.5-flash";
@@ -12,6 +12,21 @@ const TEMPORARILY_UNAVAILABLE_AI_ERROR_PATTERN =
   /unavailable|high demand|overloaded|try again later|503/i;
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function getAiClient() {
+  const apiKey = String(process.env.GEMINI_API_KEY || "").trim();
+  if (!apiKey) {
+    const error = new Error("GEMINI_API_KEY is not configured");
+    error.code = "MISSING_GEMINI_API_KEY";
+    throw error;
+  }
+
+  if (!aiClient) {
+    aiClient = new GoogleGenAI({ apiKey });
+  }
+
+  return aiClient;
+}
 
 function isRetryableAiError(error) {
   const message = String(error?.message || "");
@@ -40,7 +55,7 @@ async function generateContentWithRetry({ model, contents }, options = {}) {
   let lastError = null;
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
-      return await ai.models.generateContent({ model, contents });
+      return await getAiClient().models.generateContent({ model, contents });
     } catch (error) {
       lastError = error;
       if (attempt >= maxAttempts || !isRetryableAiError(error)) throw error;

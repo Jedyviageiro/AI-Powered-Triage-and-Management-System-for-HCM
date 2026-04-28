@@ -80,6 +80,11 @@ const formatWait = (mins) => {
   return `${Math.floor(value / 60)}h ${value % 60}min`;
 };
 
+const formatVital = (value, unit = "") => {
+  if (value == null || value === "" || Number.isNaN(Number(value))) return "-";
+  return `${Number(value)}${unit}`;
+};
+
 function Avatar({ name, size = 38 }) {
   const palette = getAvatarPalette(name);
   return (
@@ -672,6 +677,40 @@ export function DoctorWaitingQueueView({
                   >
                     {value}
                   </div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10 }}>
+              {[
+                { label: "Temp.", value: formatVital(selectedRow.temperature, " °C") },
+                { label: "SpO2", value: formatVital(selectedRow.oxygen_saturation, "%") },
+                { label: "FC", value: formatVital(selectedRow.heart_rate, " bpm") },
+                { label: "FR", value: formatVital(selectedRow.respiratory_rate, " rpm") },
+                { label: "Peso", value: formatVital(selectedRow.weight, " kg") },
+              ].map(({ label, value }) => (
+                <div
+                  key={label}
+                  style={{
+                    borderRadius: 18,
+                    border: `1px solid ${BORDER}`,
+                    background: "#fff",
+                    padding: "12px 16px",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 700,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.1em",
+                      color: "#9CA3AF",
+                      marginBottom: 6,
+                    }}
+                  >
+                    {label}
+                  </div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "#1F2937" }}>{value}</div>
                 </div>
               ))}
             </div>
