@@ -4,7 +4,6 @@ import { AdminButton } from "../admin-helpers/adminUi.jsx";
 
 export function AdminLayout({
   children,
-  me,
   loading,
   error,
   activeView,
@@ -20,6 +19,7 @@ export function AdminLayout({
   onLogout,
 }) {
   const meta = ADMIN_VIEW_META[activeView] || { title: "Admin", subtitle: "" };
+  const logoImage = "/assets/logo_icon.svg";
 
   if (loading) {
     return (
@@ -170,6 +170,15 @@ export function AdminLayout({
               </svg>
             )}
           </button>
+          {sidebarOpen ? (
+            <img
+              src={logoImage}
+              alt=""
+              aria-hidden="true"
+              className="flex-shrink-0"
+              style={{ width: 36, height: 36, borderRadius: 9, objectFit: "contain", background: "transparent" }}
+            />
+          ) : null}
           <div className="logo-text min-w-0">
             <div className="text-sm font-bold text-white leading-tight">Admin</div>
             <div className="text-xs font-medium" style={{ color: "#dcebe2" }}>

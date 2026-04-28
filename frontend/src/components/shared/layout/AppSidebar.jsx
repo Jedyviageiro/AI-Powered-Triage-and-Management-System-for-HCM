@@ -13,6 +13,8 @@ export default function AppSidebar({
   footerActionLabel = "",
   onFooterAction,
 }) {
+  const logoImage = "/assets/logo_icon.svg";
+
   if (children) {
     return (
       <aside
@@ -72,6 +74,15 @@ export default function AppSidebar({
             </svg>
           )}
         </button>
+        {open ? (
+          <img
+            src={logoImage}
+            alt=""
+            aria-hidden="true"
+            className="flex-shrink-0"
+            style={{ width: 36, height: 36, borderRadius: 9, objectFit: "contain", background: "transparent" }}
+          />
+        ) : null}
         <div className="logo-text min-w-0">
           <div className="text-sm font-semibold text-white leading-tight">{title}</div>
         </div>

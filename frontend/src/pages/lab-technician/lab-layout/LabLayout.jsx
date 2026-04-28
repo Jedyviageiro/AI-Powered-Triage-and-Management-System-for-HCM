@@ -48,6 +48,7 @@ export function LabLayout(props) {
     handleSave,
     ResultModal,
   } = props;
+  const logoImage = "/assets/logo_icon.svg";
 
   return (
     <div
@@ -118,6 +119,14 @@ export function LabLayout(props) {
               </svg>
             )}
           </button>
+          {sidebarOpen ? (
+            <img
+              src={logoImage}
+              alt=""
+              aria-hidden="true"
+              style={{ width: 32, height: 32, borderRadius: 8, objectFit: "contain", background: "transparent", flexShrink: 0 }}
+            />
+          ) : null}
           {sidebarOpen && (
             <div>
               <div style={{ fontSize: 13, fontWeight: 600, color: "#fff", lineHeight: 1.2 }}>

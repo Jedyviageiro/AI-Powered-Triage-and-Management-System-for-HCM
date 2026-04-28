@@ -224,6 +224,8 @@ export function NurseLayout(props) {
     savePatientEdit,
     saveQueueTriageEdit,
   } = props;
+  const logoImage = "/assets/logo_icon.svg";
+
   return (
     <div
       className={`triage-page flex h-screen bg-gray-50 ${
@@ -573,6 +575,15 @@ export function NurseLayout(props) {
               </svg>
             )}
           </button>
+          {sidebarOpen ? (
+            <img
+              src={logoImage}
+              alt=""
+              aria-hidden="true"
+              className="flex-shrink-0"
+              style={{ width: 36, height: 36, borderRadius: 9, objectFit: "contain", background: "transparent" }}
+            />
+          ) : null}
           <div className="logo-text min-w-0">
             <div className="text-sm font-bold text-white leading-tight">Triagem</div>
             <div className="text-xs font-medium" style={{ color: "#dcebe2" }}>

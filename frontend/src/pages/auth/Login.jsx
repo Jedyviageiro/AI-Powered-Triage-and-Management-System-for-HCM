@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../lib/api";
 import { saveAuth } from "../../lib/auth";
+const logoImage = "/assets/logo_icon.svg";
 const loginImage = "/assets/foto-de-medico-enfermeiro-pediatrico.png";
 
 export default function Login() {
@@ -62,28 +63,17 @@ export default function Login() {
         <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", maxWidth: 400 }}>
           {/* Logo badge */}
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 32 }}>
-            <div
+            <img
+              src={logoImage}
+              alt="HCM"
               style={{
-                width: 38,
-                height: 38,
+                width: 44,
+                height: 44,
                 borderRadius: 10,
-                background: "#0e4f35",
-                color: "#fff",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 11,
-                fontWeight: 800,
-                letterSpacing: "0.05em",
+                objectFit: "contain",
+                background: "transparent",
               }}
-            >
-              {/* stethoscope icon */}
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6 6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.2.2 0 1 0 .3.3" />
-                <path d="M8 15v1a6 6 0 0 0 6 6 6 6 0 0 0 6-6v-4" />
-                <circle cx="20" cy="10" r="2" />
-              </svg>
-            </div>
+            />
             <span style={{ fontSize: 13, fontWeight: 800, color: "#0e4f35", letterSpacing: "0.08em" }}>HCM</span>
           </div>
 
