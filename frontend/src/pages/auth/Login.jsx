@@ -11,6 +11,7 @@ export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [errorPopupOpen, setErrorPopupOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
@@ -30,6 +31,7 @@ export default function Login() {
       else navigate("/triage/dashboard");
     } catch (err) {
       setError(err.message);
+      setErrorPopupOpen(true);
     } finally {
       setLoading(false);
     }
@@ -154,7 +156,7 @@ export default function Login() {
 
         .field-input {
           width: 100%;
-          border: 1.5px solid #dce7e0;
+          border: none;
           border-radius: 12px;
           padding: 10px 12px 10px 38px;
           min-height: 42px;
@@ -163,12 +165,11 @@ export default function Login() {
           color: #0f172a;
           background: #f8fbf9;
           outline: none;
-          transition: border-color 0.18s, box-shadow 0.18s, background 0.18s;
+          transition: box-shadow 0.18s, background 0.18s;
         }
 
         .field-input:focus {
-          border-color: #165034;
-          box-shadow: 0 0 0 3px rgba(22, 80, 52, 0.12);
+          box-shadow: inset 0 0 0 1px rgba(22, 80, 52, 0.18);
           background: #ffffff;
         }
 
@@ -266,16 +267,6 @@ export default function Login() {
           color: #165034;
           font-weight: 700;
           text-decoration: none;
-        }
-
-        .error-box {
-          background: #fff1f2;
-          color: #9f1239;
-          border: 1px solid #fecdd3;
-          padding: 9px 12px;
-          border-radius: 10px;
-          margin-bottom: 14px;
-          font-size: 12.5px;
         }
 
         .right-panel {
@@ -390,7 +381,134 @@ export default function Login() {
           .form-subheading {
             margin-bottom: 16px;
           }
-        }
+    }
+
+       .login-popup-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: rgba(15, 23, 42, 0.38);
+  backdrop-filter: blur(6px);
+}
+
+.login-popup {
+  width: min(360px, 100%);
+  background: #ffffff;
+  border: 1px solid #e4ece7;
+  border-radius: 24px;
+  box-shadow: 0 32px 80px rgba(15, 23, 42, 0.22);
+  padding: 28px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  animation: loginPopupIn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.login-popup-icon-wrap {
+  width: 64px;
+  height: 64px;
+  border-radius: 999px;
+  background: #fff1f2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 18px;
+}
+
+.login-popup-icon-inner {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  background: #ffe0e3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #be123c;
+}
+
+.login-popup-title {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+}
+
+.login-popup-message {
+  margin: 0 0 24px;
+  font-size: 13px;
+  line-height: 1.65;
+  color: #64748b;
+  max-width: 280px;
+}
+
+.login-popup-actions {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.login-popup-btn-primary {
+  width: 100%;
+  border: none;
+  border-radius: 14px;
+  min-height: 44px;
+  padding: 11px 18px;
+  background: #0c3a24;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.18s, transform 0.12s;
+}
+
+.login-popup-btn-primary:hover {
+  background: #165034;
+}
+
+.login-popup-btn-primary:active {
+  transform: translateY(1px);
+}
+
+.login-popup-btn-ghost {
+  width: 100%;
+  border: none;
+  border-radius: 14px;
+  min-height: 40px;
+  padding: 10px 18px;
+  background: transparent;
+  color: #64748b;
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+
+.login-popup-btn-ghost:hover {
+  background: #f1f5f2;
+  color: #334155;
+}
+
+.login-popup-drag-handle {
+  width: 36px;
+  height: 4px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  margin: 0 auto 24px;
+}
+
+@keyframes loginPopupIn {
+  from { opacity: 0; transform: translateY(18px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
       `}</style>
 
       <div className="login-root">
@@ -408,13 +526,22 @@ export default function Login() {
               <h1 className="form-heading">Entrar no sistema</h1>
               <p className="form-subheading">Acesso restrito a profissionais autorizados.</p>
 
-              {error ? <div className="error-box">{error}</div> : null}
-
               <form onSubmit={handleSubmit}>
-                <label className="field-label" htmlFor="username">Utilizador</label>
+                <label className="field-label" htmlFor="username">
+                  Utilizador
+                </label>
                 <div className="input-wrap">
                   <span className="input-icon">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <svg
+                      width="15"
+                      height="15"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
                       <path d="M20 21a8 8 0 0 0-16 0" />
                       <circle cx="12" cy="7" r="4" />
                     </svg>
@@ -429,10 +556,21 @@ export default function Login() {
                   />
                 </div>
 
-                <label className="field-label" htmlFor="password">Palavra-passe</label>
+                <label className="field-label" htmlFor="password">
+                  Palavra-passe
+                </label>
                 <div className="input-wrap">
                   <span className="input-icon">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <svg
+                      width="15"
+                      height="15"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
                       <rect x="3" y="11" width="18" height="11" rx="2" />
                       <path d="M7 11V7a5 5 0 0 1 10 0v4" />
                     </svg>
@@ -447,15 +585,38 @@ export default function Login() {
                     autoComplete="current-password"
                     style={{ paddingRight: 42 }}
                   />
-                  <button type="button" className="toggle-pw" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Ocultar palavra-passe" : "Mostrar palavra-passe"}>
+                  <button
+                    type="button"
+                    className="toggle-pw"
+                    onClick={() => setShowPassword((value) => !value)}
+                    aria-label={showPassword ? "Ocultar palavra-passe" : "Mostrar palavra-passe"}
+                  >
                     {showPassword ? (
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
                         <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
                         <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
                         <line x1="1" y1="1" x2="23" y2="23" />
                       </svg>
                     ) : (
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
                         <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
                         <circle cx="12" cy="12" r="3" />
                       </svg>
@@ -473,7 +634,9 @@ export default function Login() {
                     />
                     Lembrar sessao
                   </label>
-                  <button type="button" className="forgot-btn">Recuperar acesso</button>
+                  <button type="button" className="forgot-btn">
+                    Recuperar acesso
+                  </button>
                 </div>
 
                 <button type="submit" className="login-btn" disabled={loading}>
@@ -490,14 +653,81 @@ export default function Login() {
           <section className="right-panel" aria-label="Equipa pediatrica do HCM">
             <div className="right-content">
               <div className="right-kicker">Sistema Pediatrico HCM</div>
-              <h2 className="right-headline">Cuidado pediatrico com mais contexto e continuidade.</h2>
+              <h2 className="right-headline">
+                Cuidado pediatrico com mais contexto e continuidade.
+              </h2>
               <p className="right-copy">
-                Registo, triagem, consultas e laboratorio num unico fluxo para apoiar a equipa clinica.
+                Registo, triagem, consultas e laboratorio num unico fluxo para apoiar a equipa
+                clinica.
               </p>
             </div>
           </section>
         </div>
       </div>
+
+      {errorPopupOpen ? (
+        <div
+          className="login-popup-overlay"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setErrorPopupOpen(false);
+          }}
+        >
+          <div
+            className="login-popup"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="login-error-title"
+          >
+            <div className="login-popup-drag-handle" aria-hidden="true" />
+
+            <div className="login-popup-icon-wrap" aria-hidden="true">
+              <div className="login-popup-icon-inner">
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="7" x2="12" y2="13" />
+                  <line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
+              </div>
+            </div>
+
+            <h2 id="login-error-title" className="login-popup-title">
+              Não foi possível entrar
+            </h2>
+            <p className="login-popup-message">
+              {error || "Verifique o nome de utilizador e a palavra-passe, depois tente novamente."}
+            </p>
+
+            <div className="login-popup-actions">
+              <button
+                type="button"
+                className="login-popup-btn-primary"
+                onClick={() => setErrorPopupOpen(false)}
+                autoFocus
+              >
+                Tentar novamente
+              </button>
+              <button
+                type="button"
+                className="login-popup-btn-ghost"
+                onClick={() => setErrorPopupOpen(false)}
+              >
+                Recuperar acesso
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+     
     </>
   );
 }

@@ -34,8 +34,16 @@ async function request(path, options = {}) {
   }
   if (timeoutId) clearTimeout(timeoutId);
 
-  // sessão expirada
+  // sessão expirada. Login failures also return 401, but should stay on the page
+  // so the login screen can show its own validation popup.
   if (res.status === 401) {
+    if (path === "/auth/login") {
+      const error = new Error(data?.error || "Nome de utilizador ou palavra-passe inválidos");
+      error.status = res.status;
+      error.data = data;
+      throw error;
+    }
+
     clearAuth();
     window.location.replace("/login");
     throw new Error(data?.error || "Sessão expirada");
