@@ -2,12 +2,12 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../lib/api";
 import { saveAuth } from "../../lib/auth";
+
 const logoImage = "/assets/logo_icon.svg";
-const loginImage = "/assets/foto-de-medico-enfermeiro-pediatrico.png";
+const loginImage = "/assets/login-image.png";
 
 export default function Login() {
   const navigate = useNavigate();
-
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -15,8 +15,8 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
     setError("");
     setLoading(true);
 
@@ -24,15 +24,10 @@ export default function Login() {
       const res = await api.login(username, password);
       saveAuth(res.token, res.user);
 
-      if (res.user.role === "ADMIN") {
-        navigate("/admin");
-      } else if (res.user.role === "DOCTOR") {
-        navigate("/doctor/dashboard");
-      } else if (res.user.role === "LAB_TECHNICIAN") {
-        navigate("/lab/dashboard");
-      } else {
-        navigate("/triage/dashboard");
-      }
+      if (res.user.role === "ADMIN") navigate("/admin");
+      else if (res.user.role === "DOCTOR") navigate("/doctor/dashboard");
+      else if (res.user.role === "LAB_TECHNICIAN") navigate("/lab/dashboard");
+      else navigate("/triage/dashboard");
     } catch (err) {
       setError(err.message);
     } finally {
@@ -41,200 +36,418 @@ export default function Login() {
   };
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        display: "grid",
-        gridTemplateColumns: "1fr 1fr",
-        background: "#f0f4f2",
-        fontFamily: "'Inter', 'Segoe UI', sans-serif",
-      }}
-    >
-      {/* ── LEFT PANEL ── */}
-      <section
-        style={{
-          padding: "48px 56px",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-between",
-        }}
-      >
-        {/* Top: logo + form */}
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", maxWidth: 400 }}>
-          {/* Logo badge */}
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 32 }}>
-            <img
-              src={logoImage}
-              alt="HCM"
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 10,
-                objectFit: "contain",
-                background: "transparent",
-              }}
-            />
-            <span style={{ fontSize: 13, fontWeight: 800, color: "#0e4f35", letterSpacing: "0.08em" }}>HCM</span>
-          </div>
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700;800&display=swap');
 
-          {/* Heading */}
-          <h1 style={{ fontSize: 28, fontWeight: 800, color: "#0f172a", margin: "0 0 8px", lineHeight: 1.15 }}>
-            Sistema de Triagem<br />Pediátrica
-          </h1>
-          <p style={{ fontSize: 13.5, color: "#64748b", margin: "0 0 32px", lineHeight: 1.6 }}>
-            Acesso restrito a profissionais de saúde autorizados.
-          </p>
+        * { box-sizing: border-box; }
 
-          {/* Card */}
-          <div
-            style={{
-              background: "#ffffff",
-              border: "1px solid #e2e8f0",
-              borderRadius: 20,
-              padding: "28px 24px 24px",
-              boxShadow: "0 4px 24px rgba(0,0,0,0.06)",
-            }}
-          >
-            {error && (
-              <div
-                style={{
-                  background: "#fff1f2",
-                  color: "#9f1239",
-                  border: "1px solid #fecdd3",
-                  padding: "9px 12px",
-                  borderRadius: 10,
-                  marginBottom: 18,
-                  fontSize: 13,
-                }}
-              >
-                {error}
-              </div>
-            )}
+        .login-root {
+          min-height: 100svh;
+          background: #eef5f0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-family: 'IBM Plex Sans', system-ui, sans-serif;
+          padding: 16px;
+          color: #0f172a;
+          overflow: hidden;
+        }
 
-            <form onSubmit={handleSubmit} style={{ display: "grid", gap: 18 }}>
-              {/* Nome de utilizador */}
-              <div>
-                <label
-                  style={{
-                    display: "block",
-                    fontSize: 11,
-                    fontWeight: 700,
-                    color: "#94a3b8",
-                    letterSpacing: "0.1em",
-                    textTransform: "uppercase",
-                    marginBottom: 7,
-                  }}
-                >
-                  Nome de utilizador
-                </label>
-                <div style={{ position: "relative" }}>
-                  <span
-                    style={{
-                      position: "absolute",
-                      left: 13,
-                      top: "50%",
-                      transform: "translateY(-50%)",
-                      color: "#94a3b8",
-                      display: "flex",
-                      alignItems: "center",
-                    }}
-                  >
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="8" r="4" />
-                      <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
-                    </svg>
-                  </span>
-                  <input
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    placeholder="Insira seu identificador"
-                    style={{
-                      width: "100%",
-                      border: "1px solid #e2e8f0",
-                      borderRadius: 12,
-                      padding: "12px 14px 12px 38px",
-                      fontSize: 13.5,
-                      outline: "none",
-                      background: "#f8fafc",
-                      color: "#0f172a",
-                      boxSizing: "border-box",
-                      transition: "border-color 0.15s",
-                    }}
-                    onFocus={(e) => (e.target.style.borderColor = "#0e4f35")}
-                    onBlur={(e) => (e.target.style.borderColor = "#e2e8f0")}
-                  />
+        .login-card {
+          display: grid;
+          grid-template-columns: minmax(360px, 0.92fr) minmax(420px, 1.08fr);
+          width: min(1040px, 100%);
+          height: min(620px, calc(100svh - 32px));
+          min-height: 540px;
+          background: #ffffff;
+          border: 1px solid #dbe7df;
+          border-radius: 18px;
+          overflow: hidden;
+          box-shadow: 0 24px 70px rgba(12, 58, 36, 0.14);
+        }
+
+        .left-panel {
+          padding: 34px 42px 28px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          background: #ffffff;
+        }
+
+        .login-form-shell {
+          width: 100%;
+          max-width: 350px;
+          margin: 0 auto;
+        }
+
+        .logo-row {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 22px;
+        }
+
+        .logo-img {
+          width: 86px;
+          height: 86px;
+          object-fit: contain;
+        }
+
+        .logo-name {
+          display: grid;
+          gap: 1px;
+          line-height: 1.1;
+        }
+
+        .logo-name strong {
+          font-size: 15px;
+          font-weight: 800;
+          color: #0c3a24;
+        }
+
+        .logo-name span {
+          font-size: 11px;
+          font-weight: 600;
+          color: #64748b;
+        }
+
+        .form-heading {
+          font-size: 22px;
+          line-height: 1.1;
+          font-weight: 800;
+          color: #0f172a;
+          margin: 0 0 6px;
+        }
+
+        .form-subheading {
+          font-size: 12.5px;
+          color: #64748b;
+          margin: 0 0 22px;
+        }
+
+        .field-label {
+          display: block;
+          font-size: 11px;
+          font-weight: 700;
+          color: #334155;
+          margin-bottom: 6px;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+        }
+
+        .input-wrap {
+          position: relative;
+          margin-bottom: 14px;
+        }
+
+        .input-icon {
+          position: absolute;
+          left: 12px;
+          top: 50%;
+          transform: translateY(-50%);
+          color: #94a3b8;
+          display: flex;
+          align-items: center;
+          pointer-events: none;
+        }
+
+        .field-input {
+          width: 100%;
+          border: 1.5px solid #dce7e0;
+          border-radius: 12px;
+          padding: 10px 12px 10px 38px;
+          min-height: 42px;
+          font-size: 13px;
+          font-family: inherit;
+          color: #0f172a;
+          background: #f8fbf9;
+          outline: none;
+          transition: border-color 0.18s, box-shadow 0.18s, background 0.18s;
+        }
+
+        .field-input:focus {
+          border-color: #165034;
+          box-shadow: 0 0 0 3px rgba(22, 80, 52, 0.12);
+          background: #ffffff;
+        }
+
+        .field-input::placeholder {
+          color: #a8b5ad;
+        }
+
+        .toggle-pw {
+          position: absolute;
+          right: 12px;
+          top: 50%;
+          transform: translateY(-50%);
+          background: transparent;
+          border: none;
+          cursor: pointer;
+          color: #94a3b8;
+          padding: 4px;
+          display: flex;
+          align-items: center;
+        }
+
+        .remember-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          margin: 2px 0 18px;
+        }
+
+        .remember-label {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 12.5px;
+          color: #475569;
+          cursor: pointer;
+          white-space: nowrap;
+        }
+
+        .remember-checkbox {
+          width: 15px;
+          height: 15px;
+          accent-color: #165034;
+          cursor: pointer;
+        }
+
+        .forgot-btn {
+          background: transparent;
+          border: none;
+          font-size: 12.5px;
+          font-family: inherit;
+          color: #165034;
+          cursor: pointer;
+          font-weight: 700;
+          padding: 0;
+          white-space: nowrap;
+        }
+
+        .login-btn {
+          width: 100%;
+          border: none;
+          border-radius: 12px;
+          padding: 11px 14px;
+          min-height: 42px;
+          background: #0c3a24;
+          color: #ffffff;
+          font-size: 13.5px;
+          font-weight: 700;
+          font-family: inherit;
+          cursor: pointer;
+          transition: background 0.18s, transform 0.12s;
+        }
+
+        .login-btn:hover:not(:disabled) {
+          background: #165034;
+        }
+
+        .login-btn:active:not(:disabled) {
+          transform: translateY(1px);
+        }
+
+        .login-btn:disabled {
+          background: #7aa08c;
+          cursor: not-allowed;
+        }
+
+        .footer-note {
+          margin: 18px 0 0;
+          font-size: 11.5px;
+          color: #94a3b8;
+          line-height: 1.5;
+        }
+
+        .footer-note a {
+          color: #165034;
+          font-weight: 700;
+          text-decoration: none;
+        }
+
+        .error-box {
+          background: #fff1f2;
+          color: #9f1239;
+          border: 1px solid #fecdd3;
+          padding: 9px 12px;
+          border-radius: 10px;
+          margin-bottom: 14px;
+          font-size: 12.5px;
+        }
+
+        .right-panel {
+          position: relative;
+          min-width: 0;
+          overflow: hidden;
+          background:
+            linear-gradient(135deg, rgba(12, 58, 36, 0.9), rgba(22, 80, 52, 0.68)),
+            url("${loginImage}") center / cover no-repeat;
+        }
+
+        .right-panel::after {
+          content: "";
+          position: absolute;
+          inset: auto 0 0;
+          height: 46%;
+          background: linear-gradient(0deg, rgba(5, 27, 17, 0.78), rgba(5, 27, 17, 0));
+          pointer-events: none;
+        }
+
+        .right-content {
+          position: absolute;
+          left: 42px;
+          right: 42px;
+          bottom: 36px;
+          z-index: 1;
+          color: #ffffff;
+        }
+
+        .right-kicker {
+          font-size: 11px;
+          font-weight: 800;
+          text-transform: uppercase;
+          letter-spacing: 0.16em;
+          color: rgba(255, 255, 255, 0.72);
+          margin-bottom: 10px;
+        }
+
+        .right-headline {
+          max-width: 430px;
+          font-size: 34px;
+          line-height: 1.04;
+          font-weight: 800;
+          letter-spacing: -0.02em;
+          margin: 0;
+        }
+
+        .right-copy {
+          max-width: 410px;
+          margin: 14px 0 0;
+          font-size: 14px;
+          line-height: 1.6;
+          color: rgba(255, 255, 255, 0.78);
+        }
+
+        @media (max-width: 860px) {
+          .login-root {
+            overflow: auto;
+            padding: 12px;
+          }
+
+          .login-card {
+            grid-template-columns: 1fr;
+            height: auto;
+            min-height: 0;
+          }
+
+          .left-panel {
+            padding: 28px 24px;
+          }
+
+          .login-form-shell {
+            max-width: 390px;
+          }
+
+          .right-panel {
+            min-height: 220px;
+            order: -1;
+          }
+
+          .right-content {
+            left: 24px;
+            right: 24px;
+            bottom: 24px;
+          }
+
+          .right-headline {
+            font-size: 26px;
+          }
+        }
+
+        @media (max-height: 650px) and (min-width: 861px) {
+          .login-card {
+            height: calc(100svh - 24px);
+            min-height: 500px;
+          }
+
+          .left-panel {
+            padding-top: 24px;
+            padding-bottom: 22px;
+          }
+
+          .logo-row {
+            margin-bottom: 16px;
+          }
+
+          .logo-img {
+            width: 72px;
+            height: 72px;
+          }
+
+          .form-subheading {
+            margin-bottom: 16px;
+          }
+        }
+      `}</style>
+
+      <div className="login-root">
+        <div className="login-card">
+          <section className="left-panel">
+            <div className="login-form-shell">
+              <div className="logo-row">
+                <img src={logoImage} alt="HCM" className="logo-img" />
+                <div className="logo-name">
+                  <strong>HCM</strong>
+                  <span>Sistema de Triagem e Gestao Pediatrica</span>
                 </div>
               </div>
 
-              {/* Palavra-passe */}
-              <div>
-                <label
-                  style={{
-                    display: "block",
-                    fontSize: 11,
-                    fontWeight: 700,
-                    color: "#94a3b8",
-                    letterSpacing: "0.1em",
-                    textTransform: "uppercase",
-                    marginBottom: 7,
-                  }}
-                >
-                  Palavra-passe
-                </label>
-                <div style={{ position: "relative" }}>
-                  <span
-                    style={{
-                      position: "absolute",
-                      left: 13,
-                      top: "50%",
-                      transform: "translateY(-50%)",
-                      color: "#94a3b8",
-                      display: "flex",
-                      alignItems: "center",
-                    }}
-                  >
+              <h1 className="form-heading">Entrar no sistema</h1>
+              <p className="form-subheading">Acesso restrito a profissionais autorizados.</p>
+
+              {error ? <div className="error-box">{error}</div> : null}
+
+              <form onSubmit={handleSubmit}>
+                <label className="field-label" htmlFor="username">Utilizador</label>
+                <div className="input-wrap">
+                  <span className="input-icon">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 21a8 8 0 0 0-16 0" />
+                      <circle cx="12" cy="7" r="4" />
+                    </svg>
+                  </span>
+                  <input
+                    id="username"
+                    className="field-input"
+                    value={username}
+                    onChange={(event) => setUsername(event.target.value)}
+                    placeholder="Nome de utilizador"
+                    autoComplete="username"
+                  />
+                </div>
+
+                <label className="field-label" htmlFor="password">Palavra-passe</label>
+                <div className="input-wrap">
+                  <span className="input-icon">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <rect x="3" y="11" width="18" height="11" rx="2" />
                       <path d="M7 11V7a5 5 0 0 1 10 0v4" />
                     </svg>
                   </span>
                   <input
+                    id="password"
+                    className="field-input"
                     type={showPassword ? "text" : "password"}
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    style={{
-                      width: "100%",
-                      border: "1px solid #e2e8f0",
-                      borderRadius: 12,
-                      padding: "12px 42px 12px 38px",
-                      fontSize: 13.5,
-                      outline: "none",
-                      background: "#f8fafc",
-                      color: "#0f172a",
-                      boxSizing: "border-box",
-                      transition: "border-color 0.15s",
-                    }}
-                    onFocus={(e) => (e.target.style.borderColor = "#0e4f35")}
-                    onBlur={(e) => (e.target.style.borderColor = "#e2e8f0")}
+                    onChange={(event) => setPassword(event.target.value)}
+                    placeholder="Palavra-passe"
+                    autoComplete="current-password"
+                    style={{ paddingRight: 42 }}
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((v) => !v)}
-                    style={{
-                      position: "absolute",
-                      right: 13,
-                      top: "50%",
-                      transform: "translateY(-50%)",
-                      background: "none",
-                      border: "none",
-                      cursor: "pointer",
-                      color: "#94a3b8",
-                      padding: 0,
-                      display: "flex",
-                      alignItems: "center",
-                    }}
-                  >
+                  <button type="button" className="toggle-pw" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Ocultar palavra-passe" : "Mostrar palavra-passe"}>
                     {showPassword ? (
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
@@ -249,255 +462,42 @@ export default function Login() {
                     )}
                   </button>
                 </div>
-              </div>
 
-              {/* Lembrar acesso + Recuperar senha */}
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: "#475569" }}>
-                  <input
-                    type="checkbox"
-                    checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
-                    style={{
-                      width: 15,
-                      height: 15,
-                      accentColor: "#0e4f35",
-                      cursor: "pointer",
-                    }}
-                  />
-                  Lembrar acesso
-                </label>
-                <button
-                  type="button"
-                  style={{
-                    background: "none",
-                    border: "none",
-                    fontSize: 13,
-                    color: "#0e7a4f",
-                    cursor: "pointer",
-                    fontWeight: 600,
-                    padding: 0,
-                  }}
-                >
-                  Esqueceu a senha?
-                </button>
-              </div>
-
-              {/* Submit */}
-              <button
-                type="submit"
-                disabled={loading}
-                style={{
-                  marginTop: 4,
-                  width: "100%",
-                  border: "none",
-                  borderRadius: 12,
-                  padding: "13px 18px",
-                  background: loading ? "#3d7a5e" : "#0e4f35",
-                  color: "#fff",
-                  fontSize: 14,
-                  fontWeight: 700,
-                  cursor: loading ? "not-allowed" : "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 8,
-                  transition: "background 0.2s",
-                  boxShadow: "0 4px 16px rgba(14,79,53,0.25)",
-                }}
-                onMouseEnter={(e) => { if (!loading) e.currentTarget.style.background = "#0c3f2a"; }}
-                onMouseLeave={(e) => { if (!loading) e.currentTarget.style.background = "#0e4f35"; }}
-              >
-                {loading ? "Entrando..." : (
-                  <>
-                    Entrar
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M5 12h14M12 5l7 7-7 7" />
-                    </svg>
-                  </>
-                )}
-              </button>
-            </form>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div style={{ paddingTop: 24 }}>
-          <p style={{ fontSize: 11, color: "#94a3b8", letterSpacing: "0.06em", textTransform: "uppercase", margin: 0 }}>
-            Ambiente de triagem de alta precisão &nbsp;•&nbsp; © 2024 HCM
-          </p>
-        </div>
-      </section>
-
-      {/* ── RIGHT PANEL ── */}
-      <section style={{ padding: "16px 16px 16px 8px" }}>
-        <div
-          style={{
-            position: "relative",
-            width: "100%",
-            height: "100%",
-            borderRadius: 24,
-            overflow: "hidden",
-            boxShadow: "0 20px 60px rgba(0,0,0,0.18)",
-          }}
-        >
-          {/* Background image */}
-          <img
-            src={loginImage}
-            alt="Equipa pediatrica"
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-          />
-
-          {/* Dark overlay */}
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              background: "linear-gradient(160deg, rgba(6,28,58,0.55) 0%, rgba(4,18,40,0.85) 100%)",
-            }}
-          />
-
-          {/* Top-right icon buttons */}
-          <div
-            style={{
-              position: "absolute",
-              top: 20,
-              right: 20,
-              display: "flex",
-              gap: 8,
-            }}
-          >
-            {[
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>,
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>,
-            ].map((icon, i) => (
-              <div
-                key={i}
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 10,
-                  background: "rgba(255,255,255,0.12)",
-                  border: "1px solid rgba(255,255,255,0.18)",
-                  backdropFilter: "blur(8px)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "rgba(255,255,255,0.75)",
-                  cursor: "pointer",
-                }}
-              >
-                {icon}
-              </div>
-            ))}
-          </div>
-
-          {/* Bottom content */}
-          <div
-            style={{
-              position: "absolute",
-              left: 0,
-              right: 0,
-              bottom: 0,
-              padding: "0 28px 28px",
-            }}
-          >
-            {/* Live badge */}
-            <div
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                background: "rgba(255,255,255,0.12)",
-                border: "1px solid rgba(255,255,255,0.2)",
-                backdropFilter: "blur(8px)",
-                borderRadius: 999,
-                padding: "5px 12px",
-                marginBottom: 20,
-              }}
-            >
-              <span
-                style={{
-                  width: 7,
-                  height: 7,
-                  borderRadius: "50%",
-                  background: "#4ade80",
-                  boxShadow: "0 0 0 2px rgba(74,222,128,0.3)",
-                  display: "inline-block",
-                }}
-              />
-              <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.9)", letterSpacing: "0.06em", textTransform: "uppercase" }}>
-                Protocolos atualizados
-              </span>
-            </div>
-
-            {/* Headline */}
-            <h2
-              style={{
-                fontSize: 30,
-                fontWeight: 800,
-                color: "#ffffff",
-                lineHeight: 1.15,
-                margin: "0 0 14px",
-                maxWidth: 380,
-              }}
-            >
-              Atendimento pediátrico com mais contexto e menos atrito.
-            </h2>
-
-            {/* Description */}
-            <p
-              style={{
-                fontSize: 14,
-                color: "rgba(255,255,255,0.72)",
-                lineHeight: 1.65,
-                margin: "0 0 24px",
-                maxWidth: 380,
-              }}
-            >
-              Nossa plataforma integra dados clínicos em tempo real para reduzir o tempo de espera e garantir que cada pequeno paciente receba o cuidado exato no momento certo.
-            </p>
-
-            {/* Feature badges */}
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              {[
-                {
-                  icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,
-                  label: "Triagem Ágil",
-                },
-                {
-                  icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
-                  label: "Protocolo Seguro",
-                },
-                {
-                  icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
-                  label: "Dados em Tempo Real",
-                },
-              ].map(({ icon, label }) => (
-                <div
-                  key={label}
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 7,
-                    background: "rgba(255,255,255,0.10)",
-                    border: "1px solid rgba(255,255,255,0.18)",
-                    backdropFilter: "blur(8px)",
-                    borderRadius: 10,
-                    padding: "8px 14px",
-                    color: "rgba(255,255,255,0.88)",
-                    fontSize: 12.5,
-                    fontWeight: 600,
-                  }}
-                >
-                  {icon}
-                  {label}
+                <div className="remember-row">
+                  <label className="remember-label">
+                    <input
+                      type="checkbox"
+                      className="remember-checkbox"
+                      checked={rememberMe}
+                      onChange={(event) => setRememberMe(event.target.checked)}
+                    />
+                    Lembrar sessao
+                  </label>
+                  <button type="button" className="forgot-btn">Recuperar acesso</button>
                 </div>
-              ))}
+
+                <button type="submit" className="login-btn" disabled={loading}>
+                  {loading ? "A entrar..." : "Entrar"}
+                </button>
+              </form>
+
+              <p className="footer-note">
+                Ao entrar, confirma que esta a usar uma conta autorizada do <a href="#">HCM</a>.
+              </p>
             </div>
-          </div>
+          </section>
+
+          <section className="right-panel" aria-label="Equipa pediatrica do HCM">
+            <div className="right-content">
+              <div className="right-kicker">Sistema Pediatrico HCM</div>
+              <h2 className="right-headline">Cuidado pediatrico com mais contexto e continuidade.</h2>
+              <p className="right-copy">
+                Registo, triagem, consultas e laboratorio num unico fluxo para apoiar a equipa clinica.
+              </p>
+            </div>
+          </section>
         </div>
-      </section>
-    </div>
+      </div>
+    </>
   );
 }
