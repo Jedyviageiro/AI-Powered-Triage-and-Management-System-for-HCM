@@ -53,7 +53,6 @@ export function useNursePageActions({
   patientLabFollowup,
   code,
   nameQuery,
-  pClinicalCode,
   pFullName,
   pSex,
   pBirthDate,
@@ -579,12 +578,25 @@ export function useNursePageActions({
           setPatient(data);
           setForceTriageForLabFollowup(false);
         } else {
-          if (!nameQuery.trim() || nameQuery.trim().length < 2) {
-            setErr("Informe pelo menos 2 letras no nome.");
+          const query = nameQuery.trim();
+          if (query.length < 2) {
+            showPopup(
+              "warning",
+              "Pesquisa incompleta",
+              "Informe pelo menos 2 letras do nome para pesquisar na base de dados."
+            );
             return;
           }
-          const data = await api.searchPatients(nameQuery.trim());
-          setSearchResults(Array.isArray(data) ? data : []);
+          const data = await api.searchPatients(query);
+          const results = Array.isArray(data) ? data : [];
+          setSearchResults(results);
+          if (results.length === 0) {
+            showPopup(
+              "warning",
+              "Paciente nao encontrado",
+              `O paciente "${query}" nao esta atualmente disponivel na base de dados. Confirme o nome ou cadastre um novo paciente.`
+            );
+          }
         }
       } catch (e) {
         setErr(e.message);
@@ -603,6 +615,7 @@ export function useNursePageActions({
       setSearchResults,
       setSelectedDoctorId,
       setVisit,
+      showPopup,
     ]
   );
 
@@ -657,7 +670,6 @@ export function useNursePageActions({
     },
     [
       pBirthDate,
-      pClinicalCode,
       pFullName,
       pGuardianName,
       pGuardianPhone,
@@ -696,8 +708,10 @@ export function useNursePageActions({
         });
         setVisit(v);
         await loadQueue();
+        return v;
       } catch (e) {
         setErr(e.message);
+        return null;
       } finally {
         setCreatingVisit(false);
       }

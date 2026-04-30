@@ -652,6 +652,7 @@ export default function NursePage({ forcedView = "home" }) {
     setPAddress,
     createPatient,
     creatingPatient,
+    resetAll,
     skipTriageReturnEligible,
     GENERAL_STATE_OPTIONS,
     generalState,

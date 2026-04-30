@@ -245,31 +245,38 @@ export const doctorPageStyles = `
         .popup-overlay {
           position: fixed;
           inset: 0;
-          background: rgba(15, 23, 42, 0.35);
-          backdrop-filter: blur(2px);
+          background: rgba(15, 23, 42, 0.38);
+          backdrop-filter: blur(6px);
           display: flex;
           align-items: center;
           justify-content: center;
           z-index: 200;
-          padding: 16px;
-        }
-        .popup-card {
-          width: min(460px, 100%);
-          background: #fff;
-          border: 1px solid #e5e7eb;
-          border-radius: 16px;
-          box-shadow: 0 20px 40px rgba(15, 23, 42, 0.18);
           padding: 18px;
         }
+        .popup-card {
+          width: min(390px, 100%);
+          background: #fff;
+          border: 1px solid #e4ece7;
+          border-radius: 24px;
+          box-shadow: 0 32px 80px rgba(15, 23, 42, 0.22);
+          padding: 28px 24px 24px;
+          text-align: center;
+          animation: doctorPopupIn 0.2s cubic-bezier(0.34,1.56,0.64,1);
+        }
         .popup-icon {
-          width: 36px;
-          height: 36px;
+          width: 64px;
+          height: 64px;
           border-radius: 9999px;
           display: inline-flex;
           align-items: center;
           justify-content: center;
           flex-shrink: 0;
+          margin: 0 auto 18px;
         }
-        .popup-icon-warning { background: #fef3c7; color: #b45309; }
-        .popup-icon-success { background: #dcfce7; color: #166534; }
+        .popup-icon-warning { background: #fff1f2; color: #be123c; }
+        .popup-icon-success { background: #e8f7ee; color: #0c3a24; }
+        @keyframes doctorPopupIn {
+          from { opacity: 0; transform: translateY(18px) scale(0.96); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
 `;

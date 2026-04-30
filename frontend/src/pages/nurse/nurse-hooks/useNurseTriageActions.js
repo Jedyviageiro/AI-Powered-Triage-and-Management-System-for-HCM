@@ -197,7 +197,11 @@ export function useNurseTriageActions({
       setTriageStep(1);
       setForceTriageForLabFollowup(false);
       if (!Array.isArray(data) || data.length === 0) {
-        showPopup("warning", "Sem resultados", "Nenhum paciente encontrado com esse nome.");
+        showPopup(
+          "warning",
+          "Paciente nao encontrado",
+          `O paciente "${q}" nao esta atualmente disponivel na base de dados. Confirme o nome ou cadastre um novo paciente.`
+        );
       }
     } catch (e) {
       setErr(e.message);
@@ -364,7 +368,7 @@ export function useNurseTriageActions({
 
   const createVisitForCurrentPatient = useCallback(
     async (options = {}) => {
-      await createVisit({ patient, ...(options || {}) });
+      return await createVisit({ patient, ...(options || {}) });
     },
     [createVisit, patient]
   );

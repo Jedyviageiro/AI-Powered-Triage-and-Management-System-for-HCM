@@ -1,3 +1,4 @@
+import { useState } from "react";
 import NursePage from "../NursePage";
 import { DoctorAvatar } from "../nurse-helpers/nurseHelpers";
 
@@ -56,6 +57,7 @@ export function NurseNewTriageView({
   setPAddress,
   createPatient,
   creatingPatient,
+  resetAll,
   skipTriageReturnEligible,
   GENERAL_STATE_OPTIONS,
   generalState,
@@ -112,6 +114,38 @@ export function NurseNewTriageView({
   savingTriage,
 }) {
   const isQuickSearch = viewMode === "quickSearch";
+  const [patientEntryMode, setPatientEntryMode] = useState("locate");
+  const canProceedToTriage = !!patient?.id;
+
+  const cancelTriageStart = () => {
+    resetAll?.();
+    setPatientEntryMode("locate");
+  };
+
+  const proceedToTriage = async () => {
+    if (!patient?.id) return;
+    if (!visit?.id) {
+      const created = await createVisit({ forceNewConsultation: !!forceTriageForLabFollowup });
+      if (!created?.id) return;
+    }
+    setTriageStep(2);
+  };
+
+  const renderStartActions = (className = "") => (
+    <div className={`triage-start-actions ${className}`.trim()}>
+      <button type="button" className="btn-secondary" onClick={cancelTriageStart}>
+        Cancelar
+      </button>
+      <button
+        type="button"
+        className="btn-primary"
+        disabled={!canProceedToTriage || creatingVisit || creatingPatient}
+        onClick={proceedToTriage}
+      >
+        {creatingVisit ? "Criando visita..." : "Proximo: Triagem"}
+      </button>
+    </div>
+  );
 
   return (
     <div className="dash-animate dash-animate-delay-1">
@@ -192,23 +226,35 @@ export function NurseNewTriageView({
             Busque pelo código clínico ou nome do paciente
           </p>
 
+          <div className="patient-entry-slider">
+            <div
+              className="patient-entry-track"
+              style={{
+                transform:
+                  patientEntryMode === "register" ? "translateX(-50%)" : "translateX(0)",
+              }}
+            >
+              <section className="patient-entry-panel">
+
           <div
+            className="search-segment"
             style={{
-              display: "flex",
-              background: "#f3f4f6",
-              padding: "4px",
-              borderRadius: "10px",
               marginBottom: "16px",
-              gap: "4px",
             }}
           >
+            <span
+              className="search-segment-indicator"
+              style={{ transform: searchMode === "NAME" ? "translateX(100%)" : "translateX(0)" }}
+            />
             <button
+              type="button"
               onClick={() => setSearchMode("CODE")}
               className={`search-tab ${searchMode === "CODE" ? "active" : "inactive"}`}
             >
               Por Código
             </button>
             <button
+              type="button"
               onClick={() => setSearchMode("NAME")}
               className={`search-tab ${searchMode === "NAME" ? "active" : "inactive"}`}
             >
@@ -297,16 +343,43 @@ export function NurseNewTriageView({
             {searchLoading ? "Buscando..." : "Buscar Paciente"}
           </button>
 
+          <button
+            type="button"
+            className="patient-register-cta"
+            onClick={() => setPatientEntryMode("register")}
+          >
+            <span className="patient-register-cta-icon" aria-hidden="true">
+              <svg
+                width="17"
+                height="17"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M5 12h14" />
+                <path d="m13 6 6 6-6 6" />
+              </svg>
+            </span>
+            <span>
+              <strong>Novo paciente?</strong>
+              <span>Ir para cadastro rapido</span>
+            </span>
+          </button>
+          {!patient && renderStartActions("triage-start-actions-inline")}
+
           {searchMode === "NAME" && searchResults.length > 0 && (
             <div style={{ marginBottom: "16px" }}>
               <div className="triage-label" style={{ marginBottom: "8px" }}>
                 Resultados encontrados
               </div>
               <div
+                className="patient-results-list"
                 style={{
                   display: "flex",
                   flexDirection: "column",
-                  gap: "8px",
                   maxHeight: "200px",
                   overflowY: "auto",
                 }}
@@ -323,12 +396,8 @@ export function NurseNewTriageView({
                     }}
                     className="patient-result-card"
                   >
-                    <div style={{ fontWeight: "600", fontSize: "14px", color: "#111827" }}>
-                      {p.full_name}
-                    </div>
-                    <div style={{ fontSize: "12px", color: "#6b7280", marginTop: "2px" }}>
-                      {p.clinical_code}
-                    </div>
+                    <div className="patient-result-name">{p.full_name}</div>
+                    <div className="patient-result-code">{p.clinical_code}</div>
                   </button>
                 ))}
               </div>
@@ -443,35 +512,43 @@ export function NurseNewTriageView({
                   agravamento ou necessidade de nova intervenção.
                 </div>
               )}
-              <button
-                onClick={() => createVisit({ forceNewConsultation: !!forceTriageForLabFollowup })}
-                disabled={creatingVisit || !!visit}
-                className="btn-primary"
-                style={{ fontSize: "13px", padding: "9px 16px", borderRadius: "8px" }}
-              >
-                {visit
-                  ? `Visita #${visit.id} Criada`
-                  : creatingVisit
-                    ? "Criando..."
-                    : forceTriageForLabFollowup
-                      ? "Registrar Chegada (Nova Consulta)"
-                      : "Registrar Chegada"}
-              </button>
+              {renderStartActions("triage-start-actions-patient")}
             </div>
           )}
 
-          <hr className="section-divider" />
-          <div
-            style={{
-              fontSize: "12px",
-              fontWeight: "600",
-              color: "#374151",
-              marginBottom: "14px",
-              textTransform: "uppercase",
-              letterSpacing: "0.05em",
-            }}
-          >
-            Cadastrar Novo Paciente
+              </section>
+              <section className="patient-entry-panel">
+          <div className="patient-register-head">
+            <div>
+              <div className="triage-label" style={{ marginBottom: "4px" }}>
+                Cadastrar Novo Paciente
+              </div>
+              <div style={{ fontSize: "13px", color: "#6b7280" }}>
+                Preencha os dados essenciais para criar o registo pediatrico.
+              </div>
+            </div>
+            <button
+              type="button"
+              className="patient-register-cta patient-entry-back"
+              onClick={() => setPatientEntryMode("locate")}
+            >
+              <span className="patient-register-cta-icon" aria-hidden="true">
+                <svg
+                  width="17"
+                  height="17"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M19 12H5" />
+                  <path d="m11 6-6 6 6 6" />
+                </svg>
+              </span>
+              <span>Voltar para pesquisa</span>
+            </button>
           </div>
 
           <form
@@ -564,16 +641,11 @@ export function NurseNewTriageView({
               {creatingPatient ? "Cadastrando..." : "Cadastrar Paciente"}
             </button>
           </form>
-
-          <div className="step-nav">
-            <button
-              onClick={() => setTriageStep(2)}
-              disabled={!patient || !visit}
-              className="btn-primary"
-            >
-              Próximo: Triagem
-            </button>
+          {renderStartActions("triage-start-actions-register")}
+              </section>
+            </div>
           </div>
+
         </div>
       )}
 
@@ -965,7 +1037,6 @@ export function NurseNewTriageView({
                     >
                       <div className={`priority-radio ${radioClass}`}>
                         {isSelected && <div className="priority-radio-dot" />}
-                        
                       </div>
                       <div style={{ flex: 1 }}>
                         <div

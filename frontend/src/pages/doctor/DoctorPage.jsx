@@ -227,6 +227,7 @@ export default function DoctorPage({ forcedView = "dashboard" }) {
     activeView,
     historySearchRef,
     setErr,
+    showPopup,
   });
 
   const { loadQueue, openVisit, loadAgenda, startShift, canOpenConsultationForDate } =

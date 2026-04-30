@@ -124,6 +124,7 @@ export function NurseLayout(props) {
     setPAddress,
     createPatient,
     creatingPatient,
+    resetAll,
     skipTriageReturnEligible,
     GENERAL_STATE_OPTIONS,
     generalState,
@@ -224,8 +225,6 @@ export function NurseLayout(props) {
     savePatientEdit,
     saveQueueTriageEdit,
   } = props;
-  const logoImage = "/assets/logo_icon.svg";
-
   return (
     <div
       className={`triage-page flex h-screen bg-gray-50 ${
@@ -295,14 +294,37 @@ export function NurseLayout(props) {
         .priority-radio.checked-less { border-color: #f97316; background: #f97316; }
         .priority-radio.checked-non { border-color: #165034; background: #165034; }
         .priority-radio-dot { width: 6px; height: 6px; border-radius: 50%; background: white; }
+        .patient-entry-slider { overflow: hidden; width: 100%; }
+        .patient-entry-track { display: flex; width: 200%; align-items: flex-start; transition: transform 0.28s cubic-bezier(0.4,0,0.2,1); }
+        .patient-entry-panel { width: 50%; flex: 0 0 50%; padding-right: 1px; }
+        .triage-start-actions { display: grid; grid-template-columns: minmax(120px, 0.42fr) minmax(160px, 0.58fr); gap: 10px; align-items: center; }
+        .triage-start-actions > button { width: 100% !important; margin: 0 !important; }
+        .triage-start-actions-inline { margin: 0 0 16px; }
+        .triage-start-actions-patient { margin-top: 12px; }
+        .triage-start-actions-register { margin-top: 14px; }
+        .patient-register-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 16px; }
+        .patient-register-cta { width: 100%; display: flex; align-items: center; gap: 12px; border: none !important; border-radius: 0 !important; background: transparent; color: #0c3a24; padding: 8px 2px 14px; margin: -2px 0 14px; text-align: left; cursor: pointer; box-shadow: none !important; }
+        .patient-register-cta-icon { width: 36px; height: 36px; border-radius: 999px; background: #165034; color: #fff; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; transition: transform 0.16s, background 0.16s; }
+        .patient-register-cta strong { display: block; font-size: 13px; font-weight: 750; color: #0f172a; line-height: 1.2; }
+        .patient-register-cta span span { display: block; margin-top: 2px; font-size: 12px; font-weight: 600; color: #5f6f66; }
+        .patient-register-cta:hover .patient-register-cta-icon { transform: translateX(2px); background: #0c3a24; }
+        .patient-entry-back { width: auto !important; padding: 0 !important; margin: 0; white-space: nowrap; }
+        .patient-entry-back .patient-register-cta-icon { width: 32px; height: 32px; }
+        .patient-entry-back:hover .patient-register-cta-icon { transform: translateX(-2px); }
+        .search-segment { position: relative; display: grid; grid-template-columns: 1fr 1fr; height: 52px; padding: 4px; background: #f3f4f6; border-radius: 999px; overflow: hidden; }
+        .search-segment-indicator { position: absolute; left: 4px; top: 4px; width: calc((100% - 8px) / 2); height: calc(100% - 8px); background: #165034; border-radius: 999px; transition: transform 0.22s cubic-bezier(0.4,0,0.2,1); z-index: 0; }
+        .search-tab { position: relative; z-index: 1; height: 44px; padding: 0 12px; font-size: 13px; font-weight: 700; border-radius: 999px !important; transition: color 0.15s; border: none; cursor: pointer; background: transparent !important; }
+        .search-tab.active { color: white; }
+        .search-tab.inactive { color: #6b7280; }
+        .search-tab.inactive:hover { color: #374151; }
 
-        .search-tab { flex: 1; padding: 8px 12px; font-size: 13px; font-weight: 500; border-radius: 8px; transition: all 0.15s; border: none; cursor: pointer; }
-        .search-tab.active { background: #165034; color: white; }
-        .search-tab.inactive { background: transparent; color: #6b7280; }
-        .search-tab.inactive:hover { background: #f3f4f6; }
-
-        .patient-result-card { border: 1.5px solid #e5e7eb; border-radius: 10px; padding: 12px 14px; cursor: pointer; transition: all 0.15s; background: #fff; text-align: left; width: 100%; }
-        .patient-result-card:hover { border-color: #165034; background: #edf5f0; }
+        .patient-results-list { background: transparent; border-radius: 0 !important; }
+        .patient-result-card { border: none !important; border-radius: 0 !important; padding: 12px 10px; cursor: pointer; transition: background 0.15s; text-align: left; width: 100%; justify-content: flex-start !important; box-shadow: none !important; }
+        .patient-result-card:nth-child(odd) { background: #ffffff !important; }
+        .patient-result-card:nth-child(even) { background: #f8fbf9 !important; }
+        .patient-result-card:hover { background: #edf5f0 !important; }
+        .patient-result-name { font-weight: 650; font-size: 14px; color: #111827; line-height: 1.25; }
+        .patient-result-code { display: block; margin-top: 4px; font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; font-weight: 600; color: #6b7280; letter-spacing: 0; }
         .patient-confirmed { background: linear-gradient(135deg, #e7f1ec 0%, #dcebe2 100%); border: 1.5px solid #2d6f4e; border-radius: 12px; padding: 16px; }
         .ai-card { background: linear-gradient(135deg, #edf5f0 0%, #e7f1ec 100%); border: 1.5px solid #2d6f4e; border-radius: 12px; padding: 14px; }
         .ai-badge { display: inline-flex; align-items: center; gap: 4px; background: #165034; color: white; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 20px; margin-bottom: 8px; }
@@ -340,22 +362,23 @@ export function NurseLayout(props) {
         .step-nav { display: flex; gap: 10px; margin-top: 20px; }
         .vital-group { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 
-        .popup-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.35); backdrop-filter: blur(2px); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 16px; }
-        .popup-card { width: min(460px, 100%); background: #fff; border: 1px solid #e5e7eb; border-radius: 16px; box-shadow: 0 20px 40px rgba(15, 23, 42, 0.18); padding: 18px; }
+        .popup-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.38); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 18px; }
+        .popup-card { width: min(390px, 100%); background: #fff; border: 1px solid #e4ece7; border-radius: 24px; box-shadow: 0 32px 80px rgba(15, 23, 42, 0.22); padding: 28px 24px 24px; animation: popupIn 0.2s cubic-bezier(0.34,1.56,0.64,1); }
         .popup-scroll { scrollbar-width: thin; scrollbar-color: rgba(156,163,175,0.75) rgba(0,0,0,0.03); }
         .popup-scroll::-webkit-scrollbar { width: 8px; }
         .popup-scroll::-webkit-scrollbar-track { background: rgba(0,0,0,0.03); border-radius: 999px; }
         .popup-scroll::-webkit-scrollbar-thumb { background: rgba(156,163,175,0.75); border-radius: 999px; }
         .popup-scroll::-webkit-scrollbar-thumb:hover { background: rgba(107,114,128,0.85); }
-        .alert-popup-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: flex; align-items: center; justify-content: center; z-index: 240; padding: 20px; }
-        .alert-popup-card { width: 100%; max-width: 620px; background: #fff; border-radius: 20px; overflow: hidden; }
-        .alert-popup-handle { width: 36px; height: 4px; border-radius: 2px; background: #e5e5ea; margin: 10px auto 0; }
-        .alert-popup-head { padding: 16px 20px 14px; border-bottom: 0.5px solid rgba(0,0,0,.07); }
-        .alert-popup-body { padding: 16px 20px; display: flex; align-items: flex-start; gap: 12px; }
-        .alert-popup-footer { padding: 14px 20px; border-top: 0.5px solid rgba(0,0,0,.07); display: flex; justify-content: flex-end; align-items: center; gap: 8px; background: #fff; }
-        .popup-icon { width: 36px; height: 36px; border-radius: 9999px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
-        .popup-icon-warning { background: #fef3c7; color: #b45309; }
-        .popup-icon-success { background: #dcebe2; color: #0c3a24; }
+        .alert-popup-overlay { position: fixed; inset: 0; background: rgba(15,23,42,.38); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; z-index: 240; padding: 18px; }
+        .alert-popup-card { width: min(390px, 100%); background: #fff; border: 1px solid #e4ece7; border-radius: 24px; box-shadow: 0 32px 80px rgba(15, 23, 42, 0.22); padding: 28px 24px 24px; text-align: center; animation: popupIn 0.2s cubic-bezier(0.34,1.56,0.64,1); }
+        .alert-popup-handle { width: 36px; height: 4px; border-radius: 999px; background: #e2e8f0; margin: 0 auto 22px; }
+        .alert-popup-head { padding: 0; border-bottom: 0; }
+        .alert-popup-body { padding: 0; display: flex; flex-direction: column; align-items: center; gap: 0; }
+        .alert-popup-footer { padding: 0; border-top: 0; display: flex; justify-content: center; align-items: center; gap: 8px; background: #fff; }
+        .popup-icon { width: 64px; height: 64px; border-radius: 9999px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; margin: 0 auto 18px; }
+        .popup-icon-warning { background: #fff1f2; color: #be123c; }
+        .popup-icon-success { background: #e8f7ee; color: #0c3a24; }
+        @keyframes popupIn { from { opacity: 0; transform: translateY(18px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
 
         /* ============================================================
            MODERNIZED DASHBOARD STYLES
@@ -575,15 +598,6 @@ export function NurseLayout(props) {
               </svg>
             )}
           </button>
-          {sidebarOpen ? (
-            <img
-              src={logoImage}
-              alt=""
-              aria-hidden="true"
-              className="flex-shrink-0"
-              style={{ width: 36, height: 36, borderRadius: 9, objectFit: "contain", background: "transparent" }}
-            />
-          ) : null}
           <div className="logo-text min-w-0">
             <div className="text-sm font-bold text-white leading-tight">Triagem</div>
             <div className="text-xs font-medium" style={{ color: "#dcebe2" }}>
@@ -1253,6 +1267,7 @@ export function NurseLayout(props) {
                 setPAddress={setPAddress}
                 createPatient={createPatient}
                 creatingPatient={creatingPatient}
+                resetAll={resetAll}
                 skipTriageReturnEligible={skipTriageReturnEligible}
                 GENERAL_STATE_OPTIONS={GENERAL_STATE_OPTIONS}
                 generalState={generalState}
@@ -1354,6 +1369,7 @@ export function NurseLayout(props) {
                 setPAddress={setPAddress}
                 createPatient={createPatient}
                 creatingPatient={creatingPatient}
+                resetAll={resetAll}
                 skipTriageReturnEligible={skipTriageReturnEligible}
                 GENERAL_STATE_OPTIONS={GENERAL_STATE_OPTIONS}
                 generalState={generalState}
@@ -1496,18 +1512,6 @@ export function NurseLayout(props) {
         <div className="alert-popup-overlay">
           <div className="alert-popup-card">
             <div className="alert-popup-handle" />
-            <div className="alert-popup-head">
-              <div
-                style={{
-                  fontSize: "17px",
-                  fontWeight: "700",
-                  color: "#1c1c1e",
-                  letterSpacing: "-.3px",
-                }}
-              >
-                {popup.title}
-              </div>
-            </div>
             <div className="alert-popup-body">
               <div
                 className={`popup-icon ${popup.type === "success" ? "popup-icon-success" : "popup-icon-warning"}`}
@@ -1542,8 +1546,11 @@ export function NurseLayout(props) {
                   </svg>
                 )}
               </div>
-              <div style={{ flex: 1 }}>
-                <p style={{ margin: 0, fontSize: "13px", color: "#636366", lineHeight: 1.5 }}>
+              <div>
+                <h3 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 800, color: "#0f172a", letterSpacing: "-0.01em" }}>
+                  {popup.title}
+                </h3>
+                <p style={{ margin: "0 0 24px", fontSize: 13, color: "#64748b", lineHeight: 1.65, maxWidth: 280 }}>
                   {popup.message}
                 </p>
               </div>
@@ -1553,7 +1560,7 @@ export function NurseLayout(props) {
                 type="button"
                 onClick={closePopup}
                 className="btn-primary"
-                style={{ width: "auto", padding: "10px 18px", borderRadius: "999px" }}
+                style={{ width: "100%", maxWidth: 280, minHeight: 44, padding: "11px 18px", borderRadius: 14 }}
               >
                 Entendi
               </button>

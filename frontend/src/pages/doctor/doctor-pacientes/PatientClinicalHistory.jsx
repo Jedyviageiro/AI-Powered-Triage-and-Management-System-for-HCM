@@ -273,7 +273,7 @@ export function PatientClinicalHistoryView({
                   setHistorySuggestOpen(true);
                 }}
                 onKeyDown={(event) => {
-                  if (event.key === "Enter") onSearchHistoryPatients?.();
+                  if (event.key === "Enter") onSearchHistoryPatients?.({ notifyEmpty: true });
                   if (event.key === "Escape") setHistorySuggestOpen(false);
                 }}
                 style={{
@@ -316,6 +316,25 @@ export function PatientClinicalHistoryView({
                   </svg>
                 </button>
               ) : null}
+              <button
+                type="button"
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => onSearchHistoryPatients?.({ notifyEmpty: true })}
+                style={{
+                  border: "none",
+                  borderRadius: 999,
+                  background: G,
+                  color: "#fff",
+                  padding: "7px 13px",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  flexShrink: 0,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {historySearchLoading ? "A procurar..." : "Buscar paciente"}
+              </button>
             </div>
 
             {historyQuery.trim() && historySuggestOpen ? (

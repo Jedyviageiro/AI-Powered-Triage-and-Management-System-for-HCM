@@ -223,7 +223,12 @@ export function useDoctorConsultationActions(args) {
   const searchFromTopNav = useCallback(async () => {
     const q = topNavSearch.trim();
     if (!q) {
-      safeSet(() => setErr("Escreva um nome para pesquisar."));
+      safeSet(() => setErr(""));
+      showPopup?.(
+        "warning",
+        "Pesquisa incompleta",
+        "Escreva o nome do paciente antes de pesquisar na base de dados."
+      );
       return;
     }
     safeSet(() => {
@@ -234,7 +239,12 @@ export function useDoctorConsultationActions(args) {
       const patients = await api.searchPatients(q);
       const list = Array.isArray(patients) ? patients : [];
       if (list.length === 0) {
-        safeSet(() => setErr("Nenhum paciente encontrado com esse nome."));
+        safeSet(() => setErr(""));
+        showPopup?.(
+          "warning",
+          "Paciente nao encontrado",
+          `O paciente "${q}" nao esta atualmente disponivel na base de dados. Confirme o nome ou solicite o registo do paciente.`
+        );
         return;
       }
       const first = list[0];
@@ -242,7 +252,12 @@ export function useDoctorConsultationActions(args) {
         (visit) => Number(visit?.patient_id) === Number(first?.id)
       );
       if (!row?.id) {
-        safeSet(() => setErr("Paciente encontrado, mas sem visita ativa na fila."));
+        safeSet(() => setErr(""));
+        showPopup?.(
+          "warning",
+          "Paciente sem visita ativa",
+          "Paciente encontrado na base de dados, mas ainda nao existe uma visita ativa na fila do medico."
+        );
         return;
       }
       safeSet(() => setActiveView("consultationForm"));
@@ -255,7 +270,16 @@ export function useDoctorConsultationActions(args) {
     } finally {
       safeSet(() => setSavingPlan(false));
     }
-  }, [detailsPanelRef, openVisit, queue, safeSet, setActiveView, setErr, topNavSearch]);
+  }, [
+    detailsPanelRef,
+    openVisit,
+    queue,
+    safeSet,
+    setActiveView,
+    setErr,
+    showPopup,
+    topNavSearch,
+  ]);
 
   const finishConsultation = useCallback(async () => {
     if (!selectedVisit?.id) return;
