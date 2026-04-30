@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import NursePage from "../NursePage";
 import { DoctorAvatar } from "../nurse-helpers/nurseHelpers";
 
@@ -354,6 +355,8 @@ export function NurseNewTriageView({
   const [patientEntryMode, setPatientEntryMode] = useState("locate");
   const [triagePart, setTriagePart] = useState("vitals");
   const [nurseInterventions, setNurseInterventions] = useState({});
+  const [manualOpen, setManualOpen] = useState(false);
+  const [manualPage, setManualPage] = useState(0);
   const canProceedToTriage = !!patient?.id;
   const hasLegacyClinicalRiskFlags =
     needsOxygen ||
@@ -367,6 +370,7 @@ export function NurseNewTriageView({
     setPatientEntryMode("locate");
     setTriagePart("vitals");
     setNurseInterventions({});
+    setManualPage(0);
     setNeedsOxygen?.(false);
     setSuspectedSevereDehydration?.(false);
     setExcessiveLethargy?.(false);
@@ -689,7 +693,36 @@ export function NurseNewTriageView({
         <div className="form-card">
           <PatientBar patient={patient} visit={visit} />
 
-          <h2 className="text-base font-semibold text-gray-900 mb-1">Triagem Clínica</h2>
+          <div className="triage-title-row">
+            <h2 className="text-base font-semibold text-gray-900 mb-1">Triagem Clínica</h2>
+            <button
+              type="button"
+              className="triage-manual-button"
+              onClick={() => {
+                setManualPage(0);
+                setManualOpen(true);
+              }}
+            >
+              <svg
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M12 7.2c-1.7-1.35-4.1-2-7-2v12.9c2.9 0 5.3.65 7 2" />
+                <path d="M12 7.2c1.7-1.35 4.1-2 7-2v12.9c-2.9 0-5.3.65-7 2" />
+                <path d="M12 7.2v12.9" />
+                <path d="M7.3 8.2c1.3.1 2.4.4 3.2.9" />
+                <path d="M16.7 8.2c-1.3.1-2.4.4-3.2.9" />
+              </svg>
+              Manual
+            </button>
+          </div>
           <p className="text-xs text-gray-400 mb-5">
             {skipTriageReturnEligible
               ? "Triagem simplificada de seguimento: atualize sinais vitais, crescimento/peso e a situação clínica atual antes de enviar para a fila médica."
@@ -937,6 +970,136 @@ export function NurseNewTriageView({
               )}
             </div>
           </form>
+
+          {manualOpen &&
+            typeof document !== "undefined" &&
+            createPortal(
+            <div className="triage-manual-overlay" role="dialog" aria-modal="true" aria-labelledby="triage-manual-title">
+              <div className="triage-manual-card">
+                <div className="triage-manual-head">
+                  <div className="triage-manual-icon">
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M12 7.2c-1.7-1.35-4.1-2-7-2v12.9c2.9 0 5.3.65 7 2" />
+                      <path d="M12 7.2c1.7-1.35 4.1-2 7-2v12.9c-2.9 0-5.3.65-7 2" />
+                      <path d="M12 7.2v12.9" />
+                      <path d="M7.3 8.2c1.3.1 2.4.4 3.2.9" />
+                      <path d="M16.7 8.2c-1.3.1-2.4.4-3.2.9" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 id="triage-manual-title">Manual de triagem</h3>
+                    <p>Guia rápido para preencher e encaminhar o paciente.</p>
+                  </div>
+                  <button type="button" className="triage-manual-close" onClick={() => setManualOpen(false)} aria-label="Fechar manual">
+                    ×
+                  </button>
+                </div>
+
+                <div className="triage-manual-pages">
+                  <div
+                    className="triage-manual-track"
+                    style={{ transform: manualPage === 1 ? "translateX(-50%)" : "translateX(0)" }}
+                  >
+                    <div className="triage-manual-page">
+                      <div className="triage-manual-item">
+                        <strong>Sinais vitais</strong>
+                        <span>Registe os valores reais medidos. O sistema usa estes limites como alerta visual durante a triagem.</span>
+                        <div className="triage-thresholds compact">
+                          <div className="triage-threshold-row">
+                            <span>Temperatura</span>
+                            <div className="triage-threshold-line">
+                              <i className="zone low" />
+                              <i className="zone normal" />
+                              <i className="zone danger" />
+                            </div>
+                            <small>&lt;36 baixa · 36-37.4 normal · ≥38.5 alta</small>
+                          </div>
+                          <div className="triage-threshold-row">
+                            <span>SpO2</span>
+                            <div className="triage-threshold-line">
+                              <i className="zone danger" />
+                              <i className="zone warn" />
+                              <i className="zone normal" />
+                            </div>
+                            <small>&lt;90 crítica · 90-94 baixa · ≥95 normal</small>
+                          </div>
+                          <div className="triage-threshold-row">
+                            <span>FC / FR</span>
+                            <div className="triage-threshold-line">
+                              <i className="zone warn" />
+                              <i className="zone normal" />
+                              <i className="zone danger" />
+                            </div>
+                            <small>FC: 60-100 normal · &gt;150 crítica. FR: 12-40 normal · &gt;40 elevada.</small>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="triage-manual-page">
+                      <div className="triage-manual-item">
+                        <strong>Avaliação clínica</strong>
+                        <span>Escolha o estado geral, marque intervenções já feitas pela enfermagem e descreva a queixa principal com clareza.</span>
+                      </div>
+                      <div className="triage-manual-item">
+                        <strong>Prioridade e fila</strong>
+                        <span>A prioridade inicial pode ser ajustada pelo sistema com base nos sinais vitais e sintomas antes de enviar para a fila médica.</span>
+                      </div>
+                      <div className="triage-manual-route">
+                        <div>
+                          <strong>Encaminhamento</strong>
+                          <span>Depois da avaliação, confirme a prioridade e escolha o destino adequado.</span>
+                        </div>
+                        <div className="triage-route-steps">
+                          <span>Fila médica</span>
+                          <span>Sala recomendada</span>
+                          <span className="danger">ER / crítico</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="triage-manual-nav">
+                  <span>{manualPage + 1}/2</span>
+                  <button
+                    type="button"
+                    onClick={() => setManualPage((page) => (page === 0 ? 1 : 0))}
+                    className="triage-manual-arrow"
+                    aria-label={manualPage === 0 ? "Ver avaliação clínica" : "Voltar aos sinais vitais"}
+                  >
+                    {manualPage === 0 ? (
+                      <>
+                        Avaliação clínica
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M5 12h14" />
+                          <path d="m13 6 6 6-6 6" />
+                        </svg>
+                      </>
+                    ) : (
+                      <>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M19 12H5" />
+                          <path d="m11 6-6 6 6 6" />
+                        </svg>
+                        Sinais vitais
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>,
+              document.body
+            )}
         </div>
       )}
 

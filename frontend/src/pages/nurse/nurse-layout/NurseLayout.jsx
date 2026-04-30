@@ -382,6 +382,51 @@ export function NurseLayout(props) {
 
         .step-nav { display: flex; gap: 10px; margin-top: 20px; }
         .vital-group { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        .triage-title-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 4px; }
+        .triage-title-row h2 { margin-bottom: 0; }
+        .triage-page .triage-manual-button { width: auto !important; min-height: 28px; display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border: 1px solid rgba(22,80,52,0.16) !important; border-radius: 9px !important; background: #e7f1ec !important; color: #0c3a24; font-size: 11px; font-weight: 750; cursor: pointer; }
+        .triage-page .triage-manual-button:hover { background: #dcebe2 !important; }
+        .triage-manual-overlay { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 24px; background: rgba(15,23,42,0.46); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+        .triage-manual-overlay::before { content: ""; position: fixed; inset: 0; background: radial-gradient(circle at 50% 40%, rgba(231,241,236,0.22), transparent 42%); pointer-events: none; }
+        .triage-manual-card { position: relative; width: min(520px, 100%); background: #fff; border: 1px solid #e4ece7; border-radius: 18px; box-shadow: 0 34px 90px rgba(15,23,42,0.28); padding: 22px; animation: popupIn 0.2s cubic-bezier(0.34,1.56,0.64,1); }
+        .triage-manual-head { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: start; padding-bottom: 16px; border-bottom: 1px solid #eef2f0; }
+        .triage-manual-icon { width: 40px; height: 40px; border-radius: 12px; background: #e7f1ec; color: #0c3a24; display: inline-flex; align-items: center; justify-content: center; }
+        .triage-manual-head h3 { margin: 0; font-size: 16px; font-weight: 800; color: #0f172a; }
+        .triage-manual-head p { margin: 3px 0 0; font-size: 12px; color: #64748b; line-height: 1.45; }
+        .triage-page .triage-manual-close { width: 32px !important; height: 32px; min-height: 32px; padding: 0; border: none !important; border-radius: 999px !important; background: #f3f4f6 !important; color: #475569; font-size: 20px; line-height: 1; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+        .triage-manual-pages { overflow: hidden; width: 100%; }
+        .triage-manual-track { display: flex; width: 200%; transition: transform 0.28s cubic-bezier(0.4,0,0.2,1); align-items: flex-start; }
+        .triage-manual-page { width: 50%; flex: 0 0 50%; display: grid; gap: 10px; padding-top: 16px; padding-right: 1px; }
+        .triage-manual-body { display: grid; gap: 10px; padding-top: 16px; }
+        .triage-manual-item { display: grid; gap: 4px; padding: 12px 0; border-bottom: 1px solid #f1f5f3; }
+        .triage-manual-item:last-child { border-bottom: 0; padding-bottom: 0; }
+        .triage-manual-item strong { font-size: 12px; font-weight: 800; color: #0c3a24; text-transform: uppercase; letter-spacing: 0.04em; }
+        .triage-manual-item span { font-size: 13px; color: #475569; line-height: 1.55; }
+        .triage-thresholds { display: grid; gap: 10px; margin-top: 10px; padding: 12px; background: #f8fbf9; border: 1px solid #e4ece7; border-radius: 12px; }
+        .triage-thresholds.compact { gap: 9px; padding: 11px; }
+        .triage-threshold-row { display: grid; grid-template-columns: 110px 1fr; gap: 8px 12px; align-items: center; }
+        .triage-threshold-row > span { font-size: 12px; font-weight: 750; color: #0f172a; }
+        .triage-threshold-row small { grid-column: 2; margin-top: -4px; font-size: 11px; color: #64748b; line-height: 1.35; }
+        .triage-threshold-line { height: 8px; display: grid; grid-template-columns: 0.8fr 1.4fr 0.8fr; overflow: hidden; border-radius: 999px; background: #e5e7eb; }
+        .triage-threshold-line .zone { display: block; min-width: 0; }
+        .triage-threshold-line .zone.low { background: #93c5fd; }
+        .triage-threshold-line .zone.normal { background: #86d6a3; }
+        .triage-threshold-line .zone.warn { background: #facc15; }
+        .triage-threshold-line .zone.danger { background: #ef4444; }
+        .triage-manual-route { display: grid; gap: 12px; padding: 14px; border: 1px solid #dcebe2; border-radius: 14px; background: linear-gradient(135deg, #f8fbf9 0%, #eef7f2 100%); }
+        .triage-manual-route strong { display: block; font-size: 12px; font-weight: 850; color: #0c3a24; text-transform: uppercase; letter-spacing: 0.04em; }
+        .triage-manual-route span { font-size: 13px; color: #475569; line-height: 1.5; }
+        .triage-route-steps { position: relative; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding-top: 14px; }
+        .triage-route-steps::before { content: ""; position: absolute; left: 8%; right: 8%; top: 4px; height: 2px; background: linear-gradient(90deg, #86d6a3, #facc15, #ef4444); }
+        .triage-route-steps span { position: relative; padding: 8px 9px; background: #fff; border: 1px solid #e4ece7; border-radius: 10px; color: #334155; font-size: 11px; font-weight: 750; text-align: center; }
+        .triage-route-steps span::before { content: ""; position: absolute; top: -14px; left: 50%; width: 8px; height: 8px; transform: translateX(-50%); border-radius: 999px; background: #86d6a3; box-shadow: 0 0 0 3px #fff; }
+        .triage-route-steps span:nth-child(2)::before { background: #facc15; }
+        .triage-route-steps span.danger::before { background: #ef4444; }
+        .triage-route-steps span.danger { border-color: #fecaca; color: #991b1b; background: #fff7f7; }
+        .triage-manual-nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 14px; margin-top: 12px; border-top: 1px solid #eef2f0; }
+        .triage-manual-nav > span { font-size: 11px; font-weight: 800; color: #94a3b8; letter-spacing: 0.08em; }
+        .triage-page .triage-manual-arrow { width: auto !important; min-height: 34px; display: inline-flex; align-items: center; gap: 7px; padding: 8px 12px; border: 1px solid #dcebe2 !important; border-radius: 10px !important; background: #f8fbf9 !important; color: #0c3a24; font-size: 12px; font-weight: 800; cursor: pointer; }
+        .triage-page .triage-manual-arrow:hover { background: #edf5f0 !important; }
 
         .popup-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.38); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 18px; }
         .popup-card { width: min(390px, 100%); background: #fff; border: 1px solid #e4ece7; border-radius: 24px; box-shadow: 0 32px 80px rgba(15, 23, 42, 0.22); padding: 28px 24px 24px; animation: popupIn 0.2s cubic-bezier(0.34,1.56,0.64,1); }
