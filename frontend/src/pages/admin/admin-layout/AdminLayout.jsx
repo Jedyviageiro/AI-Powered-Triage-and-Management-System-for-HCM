@@ -63,6 +63,7 @@ export function AdminLayout({
         .sidebar-nav-btn { position: relative; border-radius: 0 !important; margin-left: 0; width: 100% !important; font-size: 12px; font-weight: 500; }
         .sidebar-open .sidebar-nav-btn { padding-left: 20px !important; }
         .nav-indicator { position: absolute; left: 0; width: 3px; background: #7fe0a0; border-radius: 0; transition: top 0.22s cubic-bezier(0.4,0,0.2,1), height 0.22s cubic-bezier(0.4,0,0.2,1), opacity 0.18s ease; pointer-events: none; }
+        .sidebar-closed .nav-indicator { left: -8px; }
         .nav-label { transition: opacity 0.2s ease, max-width 0.3s cubic-bezier(0.4,0,0.2,1); white-space: nowrap; overflow: hidden; }
         .sidebar-open .nav-label { opacity: 1; max-width: 200px; }
         .sidebar-closed .nav-label { opacity: 0; max-width: 0; }
@@ -74,7 +75,7 @@ export function AdminLayout({
         .sidebar-open .nav-tooltip { display: none; }
         .nav-active { background: rgba(134, 214, 163, 0.14) !important; color: #ffffff !important; margin-right: -12px !important; width: calc(100% + 12px) !important; padding-left: 20px !important; border-radius: 0 !important; }
         .sidebar .nav-item-wrap, .sidebar .nav-item-wrap > button { border-radius: 0 !important; }
-        .sidebar-closed .nav-active { padding-left: 0 !important; justify-content: center !important; }
+        .sidebar-closed .nav-active { margin-left: -8px !important; margin-right: -8px !important; width: calc(100% + 16px) !important; padding-left: 0 !important; justify-content: center !important; }
         .sidebar-nav-inactive { color: rgba(255,255,255,0.78) !important; }
         .sidebar-nav-inactive:hover { background: rgba(255,255,255,0.06) !important; color: #ffffff !important; }
         .popup-overlay {

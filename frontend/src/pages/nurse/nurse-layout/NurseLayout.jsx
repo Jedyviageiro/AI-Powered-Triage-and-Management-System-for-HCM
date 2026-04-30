@@ -227,10 +227,12 @@ export function NurseLayout(props) {
   } = props;
   return (
     <div
-      className={`triage-page flex h-screen bg-gray-50 ${
+      className={`triage-page flex h-screen ${
         Number(preferences?.font_scale_percent || 100) !== 100 ? "nurse-font-scaled" : ""
       }`}
       style={{
+        "--nurse-page-bg": "#eaebea",
+        background: "var(--nurse-page-bg)",
         "--nurse-font-scale": Number(preferences?.font_scale_percent || 100) === 105 ? 1.05 : 1,
       }}
     >
@@ -257,6 +259,7 @@ export function NurseLayout(props) {
         .sidebar-nav-btn { position: relative; border-radius: 0 !important; margin-left: 0; width: 100% !important; font-size: 12px; font-weight: 500; }
         .sidebar-open .sidebar-nav-btn { padding-left: 20px !important; }
         .nav-indicator { position: absolute; left: 0; width: 3px; background: #7fe0a0; border-radius: 0; transition: top 0.22s cubic-bezier(0.4,0,0.2,1), height 0.22s cubic-bezier(0.4,0,0.2,1), opacity 0.18s ease; pointer-events: none; }
+        .sidebar-closed .nav-indicator { left: -8px; }
 
         .nav-label { transition: opacity 0.2s ease, max-width 0.3s cubic-bezier(0.4,0,0.2,1); white-space: nowrap; overflow: hidden; }
         .sidebar-open .nav-label { opacity: 1; max-width: 200px; }
@@ -278,11 +281,18 @@ export function NurseLayout(props) {
         .step-circle.active { background: #165034; color: white; border: 2px solid #165034; }
         .step-circle.done { background: #165034; color: white; border: 2px solid #165034; }
 
-        .triage-input { width: 100%; padding: 10px 14px; border: 1.5px solid #e5e7eb; border-radius: 18px; font-size: 13px; color: #111827; background: #fff; transition: border-color 0.15s; }
+        .triage-input { width: 100%; padding: 10px 14px; border: 1.5px solid #e5e7eb; border-radius: 18px; font-size: 13px; color: #111827; background: #fff; transition: border-color 0.15s; box-shadow: none; }
         .triage-input::placeholder { color: #d1d5db; }
-        .triage-input:focus { outline: none; border-color: #165034; }
+        .triage-input:focus { outline: none; border-color: #dcebe2; box-shadow: none; }
         .triage-label { font-size: 10px; font-weight: 700; color: #374151; margin-bottom: 4px; display: block; letter-spacing: 0.08em; text-transform: uppercase; }
         .triage-hint { font-size: 11px; color: #9ca3af; margin-bottom: 6px; line-height: 1.4; }
+        .triage-page .general-state-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin-bottom: 16px; border: 1px solid #e5e7eb; border-radius: 0 !important; overflow: hidden; }
+        .triage-page .general-state-option { border: none !important; border-right: 1px solid #e5e7eb !important; border-bottom: 1px solid #e5e7eb !important; border-radius: 0 !important; box-shadow: none !important; background: #fff; padding: 11px 12px; text-align: left; cursor: pointer; transition: background 0.15s; clip-path: inset(0 round 0); }
+        .triage-page .general-state-option.active { background: #e7f1ec !important; border-radius: 0 !important; }
+        .triage-page .general-state-option:hover,
+        .triage-page .general-state-option:active,
+        .triage-page .general-state-option:focus,
+        .triage-page .general-state-option:focus-visible { outline: none; border-radius: 0 !important; box-shadow: none !important; }
 
         .priority-card { border: 2px solid #e5e7eb; border-radius: 12px; padding: 14px 16px; cursor: pointer; transition: all 0.15s; background: #fff; display: flex; align-items: center; gap: 12px; }
         .priority-card:hover { border-color: #2d6f4e; background: #fafafa; }
@@ -296,7 +306,18 @@ export function NurseLayout(props) {
         .priority-radio-dot { width: 6px; height: 6px; border-radius: 50%; background: white; }
         .patient-entry-slider { overflow: hidden; width: 100%; }
         .patient-entry-track { display: flex; width: 200%; align-items: flex-start; transition: transform 0.28s cubic-bezier(0.4,0,0.2,1); }
-        .patient-entry-panel { width: 50%; flex: 0 0 50%; padding-right: 1px; }
+        .patient-entry-panel { width: 50%; flex: 0 0 50%; padding-right: 1px; transition: opacity 0.18s ease; }
+        .patient-entry-panel.inactive { height: 0; overflow: hidden; opacity: 0; pointer-events: none; }
+        .patient-entry-panel.active { height: auto; opacity: 1; }
+        .triage-part-segment { position: relative; display: grid; grid-template-columns: 1fr 1fr; height: 46px; padding: 4px; background: #f3f4f6; border-radius: 999px; overflow: hidden; margin-bottom: 2px; }
+        .triage-part-indicator { position: absolute; left: 4px; top: 4px; width: calc((100% - 8px) / 2); height: calc(100% - 8px); background: #165034; border-radius: 999px; transition: transform 0.24s cubic-bezier(0.4,0,0.2,1); z-index: 0; }
+        .triage-part-tab { position: relative; z-index: 1; height: 38px; padding: 0 12px; border: none; border-radius: 999px !important; background: transparent !important; color: #6b7280; font-size: 12px; font-weight: 750; cursor: pointer; transition: color 0.16s; }
+        .triage-part-tab.active { color: #fff; }
+        .triage-part-slider { overflow: hidden; width: 100%; }
+        .triage-part-track { display: flex; width: 200%; align-items: flex-start; transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); }
+        .triage-part-panel { width: 50%; flex: 0 0 50%; display: flex; flex-direction: column; gap: 18px; padding-right: 1px; transition: opacity 0.18s ease; }
+        .triage-part-panel.inactive { height: 0; overflow: hidden; opacity: 0; pointer-events: none; }
+        .triage-part-panel.active { height: auto; opacity: 1; }
         .triage-start-actions { display: grid; grid-template-columns: minmax(120px, 0.42fr) minmax(160px, 0.58fr); gap: 10px; align-items: center; }
         .triage-start-actions > button { width: 100% !important; margin: 0 !important; }
         .triage-start-actions-inline { margin: 0 0 16px; }
@@ -340,12 +361,12 @@ export function NurseLayout(props) {
         .btn-ghost:disabled { opacity: 0.45; cursor: not-allowed; }
 
         .section-divider { border: none; border-top: 1.5px dashed #e5e7eb; margin: 20px 0; }
-        .form-card { background: white; border: 1px solid #f0f0f0; border-radius: 16px; padding: 28px; box-shadow: 0 1px 8px rgba(0,0,0,0.04); }
+        .form-card { background: white; border: 1px solid #f0f0f0; border-radius: 16px; padding: 28px; box-shadow: 0 8px 22px rgba(12,58,36,0.075); }
 
         .nav-active { background: rgba(134, 214, 163, 0.14) !important; color: #ffffff !important; margin-right: -12px !important; width: calc(100% + 12px) !important; padding-left: 20px !important; border-radius: 0 !important; box-shadow: none !important; }
         .sidebar .nav-item-wrap,
         .sidebar .nav-item-wrap > button { border-radius: 0 !important; }
-        .sidebar-closed .nav-active { padding-left: 0 !important; justify-content: center !important; }
+        .sidebar-closed .nav-active { margin-left: -8px !important; margin-right: -8px !important; width: calc(100% + 16px) !important; padding-left: 0 !important; justify-content: center !important; }
         .sidebar-nav-inactive { color: rgba(255,255,255,0.78) !important; }
         .sidebar-nav-inactive:hover { background: rgba(255,255,255,0.06) !important; color: #ffffff !important; }
         .nav-item-btn:focus-visible { outline: none; }
@@ -703,7 +724,7 @@ export function NurseLayout(props) {
       </aside>
 
       {/* Main */}
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto" style={{ background: "var(--nurse-page-bg)" }}>
         {/* Top Nav */}
         <div
           style={{
@@ -1547,10 +1568,26 @@ export function NurseLayout(props) {
                 )}
               </div>
               <div>
-                <h3 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 800, color: "#0f172a", letterSpacing: "-0.01em" }}>
+                <h3
+                  style={{
+                    margin: "0 0 8px",
+                    fontSize: 18,
+                    fontWeight: 800,
+                    color: "#0f172a",
+                    letterSpacing: "-0.01em",
+                  }}
+                >
                   {popup.title}
                 </h3>
-                <p style={{ margin: "0 0 24px", fontSize: 13, color: "#64748b", lineHeight: 1.65, maxWidth: 280 }}>
+                <p
+                  style={{
+                    margin: "0 0 24px",
+                    fontSize: 13,
+                    color: "#64748b",
+                    lineHeight: 1.65,
+                    maxWidth: 280,
+                  }}
+                >
                   {popup.message}
                 </p>
               </div>
@@ -1560,7 +1597,13 @@ export function NurseLayout(props) {
                 type="button"
                 onClick={closePopup}
                 className="btn-primary"
-                style={{ width: "100%", maxWidth: 280, minHeight: 44, padding: "11px 18px", borderRadius: 14 }}
+                style={{
+                  width: "100%",
+                  maxWidth: 280,
+                  minHeight: 44,
+                  padding: "11px 18px",
+                  borderRadius: 14,
+                }}
               >
                 Entendi
               </button>

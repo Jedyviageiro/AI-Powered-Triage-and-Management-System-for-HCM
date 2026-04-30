@@ -75,6 +75,7 @@ const CSS = `
   .sidebar-nav-inactive:hover { background:rgba(255,255,255,.06) !important; color:#fff; }
   .nav-active { background:rgba(134,214,163,.14) !important; color:#fff !important; font-weight:600; margin-right:-12px !important; width:calc(100% + 12px) !important; padding-left:20px !important; border-radius:0 !important; box-shadow:none !important; }
   .nav-indicator { position:absolute; left:0; width:3px; background:#7fe0a0; border-radius:0; transition:top .22s cubic-bezier(.4,0,.2,1), height .22s cubic-bezier(.4,0,.2,1), opacity .18s ease; pointer-events:none; }
+  .sidebar-closed .nav-indicator { left:-8px; }
   .nav-item-wrap { position:relative; }
   .nav-tooltip { position:absolute; left:calc(100% + 10px); top:50%; transform:translateY(-50%); background:#111827; color:#fff; font-size:12px; padding:4px 10px; border-radius:6px; white-space:nowrap; pointer-events:none; opacity:0; transition:opacity .15s; z-index:100; }
   .sidebar-closed .nav-item-wrap:hover .nav-tooltip { opacity:1; }
@@ -82,7 +83,7 @@ const CSS = `
   .sidebar .nav-item-wrap,
   .sidebar .nav-item-wrap > button { border-radius:0 !important; }
   .sidebar-closed .nav-item-wrap > button { justify-content:center; gap:0 !important; padding-left:10px !important; padding-right:10px !important; }
-  .sidebar-closed .nav-active { padding-left:0 !important; justify-content:center !important; }
+  .sidebar-closed .nav-active { margin-left:-8px !important; margin-right:-8px !important; width:calc(100% + 16px) !important; padding-left:0 !important; justify-content:center !important; }
 `;
 
 const SIDEBAR_BG = "#0c3a24";

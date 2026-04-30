@@ -220,6 +220,7 @@ export const doctorPageStyles = `
           transition: top 0.22s cubic-bezier(0.4, 0, 0.2, 1), height 0.22s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.18s ease;
           pointer-events: none;
         }
+        .sidebar-closed .nav-indicator { left: -8px; }
         .nav-active {
           background: rgba(134, 214, 163, 0.14) !important;
           color: #ffffff !important;
@@ -234,6 +235,9 @@ export const doctorPageStyles = `
           border-radius: 0 !important;
         }
         .sidebar-closed .nav-active {
+          margin-left: -8px !important;
+          margin-right: -8px !important;
+          width: calc(100% + 16px) !important;
           padding-left: 0 !important;
           justify-content: center !important;
         }
