@@ -10,7 +10,10 @@ import { NursePatientsInTriageView } from "../nurse-triage/NursePatientsInTriage
 import { NursePatientsView } from "../nurse-patients/NursePatients";
 import { NurseQuickSearchView } from "../nurse-triage/NurseQuickSearch";
 import { NurseRoomsAvailableView } from "../nurse-rooms/NurseRoomsAvailable";
-import { PastVisitHistoryModal } from "../nurse-patients/PastVisitHistoryModal";
+import {
+  PastVisitHistoryModal,
+  VisitPdfTemplateModal,
+} from "../nurse-patients/PastVisitHistoryModal";
 import ConfirmDialog from "../../../components/shared/ConfirmDialog";
 
 export function NurseLayout(props) {
@@ -50,6 +53,11 @@ export function NurseLayout(props) {
     openPastVisitModal,
     pdfLoadingId,
     downloadVisitPdf,
+    pdfTemplateModal,
+    openVisitPdfTemplateModal,
+    closeVisitPdfTemplateModal,
+    setVisitPdfTemplate,
+    generateVisitPdfFromTemplate,
     queue,
     queueSummary,
     pastVisits,
@@ -1684,7 +1692,15 @@ export function NurseLayout(props) {
         onStartEdit={startPastVisitPatientEdit}
         onSave={savePastVisitPatientEdit}
         onClose={closePastVisitModal}
-        onDownloadPdf={downloadVisitPdf}
+        onDownloadPdf={(visitRow) => openVisitPdfTemplateModal(visitRow, pastVisitTimeline)}
+      />
+
+      <VisitPdfTemplateModal
+        modal={pdfTemplateModal}
+        pdfLoadingId={pdfLoadingId}
+        onClose={closeVisitPdfTemplateModal}
+        onSelectTemplate={setVisitPdfTemplate}
+        onGenerate={generateVisitPdfFromTemplate}
       />
 
       {patientEditModal.open && (

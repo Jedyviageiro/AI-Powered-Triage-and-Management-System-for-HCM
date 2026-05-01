@@ -1,9 +1,11 @@
+import { useEffect, useState } from "react";
 import {
   Activity,
   AlertTriangle,
   Baby,
   CalendarClock,
   CalendarDays,
+  Check,
   CheckCircle2,
   ClipboardList,
   Download,
@@ -92,6 +94,39 @@ export function DonutChart({ segments, size = 120, stroke = 22 }) {
 
 const iconStroke = 1.9;
 
+function SkeletonLine({ width = "72%", height = 12, style = {} }) {
+  return (
+    <span
+      aria-hidden="true"
+      style={{
+        display: "block",
+        width,
+        height,
+        borderRadius: "999px",
+        background:
+          "linear-gradient(90deg, #eef2f7 0%, #f8fafc 45%, #e5eaf0 100%)",
+        backgroundSize: "220% 100%",
+        animation: "modalSkeleton 1.25s ease-in-out infinite",
+        ...style,
+      }}
+    />
+  );
+}
+
+function SkeletonTextBlock({ lines = 3 }) {
+  return (
+    <div style={{ display: "grid", gap: "7px", paddingTop: "2px" }}>
+      {Array.from({ length: lines }).map((_, index) => (
+        <SkeletonLine
+          key={index}
+          width={index === lines - 1 ? "58%" : "100%"}
+          height={10}
+        />
+      ))}
+    </div>
+  );
+}
+
 function SoftIcon({ icon: Icon, color = "#165034", background = "rgba(22,80,52,.08)", size = 28 }) {
   if (!Icon) return null;
 
@@ -115,7 +150,7 @@ function SoftIcon({ icon: Icon, color = "#165034", background = "rgba(22,80,52,.
   );
 }
 
-function InfoTile({ label, value, accent, icon, iconColor = "#165034" }) {
+function InfoTile({ label, value, accent, icon, iconColor = "#165034", loading = false }) {
   const normalizedLabel = String(label || "")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -173,19 +208,27 @@ function InfoTile({ label, value, accent, icon, iconColor = "#165034" }) {
         style={{
           fontSize: "13px",
           fontWeight: 600,
-          color: accent || "#1c1c1e",
+          color: loading ? "transparent" : accent || "#1c1c1e",
           lineHeight: 1.4,
           overflowWrap: "anywhere",
+          width: loading ? "78%" : undefined,
+          height: loading ? "13px" : undefined,
+          borderRadius: loading ? "999px" : undefined,
+          background: loading
+            ? "linear-gradient(90deg, #eef2f7 0%, #f8fafc 45%, #e5eaf0 100%)"
+            : undefined,
+          backgroundSize: loading ? "220% 100%" : undefined,
+          animation: loading ? "modalSkeleton 1.25s ease-in-out infinite" : undefined,
         }}
       >
-        {value || "Não informado"}
+        {loading ? "" : value || "Não informado"}
       </div>
       </div>
     </div>
   );
 }
 
-function VitalTile({ label, value, unit, accent, icon }) {
+function VitalTile({ label, value, unit, accent, icon, loading = false }) {
   return (
     <div
       style={{
@@ -216,13 +259,21 @@ function VitalTile({ label, value, unit, accent, icon }) {
         style={{
           fontSize: "15px",
           fontWeight: 700,
-          color: accent || "#1c1c1e",
+          color: loading ? "transparent" : accent || "#1c1c1e",
           lineHeight: 1.2,
+          width: loading ? "48%" : undefined,
+          height: loading ? "15px" : undefined,
+          borderRadius: loading ? "999px" : undefined,
+          background: loading
+            ? "linear-gradient(90deg, #eef2f7 0%, #f8fafc 45%, #e5eaf0 100%)"
+            : undefined,
+          backgroundSize: loading ? "220% 100%" : undefined,
+          animation: loading ? "modalSkeleton 1.25s ease-in-out infinite" : undefined,
         }}
       >
-        {value ?? "—"}
+        {loading ? "" : value ?? "—"}
       </div>
-      {unit && (
+      {unit && !loading && (
         <div style={{ fontSize: "10px", color: "#8e8e93", marginTop: "1px" }}>{unit}</div>
       )}
       </div>
@@ -350,6 +401,7 @@ function ProfilePage({
   onSave,
 }) {
   const isEditing = modal.editingPatient && !modal.patientLoading;
+  const profileLoading = modal.detailLoading || modal.patientLoading;
 
   const vitalAccent = (val, high, low) => {
     if (val == null) return undefined;
@@ -360,7 +412,17 @@ function ProfilePage({
   return (
     <div style={{ display: "grid", gap: "12px" }}>
       {modal.detailLoading && !modal.patientProfile ? (
-        <SoftCard style={{ color: "#6b7280" }}>Carregando perfil do paciente...</SoftCard>
+        <SoftCard>
+          <SectionLabel icon={UserRound}>Perfil do paciente</SectionLabel>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+            <InfoTile label="Data de nascimento" icon={CalendarDays} loading />
+            <InfoTile label="Idade" icon={Baby} loading />
+          </div>
+          <div style={{ display: "grid", gap: "8px", marginTop: "8px" }}>
+            <InfoTile label="Acompanhante" icon={Users} loading />
+            <InfoTile label="Morada" icon={Home} loading />
+          </div>
+        </SoftCard>
       ) : (
         <>
           {/* Row 1: Patient profile + Visit info */}
@@ -469,6 +531,7 @@ function ProfilePage({
                     <InfoTile
                       label="Data de nascimento"
                       icon={CalendarDays}
+                      loading={profileLoading}
                       value={
                         profileDob
                           ? new Date(`${profileDob}T00:00:00`).toLocaleDateString("pt-PT")
@@ -478,16 +541,17 @@ function ProfilePage({
                     <InfoTile
                       label="Idade"
                       icon={Baby}
+                      loading={profileLoading}
                       value={profileAge != null ? `${profileAge} ano${profileAge === 1 ? "" : "s"}` : null}
                     />
                   </div>
-                  <InfoTile label="Acompanhante" value={profileGuardian} icon={Users} />
+                  <InfoTile label="Acompanhante" value={profileGuardian} icon={Users} loading={profileLoading} />
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
-                    <InfoTile label="Telefone" value={profilePhone} icon={UserRound} />
-                    <InfoTile label="Contacto alt." value={modal.patientProfile?.alt_phone} icon={Users} />
+                    <InfoTile label="Telefone" value={profilePhone} icon={UserRound} loading={profileLoading} />
+                    <InfoTile label="Contacto alt." value={modal.patientProfile?.alt_phone} icon={Users} loading={profileLoading} />
                   </div>
-                  <InfoTile label="Morada" value={profileAddress} icon={Home} />
-                  <InfoTile label="Email" value={modal.patientProfile?.email} icon={Mail} />
+                  <InfoTile label="Morada" value={profileAddress} icon={Home} loading={profileLoading} />
+                  <InfoTile label="Email" value={modal.patientProfile?.email} icon={Mail} loading={profileLoading} />
                 </div>
               )}
             </SoftCard>
@@ -672,6 +736,8 @@ function ProfilePage({
                       }}
                       style={{ resize: "none", background: "#fff" }}
                     />
+                  ) : profileLoading ? (
+                    <SkeletonTextBlock lines={3} />
                   ) : (
                     <div
                       style={{
@@ -795,7 +861,33 @@ function HistoryPage({ modal, timeline }) {
       )}
 
       {modal.detailLoading && timeline.length === 0 ? (
-        <div style={{ ...softCardStyle, color: "#6b7280" }}>Carregando histórico clínico...</div>
+        <div style={{ display: "grid", gap: "10px" }} aria-busy="true">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <div key={index} style={softCardStyle}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: "18px" }}>
+                <div style={{ flex: 1 }}>
+                  <SkeletonLine width="46%" height={14} />
+                  <SkeletonLine width="64%" height={10} style={{ marginTop: "9px" }} />
+                </div>
+                <SkeletonLine width="82px" height={22} />
+              </div>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "8px",
+                  marginTop: "12px",
+                }}
+              >
+                <InfoTile label="Médico" icon={Stethoscope} loading />
+                <InfoTile label="Diagnóstico" icon={ClipboardList} loading />
+              </div>
+              <div style={{ marginTop: "10px" }}>
+                <SkeletonTextBlock lines={2} />
+              </div>
+            </div>
+          ))}
+        </div>
       ) : timeline.length === 0 ? (
         <div
           style={{
@@ -1016,6 +1108,750 @@ function HistoryPage({ modal, timeline }) {
 
 // ─── Main modal ───────────────────────────────────────────────────────────────
 
+function PdfAnimation() {
+  return (
+    <div
+      aria-hidden="true"
+      style={{
+        width: "104px",
+        height: "104px",
+        borderRadius: "26px",
+        background: "linear-gradient(145deg, #f8fafc, #eef8f1)",
+        display: "grid",
+        placeItems: "center",
+        margin: "0 auto",
+        boxShadow: "inset 0 0 0 1px rgba(22,80,52,.08)",
+      }}
+    >
+      <style>
+        {`
+          @keyframes pdfFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+          @keyframes pdfTrace { 0% { stroke-dashoffset: 54; opacity: .25; } 100% { stroke-dashoffset: 0; opacity: .95; } }
+        `}
+      </style>
+      <svg
+        width="68"
+        height="76"
+        viewBox="0 0 68 76"
+        fill="none"
+        style={{ animation: "pdfFloat 1.9s ease-in-out infinite" }}
+      >
+        <path
+          d="M18 5h25l12 12v45a8 8 0 0 1-8 8H18a8 8 0 0 1-8-8V13a8 8 0 0 1 8-8Z"
+          fill="#ffffff"
+          stroke="#165034"
+          strokeWidth="2"
+        />
+        <path d="M43 5v10a4 4 0 0 0 4 4h8" fill="#e6f6eb" stroke="#165034" strokeWidth="2" />
+        <rect x="18" y="28" width="32" height="16" rx="5" fill="#165034" />
+        <path
+          d="M23 39v-7h3.9c1.5 0 2.6.9 2.6 2.3s-1.1 2.3-2.6 2.3H25v2.4h-2Zm2-4h1.6c.5 0 .8-.2.8-.7s-.3-.7-.8-.7H25V35Zm6.9 4v-7h3c2.2 0 3.7 1.4 3.7 3.5S37.1 39 34.9 39h-3Zm2.1-1.8h.7c1 0 1.6-.6 1.6-1.7s-.6-1.7-1.6-1.7H34v3.4Zm7.1 1.8v-7h5.1v1.8h-3v1h2.6v1.7h-2.6V39h-2.1Z"
+          fill="#ffffff"
+        />
+        <path
+          d="M19 52h30"
+          stroke="#86d6a3"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeDasharray="54"
+          style={{ animation: "pdfTrace 1.35s ease-in-out infinite alternate" }}
+        />
+        <path
+          d="M19 59h22"
+          stroke="#b8e8c5"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeDasharray="54"
+          style={{ animation: "pdfTrace 1.35s .18s ease-in-out infinite alternate" }}
+        />
+      </svg>
+    </div>
+  );
+}
+
+// PDF template picker.
+
+export function VisitPdfTemplateModal({
+  modal,
+  pdfLoadingId,
+  onClose,
+  onSelectTemplate,
+  onGenerate,
+}) {
+  const [progress, setProgress] = useState(0);
+  const generating = !!modal?.generating || (!!modal?.visit && pdfLoadingId === modal.visit.id);
+  const success = !!modal?.success;
+  const progressDuration = modal?.template === "full-record" ? 2400 : 1600;
+
+  useEffect(() => {
+    if (!generating) {
+      return undefined;
+    }
+
+    const startedAt = performance.now();
+    const reset = window.setTimeout(() => setProgress(5), 0);
+    const tick = window.setInterval(() => {
+      const elapsed = performance.now() - startedAt;
+      const t = Math.min(elapsed / progressDuration, 1);
+      const eased = t < 0.6 ? 0.38 * (t / 0.6) ** 2.35 : 0.38 + 0.59 * ((t - 0.6) / 0.4) ** 0.55;
+      setProgress(Math.min(97, Math.round(5 + eased * 92)));
+    }, 80);
+
+    return () => {
+      window.clearTimeout(reset);
+      window.clearInterval(tick);
+    };
+  }, [generating, progressDuration]);
+
+  if (!modal?.open || !modal?.visit) return null;
+
+  if (success) {
+    return (
+      <div className="alert-popup-overlay">
+        <style>
+          {`
+            @keyframes pdfConfetti {
+              0% { transform: translate3d(0, 0, 0) rotate(0deg); opacity: 0; }
+              12% { opacity: 1; }
+              100% { transform: translate3d(var(--x), var(--y), 0) rotate(var(--r)); opacity: 0; }
+            }
+          `}
+        </style>
+        <div className="alert-popup-card" style={{ position: "relative", overflow: "hidden" }}>
+          {[
+            ["-82px", "-44px", "80deg", "#165034"],
+            ["74px", "-50px", "-70deg", "#86d6a3"],
+            ["-58px", "-76px", "140deg", "#2f8f59"],
+            ["42px", "-78px", "95deg", "#f5c542"],
+            ["-96px", "-12px", "-130deg", "#b8e8c5"],
+            ["92px", "-16px", "120deg", "#165034"],
+            ["-28px", "-94px", "-80deg", "#86d6a3"],
+            ["18px", "-98px", "160deg", "#f5c542"],
+          ].map(([x, y, r, color], index) => (
+            <span
+              key={`${x}-${y}`}
+              aria-hidden="true"
+              style={{
+                "--x": x,
+                "--y": y,
+                "--r": r,
+                position: "absolute",
+                left: "50%",
+                top: 92,
+                width: index % 2 ? 7 : 5,
+                height: index % 2 ? 12 : 9,
+                borderRadius: 2,
+                background: color,
+                animation: `pdfConfetti 950ms ${index * 45}ms ease-out both`,
+              }}
+            />
+          ))}
+          <div className="alert-popup-handle" />
+          <div className="alert-popup-body">
+            <div className="popup-icon popup-icon-success">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M20 6L9 17l-5-5" />
+              </svg>
+            </div>
+            <div>
+              <h3
+                style={{
+                  margin: "0 0 8px",
+                  fontSize: 18,
+                  fontWeight: 800,
+                  color: "#0f172a",
+                  letterSpacing: "-0.01em",
+                }}
+              >
+                PDF gerado com sucesso
+              </h3>
+              <p
+                style={{
+                  margin: "0 0 24px",
+                  fontSize: 13,
+                  color: "#64748b",
+                  lineHeight: 1.65,
+                  maxWidth: 280,
+                }}
+              >
+                O download deve iniciar em instantes.
+              </p>
+            </div>
+          </div>
+          <div className="alert-popup-footer">
+            <button
+              type="button"
+              onClick={onClose}
+              className="btn-primary"
+              style={{
+                width: "100%",
+                maxWidth: 280,
+                minHeight: 44,
+                padding: "11px 18px",
+                borderRadius: 14,
+              }}
+            >
+              Entendi
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const options = [
+    {
+      id: "today-summary",
+      badgeLabel: "Consulta de hoje",
+      title: "Resumo de hoje",
+      description:
+        "Dados do paciente, diagnostico, sinais vitais e prescricao desta consulta.",
+      previewType: "summary",
+    },
+    {
+      id: "full-record",
+      badgeLabel: "Com historico",
+      title: "Registo completo",
+      description:
+        "Consulta atual com historico clinico anterior e resultados laboratoriais registados.",
+      previewType: "full",
+    },
+  ];
+
+  return (
+    <div className="popup-overlay">
+      <style>
+        {`
+          .triage-page .pdf-template-option,
+          .popup-overlay .pdf-template-option {
+            border-radius: 14px !important;
+          }
+          .triage-page .pdf-template-close,
+          .popup-overlay .pdf-template-close {
+            border-radius: 8px !important;
+          }
+          @keyframes pdfProgress {
+            0% { transform: translateX(-110%); opacity: .15; }
+            40% { opacity: .65; }
+            100% { transform: translateX(110%); opacity: .2; }
+          }
+          @keyframes pdfConfetti {
+            0% { transform: translate3d(0, 0, 0) rotate(0deg); opacity: 0; }
+            12% { opacity: 1; }
+            100% { transform: translate3d(var(--x), var(--y), 0) rotate(var(--r)); opacity: 0; }
+          }
+          @media (max-width: 720px) {
+            .pdf-template-grid { grid-template-columns: 1fr !important; }
+          }
+        `}
+      </style>
+      <div
+        className="popup-card"
+        style={{
+          width: "min(92vw, 700px)",
+          maxHeight: "84vh",
+          padding: 0,
+          overflow: "hidden",
+          borderRadius: 22,
+          border: "0.5px solid rgba(0,0,0,.08)",
+          background: "#ffffff",
+          boxShadow: "0 22px 70px rgba(15,23,42,.18)",
+        }}
+      >
+        {/* ── Header ── */}
+        <div
+          style={{
+            padding: "18px 20px 16px",
+            borderBottom: "0.5px solid #eef2f7",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            gap: 14,
+          }}
+        >
+          <div>
+            <h3
+              style={{
+                margin: 0,
+                fontSize: 16,
+                fontWeight: 700,
+                color: "#111827",
+              }}
+            >
+              Escolher modelo do PDF
+            </h3>
+            <p style={{ margin: "3px 0 0", fontSize: 12, color: "#6b7280" }}>
+              {modal.visit.full_name || "Paciente"} · Consulta #{modal.visit.id}
+            </p>
+          </div>
+          {!generating && !success && (
+            <button
+              type="button"
+              className="pdf-template-close"
+              onClick={onClose}
+              aria-label="Fechar"
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: 8,
+                border: "0.5px solid #e5e7eb",
+                background: "transparent",
+                color: "#6b7280",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                flexShrink: 0,
+              }}
+            >
+              <X size={13} strokeWidth={2.2} />
+            </button>
+          )}
+        </div>
+
+        {/* ── Generating state ── */}
+        {generating ? (
+          <div style={{ padding: "32px 34px 30px", textAlign: "center" }}>
+            <PdfAnimation />
+            <h4
+              style={{
+                margin: "20px 0 6px",
+                fontSize: 18,
+                fontWeight: 800,
+                color: "#111827",
+              }}
+            >
+              Gerando PDF
+            </h4>
+            <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>
+              {modal.template === "full-record"
+                ? "A reunir o historico clinico completo."
+                : "A preparar o resumo da consulta."}
+            </p>
+            <div
+              style={{
+                marginTop: 22,
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: 12,
+              }}
+            >
+              <span style={{ fontSize: 11, color: "#64748b", fontWeight: 700 }}>
+                Processando
+              </span>
+              <span
+                style={{
+                  fontSize: 12,
+                  color: "#165034",
+                  fontWeight: 800,
+                  fontVariantNumeric: "tabular-nums",
+                }}
+              >
+                {generating ? progress : 0}%
+              </span>
+            </div>
+            <div
+              style={{
+                height: 4,
+                borderRadius: 999,
+                background: "linear-gradient(90deg, #dfe7ee, #edf2f7)",
+                overflow: "visible",
+                marginTop: 8,
+                position: "relative",
+              }}
+            >
+              <span
+                aria-hidden="true"
+                style={{
+                  position: "absolute",
+                  left: -2,
+                  top: "50%",
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  background: "#165034",
+                  transform: "translateY(-50%)",
+                  zIndex: 2,
+                }}
+              />
+              <span
+                aria-hidden="true"
+                style={{
+                  position: "absolute",
+                  right: -2,
+                  top: "50%",
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  background: "#dfe7ee",
+                  transform: "translateY(-50%)",
+                }}
+              />
+              <div
+                style={{
+                  width: `${generating ? progress : 0}%`,
+                  height: "100%",
+                  borderRadius: 999,
+                  background:
+                    "linear-gradient(90deg, #165034 0%, #2f8f59 52%, #9be7b5 100%)",
+                  transition: "width 90ms linear",
+                  position: "relative",
+                  overflow: "hidden",
+                  zIndex: 1,
+                }}
+              >
+                <span
+                  aria-hidden="true"
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    background:
+                      "linear-gradient(90deg, transparent, rgba(255,255,255,.42), transparent)",
+                    transform: "translateX(-100%)",
+                    animation: "pdfProgress 1.4s cubic-bezier(.4,0,.2,1) infinite",
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div style={{ padding: "16px 18px 18px", overflowY: "auto", maxHeight: "calc(84vh - 78px)" }}>
+            {/* ── Template cards grid ── */}
+            <div
+              className="pdf-template-grid"
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 12,
+                marginBottom: 16,
+              }}
+            >
+              {options.map((option) => {
+                const selected = modal.template === option.id;
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    className="pdf-template-option"
+                    onClick={() => onSelectTemplate(option.id)}
+                    style={{
+                      border: `1.5px solid ${selected ? "#165034" : "#e5e7eb"}`,
+                      background: selected ? "#f8fcf9" : "#ffffff",
+                      borderRadius: 14,
+                      padding: 0,
+                      textAlign: "left",
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                      overflow: "hidden",
+                      position: "relative",
+                      boxShadow: selected ? "0 0 0 3px rgba(22,80,52,.1)" : "none",
+                      transition: "border-color .18s, background .18s, box-shadow .18s",
+                    }}
+                  >
+                    <span
+                      aria-hidden="true"
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        height: 4,
+                        background: selected ? "#165034" : "transparent",
+                        zIndex: 2,
+                      }}
+                    />
+
+                    {/* Document preview area */}
+                    <div
+                      style={{
+                        background: selected ? "#eef8f1" : "#f4f6f9",
+                        padding: "16px 14px 0",
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "flex-end",
+                        minHeight: 210,
+                      }}
+                    >
+                      <DocPreview type={option.previewType} />
+                    </div>
+
+                    {/* Card metadata */}
+                    <div style={{ padding: "10px 12px 12px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", gap: 8, marginBottom: 6 }}>
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 4,
+                            fontSize: 10,
+                            fontWeight: 600,
+                            padding: "2px 8px",
+                            borderRadius: 999,
+                            background: selected ? "#e8f5ee" : "#f0f4f0",
+                            color: selected ? "#165034" : "#4b6355",
+                            transition: "background .18s, color .18s",
+                          }}
+                        >
+                          {option.previewType === "summary" ? (
+                            <FileText size={9} />
+                          ) : (
+                            <ClipboardList size={9} />
+                          )}
+                          {option.badgeLabel}
+                        </span>
+                        {selected && (
+                          <span
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 4,
+                              color: "#165034",
+                              fontSize: 10,
+                              fontWeight: 700,
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            <Check size={12} strokeWidth={2.5} />
+                            Selecionado
+                          </span>
+                        )}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 700,
+                          color: "#111827",
+                          marginBottom: 3,
+                          lineHeight: 1.3,
+                        }}
+                      >
+                        {option.title}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 11,
+                          color: "#6b7280",
+                          lineHeight: 1.5,
+                        }}
+                      >
+                        {option.description}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* ── Footer actions ── */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                alignItems: "center",
+                gap: 8,
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 11,
+                  color: "#9ca3af",
+                  marginRight: "auto",
+                }}
+              >
+                {modal.template ? "1 modelo selecionado" : "Selecione um modelo"}
+              </span>
+              <button
+                type="button"
+                className="btn-secondary"
+                style={{
+                  width: "auto",
+                  padding: "8px 16px",
+                  borderRadius: 999,
+                  fontSize: 12,
+                }}
+                onClick={onClose}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                style={{
+                  width: "auto",
+                  padding: "8px 16px",
+                  borderRadius: 999,
+                  fontSize: 12,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  opacity: modal.template ? 1 : 0.5,
+                  cursor: modal.template ? "pointer" : "not-allowed",
+                }}
+                disabled={!modal.template}
+                onClick={onGenerate}
+              >
+                <Download size={13} strokeWidth={2} />
+                Gerar PDF
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── DocPreview ────────────────────────────────────────────────────────────────
+// SVG-based miniature document thumbnail rendered inside the card preview area.
+
+function DocLine({ width = "100%", height = 3, color = "#dde3ea", mt = 4 }) {
+  return (
+    <div
+      style={{
+        height,
+        borderRadius: 2,
+        background: color,
+        width,
+        marginTop: mt,
+      }}
+    />
+  );
+}
+
+function DocPreview({ type }) {
+  const isFull = type === "full";
+
+  return (
+    <div
+      style={{
+        background: "#ffffff",
+        borderRadius: 4,
+        border: "1px solid #d8dee7",
+        width: 156,
+        minHeight: 190,
+        padding: "12px 12px 9px",
+        boxShadow: "0 8px 18px rgba(15,23,42,.1)",
+      }}
+    >
+      {/* Green top accent */}
+      <div
+        style={{
+          height: 7,
+          borderRadius: 2,
+          background: "#165034",
+          marginBottom: 9,
+          opacity: 0.88,
+        }}
+      />
+
+      {/* Logo row */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 7,
+        }}
+      >
+        <div
+          style={{
+            width: 34,
+            height: 6,
+            borderRadius: 2,
+            background: "#d1d5db",
+          }}
+        />
+        <span
+          style={{
+            fontSize: 7,
+            fontWeight: 600,
+            color: "#9ca3af",
+            letterSpacing: ".05em",
+            textTransform: "uppercase",
+          }}
+        >
+          {isFull ? "Registo completo" : "Resumo"}
+        </span>
+      </div>
+
+      {/* Patient name lines */}
+      <DocLine color="#165034" height={3} mt={0} />
+      <DocLine width="58%" height={2} mt={4} />
+
+      {/* Divider */}
+      <div
+        style={{
+          height: 0.5,
+          background: "#e5e7eb",
+          margin: "7px 0",
+        }}
+      />
+
+      {/* Two-column vitals row */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: 5,
+          marginBottom: 5,
+        }}
+      >
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i}>
+            <DocLine height={2} color="#c8d0d9" mt={0} />
+            <DocLine width="55%" height={2} mt={3} color="#dde3ea" />
+          </div>
+        ))}
+      </div>
+
+      <div style={{ height: 0.5, background: "#e5e7eb", margin: "7px 0" }} />
+
+      {/* Diagnosis / prescription lines */}
+      <DocLine color="#165034" height={2} mt={0} />
+      <DocLine height={2} mt={4} />
+      <DocLine width="70%" height={2} mt={4} />
+
+      {isFull && (
+        <>
+          <div style={{ height: 0.5, background: "#e5e7eb", margin: "7px 0" }} />
+          {/* Past history section — faded */}
+          <DocLine color="#165034" height={2} mt={0} />
+          <DocLine height={2} mt={4} color="#e9edf2" />
+          <DocLine width="60%" height={2} mt={4} color="#e9edf2" />
+          <div style={{ height: 0.5, background: "#eef2f7", margin: "7px 0" }} />
+          <DocLine color="#165034" height={2} mt={0} />
+          <DocLine height={2} mt={4} color="#f0f3f6" />
+        </>
+      )}
+
+      {/* Signature line (summary only) */}
+      {!isFull && (
+        <div
+          style={{
+            width: 46,
+            height: 12,
+            borderBottom: "1px solid #d1d5db",
+            marginTop: 12,
+            marginLeft: "auto",
+          }}
+        />
+      )}
+
+      <div style={{ height: 6 }} />
+    </div>
+  );
+}
+
 export function PastVisitHistoryModal({
   modal,
   profileName,
@@ -1037,6 +1873,7 @@ export function PastVisitHistoryModal({
 }) {
   if (!modal?.open || !modal?.visit) return null;
   const visit = modal.visit;
+  const profileLoading = modal.detailLoading || modal.patientLoading;
 
   const isDeceased = inferVitalStatus(visit) === "Óbito";
 
@@ -1051,6 +1888,14 @@ export function PastVisitHistoryModal({
 
   return (
     <div className="popup-overlay">
+      <style>
+        {`
+          @keyframes modalSkeleton {
+            0% { background-position: 140% 0; }
+            100% { background-position: -80% 0; }
+          }
+        `}
+      </style>
       <div
         className="popup-card"
         style={{
@@ -1133,7 +1978,7 @@ export function PastVisitHistoryModal({
                 </div>
               )}
 
-              <div style={{ minWidth: 0 }}>
+              <div style={{ minWidth: 0, flex: 1 }}>
                 <div
                   style={{
                     fontSize: "19px",
@@ -1145,10 +1990,14 @@ export function PastVisitHistoryModal({
                     textOverflow: "ellipsis",
                   }}
                 >
-                  {profileName}
+                  {profileLoading ? <SkeletonLine width="180px" height={18} /> : profileName}
                 </div>
                 <div style={{ fontSize: "12px", color: "#8e8e93", marginTop: "2px" }}>
-                  {profileCode} · Consulta #{visit.id}
+                  {profileLoading ? (
+                    <SkeletonLine width="140px" height={10} />
+                  ) : (
+                    `${profileCode} · Consulta #${visit.id}`
+                  )}
                 </div>
                 <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginTop: "8px" }}>
                   {/* Hospital status badge */}

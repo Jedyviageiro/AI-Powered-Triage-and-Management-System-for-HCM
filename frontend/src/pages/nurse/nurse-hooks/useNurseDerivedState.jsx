@@ -272,13 +272,13 @@ export function useNurseDerivedState({
     pastVisitProfileRecord?.clinical_code || pastVisitModal?.visit?.clinical_code || "-";
   const pastVisitProfileDob = String(pastVisitProfileRecord?.birth_date || "").slice(0, 10);
   const pastVisitProfileAge = calculateAgeYears(pastVisitProfileDob);
-  const pastVisitProfileGuardian = pastVisitProfileRecord?.guardian_name || "Nao informado";
-  const pastVisitProfilePhone = pastVisitProfileRecord?.guardian_phone || "Nao informado";
+  const pastVisitProfileGuardian = pastVisitProfileRecord?.guardian_name || null;
+  const pastVisitProfilePhone = pastVisitProfileRecord?.guardian_phone || null;
   const pastVisitProfileAddress =
     pastVisitProfileRecord?.address ||
     pastVisitProfileRecord?.home_address ||
     pastVisitProfileRecord?.residential_address ||
-    "Nao informado";
+    null;
   const pastVisitProfilePhoto =
     pastVisitProfileRecord?.profile_photo_url ||
     pastVisitProfileRecord?.photo_url ||

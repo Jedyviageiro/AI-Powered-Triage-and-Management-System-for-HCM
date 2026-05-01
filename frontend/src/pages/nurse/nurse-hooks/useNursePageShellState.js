@@ -150,6 +150,14 @@ export function useNursePageShellState() {
     triage_max_wait_minutes: "",
   });
   const [pdfLoadingId, setPdfLoadingId] = useState(null);
+  const [pdfTemplateModal, setPdfTemplateModal] = useState({
+    open: false,
+    visit: null,
+    timeline: [],
+    template: "today-summary",
+    generating: false,
+    success: false,
+  });
   const [triageStep, setTriageStep] = useState(1);
 
   const showPopup = useCallback((type, title, message) => {
@@ -361,6 +369,8 @@ export function useNursePageShellState() {
     setPatientEditModal,
     pdfLoadingId,
     setPdfLoadingId,
+    pdfTemplateModal,
+    setPdfTemplateModal,
     triageStep,
     setTriageStep,
   };

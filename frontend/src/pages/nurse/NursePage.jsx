@@ -213,6 +213,8 @@ export default function NursePage({ forcedView = "home" }) {
     setPatientEditModal,
     pdfLoadingId,
     setPdfLoadingId,
+    pdfTemplateModal,
+    setPdfTemplateModal,
     triageStep,
     setTriageStep,
   } = useNursePageShellState();
@@ -415,6 +417,56 @@ export default function NursePage({ forcedView = "home" }) {
     openConfirmPopup,
   });
 
+  const openVisitPdfTemplateModal = (visit, timeline = []) => {
+    closePastVisitModal();
+    setPdfTemplateModal({
+      open: true,
+      visit: visit || null,
+      timeline: Array.isArray(timeline) ? timeline : [],
+      template: "today-summary",
+      generating: false,
+      success: false,
+    });
+  };
+
+  const closeVisitPdfTemplateModal = () => {
+    setPdfTemplateModal((prev) => ({
+      ...prev,
+      open: false,
+      generating: false,
+      success: false,
+    }));
+  };
+
+  const setVisitPdfTemplate = (template) => {
+    setPdfTemplateModal((prev) => ({ ...prev, template }));
+  };
+
+  const generateVisitPdfFromTemplate = async () => {
+    const visit = pdfTemplateModal.visit;
+    if (!visit || pdfTemplateModal.generating) return;
+    const minGenerateMs = pdfTemplateModal.template === "full-record" ? 2400 : 1600;
+    setPdfTemplateModal((prev) => ({ ...prev, generating: true }));
+    try {
+      await Promise.all([
+        downloadVisitPdf(visit, {
+          template: pdfTemplateModal.template,
+          timeline: pdfTemplateModal.timeline,
+        }),
+        new Promise((resolve) => {
+          window.setTimeout(resolve, minGenerateMs);
+        }),
+      ]);
+      setPdfTemplateModal((prev) => ({
+        ...prev,
+        generating: false,
+        success: true,
+      }));
+    } catch {
+      setPdfTemplateModal((prev) => ({ ...prev, generating: false }));
+    }
+  };
+
   const {
     openPatientEditModal,
     savePatientEdit,
@@ -576,6 +628,11 @@ export default function NursePage({ forcedView = "home" }) {
     openPastVisitModal,
     pdfLoadingId,
     downloadVisitPdf,
+    pdfTemplateModal,
+    openVisitPdfTemplateModal,
+    closeVisitPdfTemplateModal,
+    setVisitPdfTemplate,
+    generateVisitPdfFromTemplate,
     queue,
     queueSummary,
     pastVisits,

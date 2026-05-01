@@ -7,8 +7,6 @@ export function NursePatientsView({
   inferHospitalStatus,
   inferVitalStatus,
   openPastVisitModal,
-  pdfLoadingId,
-  downloadVisitPdf,
 }) {
   return (
     <div className="dash-animate dash-animate-delay-1">
@@ -134,7 +132,6 @@ export function NursePatientsView({
                 <col style={{ width: "110px" }} />
                 <col style={{ width: "80px" }} />
                 <col style={{ width: "120px" }} />
-                <col style={{ width: "80px" }} />
               </colgroup>
               <thead style={{ background: "#f9fafb" }}>
                 <tr>
@@ -147,7 +144,6 @@ export function NursePatientsView({
                     "Destino",
                     "Vital",
                     "Data",
-                    "",
                   ].map((h) => (
                     <th
                       key={h}
@@ -387,31 +383,6 @@ export function NursePatientsView({
                               })
                             : "-"}
                         </span>
-                      </td>
-
-                      <td style={{ padding: "13px 16px" }}>
-                        <button
-                          type="button"
-                          disabled={pdfLoadingId === v.id}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            downloadVisitPdf(v);
-                          }}
-                          style={{
-                            fontSize: "11px",
-                            padding: "5px 12px",
-                            borderRadius: "20px",
-                            border: "0.5px solid #e5e7eb",
-                            background: "transparent",
-                            color: "#6b7280",
-                            cursor: "pointer",
-                            whiteSpace: "nowrap",
-                            fontFamily: "inherit",
-                            opacity: pdfLoadingId === v.id ? 0.5 : 1,
-                          }}
-                        >
-                          {pdfLoadingId === v.id ? "..." : "PDF"}
-                        </button>
                       </td>
                     </tr>
                   );
