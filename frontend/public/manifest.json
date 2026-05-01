@@ -1,0 +1,26 @@
+{
+  "name": "Sistema de Triagem e Gestao Pediatrica",
+  "short_name": "Triagem Pediatrica",
+  "description": "Aplicacao de triagem e gestao pediatrica para equipas clinicas.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f8fafc",
+  "theme_color": "#165034",
+  "categories": ["medical", "productivity"],
+  "icons": [
+    {
+      "src": "/assets/pwa_icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa_icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

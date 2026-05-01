@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { Zap } from "lucide-react";
 import NursePage from "../NursePage";
 import { DoctorAvatar } from "../nurse-helpers/nurseHelpers";
 
@@ -1156,8 +1157,8 @@ export function NurseNewTriageView({
               {aiSuggestion && (
                 <div className="ai-card" style={{ marginTop: "10px" }}>
                   <div className="ai-badge">
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="white"><circle cx="12" cy="12" r="10" /></svg>
-                    IA automática
+                    <Zap size={12} fill="currentColor" aria-hidden="true" />
+                    Triagem Automatica
                   </div>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
                     <div style={{ minWidth: 0 }}>
