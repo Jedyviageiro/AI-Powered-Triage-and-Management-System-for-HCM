@@ -70,20 +70,26 @@ export function useNurseDerivedState({
     [activeDoctors, doctorHasActiveCase]
   );
   const busyDoctors = useMemo(
-    () => activeDoctors.filter((d) => doctorHasActiveCase(d)),
+    () => activeDoctors.filter((d) => doctorHasActiveCase(d) || d?.is_available === false),
     [activeDoctors, doctorHasActiveCase]
   );
   const assignableDoctors = useMemo(
     () =>
-      availableDoctors.slice().sort((a, b) => {
-        if (Boolean(a?.is_online_now) !== Boolean(b?.is_online_now)) {
-          return a?.is_online_now ? -1 : 1;
-        }
-        return String(a?.full_name || a?.username || "").localeCompare(
-          String(b?.full_name || b?.username || "")
-        );
-      }),
-    [availableDoctors]
+      activeDoctors
+        .filter((d) => d?.is_available !== false)
+        .slice()
+        .sort((a, b) => {
+          if (Boolean(a?.is_busy) !== Boolean(b?.is_busy)) {
+            return a?.is_busy ? 1 : -1;
+          }
+          if (Boolean(a?.is_online_now) !== Boolean(b?.is_online_now)) {
+            return a?.is_online_now ? -1 : 1;
+          }
+          return String(a?.full_name || a?.username || "").localeCompare(
+            String(b?.full_name || b?.username || "")
+          );
+        }),
+    [activeDoctors]
   );
   const doctorQueueEtaById = useMemo(() => {
     const map = new Map();

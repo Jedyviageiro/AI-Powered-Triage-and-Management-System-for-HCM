@@ -41,7 +41,7 @@ export function NurseDoctorsView({
             ))
           : [
               { title: "Disponíveis", list: availableDoctors, color: "#165034", bg: "#edf5f0" },
-              { title: "Ocupados", list: busyDoctors, color: "#ef4444", bg: "#fef2f2" },
+              { title: "Ocupados / indisponíveis", list: busyDoctors, color: "#ef4444", bg: "#fef2f2" },
             ].map(({ title, list, color, bg }) => (
               <div key={title} className="form-card">
                 <div
@@ -112,6 +112,11 @@ export function NurseDoctorsView({
                                 {activeVisit
                                   ? ` · Paciente: ${activeVisit.full_name} (${activeVisit.clinical_code})`
                                   : ""}
+                              </div>
+                            )}
+                            {d.is_available === false && !d.current_visit_id && (
+                              <div style={{ fontSize: "11px", color: "#b45309", fontWeight: 700 }}>
+                                Indisponível no momento
                               </div>
                             )}
                           </div>

@@ -1,4 +1,29 @@
 import {
+  Activity,
+  AlertTriangle,
+  Baby,
+  CalendarClock,
+  CalendarDays,
+  CheckCircle2,
+  ClipboardList,
+  Download,
+  Edit3,
+  FileText,
+  HeartPulse,
+  Home,
+  Mail,
+  MapPin,
+  Pill,
+  Ruler,
+  Scissors,
+  Stethoscope,
+  Thermometer,
+  UserRound,
+  Users,
+  Weight,
+  X,
+} from "lucide-react";
+import {
   inferHospitalStatus,
   inferVitalStatus,
   statusLabelForVisit,
@@ -65,15 +90,73 @@ export function DonutChart({ segments, size = 120, stroke = 22 }) {
 
 // ─── Subcomponents ────────────────────────────────────────────────────────────
 
-function InfoTile({ label, value, accent }) {
+const iconStroke = 1.9;
+
+function SoftIcon({ icon: Icon, color = "#165034", background = "rgba(22,80,52,.08)", size = 28 }) {
+  if (!Icon) return null;
+
+  return (
+    <span
+      aria-hidden="true"
+      style={{
+        width: `${size}px`,
+        height: `${size}px`,
+        borderRadius: "9px",
+        background,
+        color,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+      }}
+    >
+      <Icon size={Math.max(14, size - 12)} strokeWidth={iconStroke} />
+    </span>
+  );
+}
+
+function InfoTile({ label, value, accent, icon, iconColor = "#165034" }) {
+  const normalizedLabel = String(label || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+  const DerivedIcon =
+    icon ||
+    (normalizedLabel.includes("medico")
+      ? Stethoscope
+      : normalizedLabel.includes("diagn")
+      ? ClipboardList
+      : normalizedLabel.includes("prescri")
+      ? Pill
+      : normalizedLabel.includes("estado vital")
+      ? HeartPulse
+      : normalizedLabel.includes("estado hospitalar")
+      ? MapPin
+      : normalizedLabel.includes("data")
+      ? CalendarClock
+      : normalizedLabel.includes("email")
+      ? Mail
+      : normalizedLabel.includes("morada")
+      ? Home
+      : normalizedLabel.includes("telefone") || normalizedLabel.includes("contacto")
+      ? Users
+      : normalizedLabel.includes("resumo") || normalizedLabel.includes("justificativa")
+      ? FileText
+      : null);
+
   return (
     <div
       style={{
-        padding: "8px 10px",
+        padding: "9px 10px",
         borderRadius: "10px",
         background: "#f8f8fa",
+        display: "flex",
+        gap: "9px",
+        alignItems: "flex-start",
       }}
     >
+      <SoftIcon icon={DerivedIcon} color={iconColor} size={26} />
+      <div style={{ minWidth: 0 }}>
       <div
         style={{
           fontSize: "10px",
@@ -92,23 +175,31 @@ function InfoTile({ label, value, accent }) {
           fontWeight: 600,
           color: accent || "#1c1c1e",
           lineHeight: 1.4,
+          overflowWrap: "anywhere",
         }}
       >
         {value || "Não informado"}
+      </div>
       </div>
     </div>
   );
 }
 
-function VitalTile({ label, value, unit, accent }) {
+function VitalTile({ label, value, unit, accent, icon }) {
   return (
     <div
       style={{
         padding: "8px 10px",
         borderRadius: "10px",
         background: "#f8f8fa",
+        display: "grid",
+        gridTemplateColumns: "28px 1fr",
+        gap: "8px",
+        alignItems: "center",
       }}
     >
+      <SoftIcon icon={icon || Activity} color={accent || "#165034"} size={28} />
+      <div>
       <div
         style={{
           fontSize: "10px",
@@ -134,21 +225,24 @@ function VitalTile({ label, value, unit, accent }) {
       {unit && (
         <div style={{ fontSize: "10px", color: "#8e8e93", marginTop: "1px" }}>{unit}</div>
       )}
+      </div>
     </div>
   );
 }
 
-function SectionLabel({ children }) {
+function SectionLabel({ children, icon, style = {} }) {
   return (
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "auto 1fr",
+        gridTemplateColumns: "auto auto 1fr",
         alignItems: "center",
-        gap: "10px",
+        gap: "8px",
         marginBottom: "12px",
+        ...style,
       }}
     >
+      <SoftIcon icon={icon} size={24} />
       <span
         style={{
           fontSize: "10px",
@@ -167,7 +261,7 @@ function SectionLabel({ children }) {
           height: "2px",
           borderRadius: "999px",
           background:
-            "linear-gradient(90deg, rgba(22,80,52,.24), rgba(134,214,163,.38), rgba(229,231,235,0))",
+            "linear-gradient(90deg, rgba(22,80,52,.28), rgba(134,214,163,.32), rgba(15,23,42,0))",
         }}
       />
     </div>
@@ -179,22 +273,48 @@ function AbstractSectionLine() {
     <div
       aria-hidden="true"
       style={{
-        height: "10px",
+        height: "18px",
         display: "grid",
-        gridTemplateColumns: "42px 1fr 18px",
+        gridTemplateColumns: "54px 9px 1fr 9px 26px",
         alignItems: "center",
-        gap: "8px",
-        margin: "2px 0",
+        gap: "7px",
+        margin: "1px 2px",
+        opacity: 0.9,
       }}
     >
-      <span style={{ height: "2px", borderRadius: "999px", background: "#165034" }} />
+      <span
+        style={{
+          height: "3px",
+          borderRadius: "999px",
+          background: "linear-gradient(90deg, #165034, #4aa36c)",
+        }}
+      />
+      <span
+        style={{
+          width: "9px",
+          height: "9px",
+          borderRadius: "50%",
+          border: "2px solid rgba(22,80,52,.35)",
+          background: "#fbfbfc",
+        }}
+      />
       <span
         style={{
           height: "1px",
-          background: "linear-gradient(90deg, rgba(22,80,52,.18), rgba(226,232,240,.35))",
+          background:
+            "linear-gradient(90deg, rgba(22,80,52,.22), rgba(134,214,163,.34), rgba(148,163,184,.12))",
         }}
       />
-      <span style={{ height: "2px", borderRadius: "999px", background: "#86d6a3" }} />
+      <span
+        style={{
+          width: "9px",
+          height: "9px",
+          borderRadius: "50%",
+          background: "#86d6a3",
+          boxShadow: "0 0 0 4px rgba(134,214,163,.14)",
+        }}
+      />
+      <span style={{ height: "3px", borderRadius: "999px", background: "#d7f0df" }} />
     </div>
   );
 }
@@ -247,7 +367,7 @@ function ProfilePage({
           <div style={{ display: "grid", gridTemplateColumns: "1.1fr 0.9fr", gap: "12px" }}>
             {/* Patient profile */}
             <SoftCard>
-              <SectionLabel>Perfil do paciente</SectionLabel>
+              <SectionLabel icon={UserRound}>Perfil do paciente</SectionLabel>
               {isEditing ? (
                 <div style={{ display: "grid", gap: "10px" }}>
                   <input
@@ -348,6 +468,7 @@ function ProfilePage({
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
                     <InfoTile
                       label="Data de nascimento"
+                      icon={CalendarDays}
                       value={
                         profileDob
                           ? new Date(`${profileDob}T00:00:00`).toLocaleDateString("pt-PT")
@@ -356,16 +477,17 @@ function ProfilePage({
                     />
                     <InfoTile
                       label="Idade"
+                      icon={Baby}
                       value={profileAge != null ? `${profileAge} ano${profileAge === 1 ? "" : "s"}` : null}
                     />
                   </div>
-                  <InfoTile label="Acompanhante" value={profileGuardian} />
+                  <InfoTile label="Acompanhante" value={profileGuardian} icon={Users} />
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
-                    <InfoTile label="Telefone" value={profilePhone} />
-                    <InfoTile label="Contacto alt." value={modal.patientProfile?.alt_phone} />
+                    <InfoTile label="Telefone" value={profilePhone} icon={UserRound} />
+                    <InfoTile label="Contacto alt." value={modal.patientProfile?.alt_phone} icon={Users} />
                   </div>
-                  <InfoTile label="Morada" value={profileAddress} />
-                  <InfoTile label="Email" value={modal.patientProfile?.email} />
+                  <InfoTile label="Morada" value={profileAddress} icon={Home} />
+                  <InfoTile label="Email" value={modal.patientProfile?.email} icon={Mail} />
                 </div>
               )}
             </SoftCard>
@@ -373,7 +495,7 @@ function ProfilePage({
             {/* Right column: Visit info + Vitals */}
             <div style={{ display: "grid", gap: "12px", alignContent: "start" }}>
               <SoftCard>
-                <SectionLabel>Consulta selecionada</SectionLabel>
+                <SectionLabel icon={CalendarClock}>Consulta selecionada</SectionLabel>
                 <div style={{ display: "grid", gap: "8px" }}>
                   <InfoTile
                     label="Médico"
@@ -384,6 +506,7 @@ function ProfilePage({
                   />
                   <InfoTile
                     label="Data"
+                    icon={CalendarClock}
                     value={
                       visit.consultation_ended_at || visit.arrival_time
                         ? new Date(
@@ -393,8 +516,8 @@ function ProfilePage({
                     }
                   />
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
-                    <InfoTile label="Estado hospitalar" value={inferHospitalStatus(visit)} />
-                    <InfoTile label="Estado vital" value={inferVitalStatus(visit)} />
+                    <InfoTile label="Estado hospitalar" value={inferHospitalStatus(visit)} icon={MapPin} />
+                    <InfoTile label="Estado vital" value={inferVitalStatus(visit)} icon={HeartPulse} />
                   </div>
                 </div>
               </SoftCard>
@@ -408,7 +531,7 @@ function ProfilePage({
                 visit.height != null ||
                 visit.blood_pressure_systolic != null) && (
                 <SoftCard>
-                  <SectionLabel>Sinais vitais</SectionLabel>
+                  <SectionLabel icon={HeartPulse}>Sinais vitais</SectionLabel>
                   <div
                     style={{
                       display: "grid",
@@ -419,6 +542,7 @@ function ProfilePage({
                     {visit.blood_pressure_systolic != null && (
                       <VitalTile
                         label="PA"
+                        icon={Activity}
                         value={`${visit.blood_pressure_systolic}/${visit.blood_pressure_diastolic}`}
                         unit="mmHg"
                         accent={
@@ -431,6 +555,7 @@ function ProfilePage({
                     {visit.heart_rate != null && (
                       <VitalTile
                         label="FC"
+                        icon={HeartPulse}
                         value={visit.heart_rate}
                         unit="bpm"
                         accent={vitalAccent(visit.heart_rate, 100, 60)}
@@ -439,6 +564,7 @@ function ProfilePage({
                     {visit.temperature != null && (
                       <VitalTile
                         label="Temp"
+                        icon={Thermometer}
                         value={visit.temperature}
                         unit="°C"
                         accent={visit.temperature > 37.5 ? "#c05c00" : undefined}
@@ -447,6 +573,7 @@ function ProfilePage({
                     {visit.oxygen_saturation != null && (
                       <VitalTile
                         label="SpO2"
+                        icon={Activity}
                         value={`${visit.oxygen_saturation}%`}
                         unit="oxig."
                         accent={visit.oxygen_saturation < 95 ? "#c05c00" : undefined}
@@ -455,16 +582,17 @@ function ProfilePage({
                     {visit.respiratory_rate != null && (
                       <VitalTile
                         label="FR"
+                        icon={Activity}
                         value={visit.respiratory_rate}
                         unit="rpm"
                         accent={vitalAccent(visit.respiratory_rate, 20, 12)}
                       />
                     )}
                     {visit.weight != null && (
-                      <VitalTile label="Peso" value={visit.weight} unit="kg" />
+                      <VitalTile label="Peso" value={visit.weight} unit="kg" icon={Weight} />
                     )}
                     {visit.height != null && (
-                      <VitalTile label="Altura" value={visit.height} unit="cm" />
+                      <VitalTile label="Altura" value={visit.height} unit="cm" icon={Ruler} />
                     )}
                   </div>
                 </SoftCard>
@@ -476,7 +604,7 @@ function ProfilePage({
 
           {/* Row 2: Clinical summary */}
           <SoftCard>
-            <SectionLabel>Resumo clínico</SectionLabel>
+            <SectionLabel icon={ClipboardList}>Resumo clínico</SectionLabel>
             <div
               style={{
                 display: "grid",
@@ -489,13 +617,18 @@ function ProfilePage({
                 ["Diagnóstico", visit.likely_diagnosis],
                 ["Justificativa clínica", visit.clinical_reasoning],
                 ["Prescrição", visit.prescription_text],
-              ].map(([label, value]) => (
+              ].map(([label, value], index) => {
+                const ClinicalIcon = [AlertTriangle, ClipboardList, FileText, Pill][index];
+                return (
                 <div
                   key={label}
                   style={{ padding: "10px 12px", borderRadius: "10px", background: "#f8f8fa" }}
                 >
                   <div
                     style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "7px",
                       fontSize: "10px",
                       fontWeight: 700,
                       textTransform: "uppercase",
@@ -504,6 +637,7 @@ function ProfilePage({
                       marginBottom: "6px",
                     }}
                   >
+                    <ClinicalIcon size={14} strokeWidth={iconStroke} />
                     {label}
                   </div>
                   {isEditing ? (
@@ -551,7 +685,8 @@ function ProfilePage({
                     </div>
                   )}
                 </div>
-              ))}
+                );
+              })}
             </div>
 
             {isEditing && (
@@ -651,7 +786,7 @@ function HistoryPage({ modal, timeline }) {
             justifyContent: "space-between",
           }}
         >
-          <SectionLabel style={{ margin: 0 }}>Histórico de visitas</SectionLabel>
+          <SectionLabel icon={FileText} style={{ margin: 0 }}>Histórico de visitas</SectionLabel>
           <span style={{ fontSize: "12px", color: "#8e8e93" }}>
             {timeline.length} visita{timeline.length !== 1 ? "s" : ""} anterior
             {timeline.length !== 1 ? "es" : ""}
@@ -674,16 +809,18 @@ function HistoryPage({ modal, timeline }) {
         </div>
       ) : (
         /* Timeline */
-        <div style={{ position: "relative", paddingLeft: "20px" }}>
+        <div style={{ position: "relative", paddingLeft: "26px" }}>
           {/* Vertical line */}
           <div
             style={{
               position: "absolute",
-              left: "7px",
-              top: "14px",
-              bottom: "14px",
-              width: "1px",
-              background: "rgba(0,0,0,.1)",
+              left: "10px",
+              top: "18px",
+              bottom: "18px",
+              width: "2px",
+              borderRadius: "999px",
+              background:
+                "linear-gradient(180deg, rgba(22,80,52,.42), rgba(134,214,163,.24), rgba(148,163,184,.14))",
             }}
           />
 
@@ -712,15 +849,22 @@ function HistoryPage({ modal, timeline }) {
                   <div
                     style={{
                       position: "absolute",
-                      left: "-17px",
-                      top: "18px",
-                      width: "8px",
-                      height: "8px",
+                      left: "-25px",
+                      top: "16px",
+                      width: "22px",
+                      height: "22px",
                       borderRadius: "50%",
-                      background: isRecent ? "#165034" : "rgba(0,0,0,.2)",
-                      border: "2px solid #fbfbfc",
+                      background: isRecent ? "#165034" : "#ffffff",
+                      border: isRecent ? "2px solid #d7f0df" : "2px solid #e5e7eb",
+                      color: isRecent ? "#ffffff" : "#6b7280",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      boxShadow: "0 2px 8px rgba(15,23,42,.08)",
                     }}
-                  />
+                  >
+                    <CalendarClock size={12} strokeWidth={2.2} />
+                  </div>
 
                   {/* Card header */}
                   <div
@@ -732,15 +876,19 @@ function HistoryPage({ modal, timeline }) {
                       marginBottom: "10px",
                     }}
                   >
-                    <div>
+                    <div style={{ minWidth: 0 }}>
                       <div
                         style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
                           fontSize: "15px",
                           fontWeight: 700,
                           color: "#1c1c1e",
                           letterSpacing: "-0.2px",
                         }}
                       >
+                        <FileText size={16} strokeWidth={iconStroke} color="#165034" />
                         {row?.chief_complaint ||
                           row?.return_visit_reason ||
                           (row?.lab_requested
@@ -758,6 +906,7 @@ function HistoryPage({ modal, timeline }) {
                       style={{
                         display: "inline-flex",
                         alignItems: "center",
+                        gap: "5px",
                         padding: "4px 10px",
                         borderRadius: "999px",
                         background: "#f4f4f5",
@@ -767,6 +916,7 @@ function HistoryPage({ modal, timeline }) {
                         whiteSpace: "nowrap",
                       }}
                     >
+                      <CheckCircle2 size={12} strokeWidth={2} />
                       {statusLabelForVisit(row)}
                     </span>
                   </div>
@@ -811,8 +961,12 @@ function HistoryPage({ modal, timeline }) {
                           letterSpacing: ".07em",
                           color: "#8e8e93",
                           marginBottom: "6px",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "6px",
                         }}
                       >
+                        <HeartPulse size={13} strokeWidth={iconStroke} />
                         Sinais vitais
                       </div>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
@@ -1002,6 +1156,7 @@ export function PastVisitHistoryModal({
                     style={{
                       display: "inline-flex",
                       alignItems: "center",
+                      gap: "5px",
                       padding: "3px 10px",
                       borderRadius: "999px",
                       background: "#f4f4f5",
@@ -1010,6 +1165,7 @@ export function PastVisitHistoryModal({
                       fontWeight: 600,
                     }}
                   >
+                    <MapPin size={12} strokeWidth={2} />
                     {inferHospitalStatus(visit)}
                   </span>
                   {/* Vital status badge */}
@@ -1017,6 +1173,7 @@ export function PastVisitHistoryModal({
                     style={{
                       display: "inline-flex",
                       alignItems: "center",
+                      gap: "5px",
                       padding: "3px 10px",
                       borderRadius: "999px",
                       background: isDeceased ? "#fff1f1" : "#eef8f1",
@@ -1025,6 +1182,7 @@ export function PastVisitHistoryModal({
                       fontWeight: 600,
                     }}
                   >
+                    <HeartPulse size={12} strokeWidth={2} />
                     {inferVitalStatus(visit)}
                   </span>
                   {/* Surgery required badge — example of contextual flag */}
@@ -1033,6 +1191,7 @@ export function PastVisitHistoryModal({
                       style={{
                         display: "inline-flex",
                         alignItems: "center",
+                        gap: "5px",
                         padding: "3px 10px",
                         borderRadius: "999px",
                         background: "#fff8e6",
@@ -1041,6 +1200,7 @@ export function PastVisitHistoryModal({
                         fontWeight: 600,
                       }}
                     >
+                      <Scissors size={12} strokeWidth={2} />
                       Cirurgia Requerida
                     </span>
                   )}
@@ -1073,8 +1233,12 @@ export function PastVisitHistoryModal({
                   background: "#f6f6f7",
                   borderColor: "rgba(0,0,0,.08)",
                   fontSize: "12px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "7px",
                 }}
               >
+                <Edit3 size={14} strokeWidth={2} />
                 {modal.editingPatient ? "Cancelar edição" : "Editar perfil"}
               </button>
               <button
@@ -1087,23 +1251,43 @@ export function PastVisitHistoryModal({
                   padding: "8px 14px",
                   borderRadius: "999px",
                   fontSize: "12px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "7px",
                 }}
               >
+                <Download size={14} strokeWidth={2} />
                 {pdfLoadingId === visit.id ? "Gerando..." : "Baixar PDF"}
               </button>
               <button
                 type="button"
                 onClick={onClose}
-                className="btn-secondary"
+                aria-label="Fechar modal"
                 style={{
-                  width: "auto",
-                  padding: "8px 12px",
-                  borderRadius: "999px",
-                  fontSize: "14px",
+                  width: "34px",
+                  height: "34px",
+                  padding: 0,
+                  border: "none",
+                  borderRadius: "50%",
+                  background: "transparent",
+                  color: "#6b7280",
+                  cursor: "pointer",
                   lineHeight: 1,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  transition: "background 0.18s ease, color 0.18s ease",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "#f3f4f6";
+                  e.currentTarget.style.color = "#111827";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "transparent";
+                  e.currentTarget.style.color = "#6b7280";
                 }}
               >
-                ✕
+                <X size={18} strokeWidth={2.2} />
               </button>
             </div>
           </div>
@@ -1133,9 +1317,17 @@ export function PastVisitHistoryModal({
                   color: modal.page === tab ? "#1c1c1e" : "#6b7280",
                   cursor: "pointer",
                   fontFamily: "inherit",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "7px",
                   transition: "background 0.18s ease, color 0.18s ease",
                 }}
               >
+                {tab === "profile" ? (
+                  <UserRound size={14} strokeWidth={2} />
+                ) : (
+                  <FileText size={14} strokeWidth={2} />
+                )}
                 {tab === "profile" ? "Perfil" : "Histórico clínico"}
               </button>
             ))}
