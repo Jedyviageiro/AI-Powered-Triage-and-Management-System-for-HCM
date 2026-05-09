@@ -5,6 +5,7 @@ import LabInsertContent from "../lab-insert/LabInsertContent";
 import LabSettingsContent from "../lab-configuracao/LabSettingsContent";
 import { examLabel } from "../lab-helpers/labExamHelpers";
 import { toSafeNotificationText } from "../lab-helpers/labNotificationHelpers";
+import RoleJoyrideTour from "../../../components/shared/RoleJoyrideTour";
 
 export function LabLayout(props) {
   const {
@@ -61,8 +62,10 @@ export function LabLayout(props) {
       }}
     >
       <style>{CSS}</style>
+      <RoleJoyrideTour role="lab" />
 
       <aside
+        data-tour="role-sidebar"
         style={{
           width: sidebarOpen ? 220 : 60,
           minWidth: sidebarOpen ? 220 : 60,
@@ -186,6 +189,7 @@ export function LabLayout(props) {
                           }
                           openView(item.key);
                         }}
+                        data-tour={`nav-${item.key}`}
                         className={`sidebar-nav-btn w-full text-left px-3 py-2.5 text-[12px] transition-all flex items-center gap-3 border-0 bg-transparent ${activeView === item.key ? "nav-active" : "sidebar-nav-inactive"}`}
                         style={
                           activeView === item.key
@@ -274,6 +278,7 @@ export function LabLayout(props) {
             }}
           >
             <div
+              data-tour="top-search"
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -312,7 +317,7 @@ export function LabLayout(props) {
               />
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <div ref={notificationsPreviewRef} style={{ position: "relative" }}>
+              <div ref={notificationsPreviewRef} data-tour="notifications" style={{ position: "relative" }}>
                 <button
                   type="button"
                   onClick={() => setNotificationsPreviewOpen((prev) => !prev)}
@@ -481,6 +486,7 @@ export function LabLayout(props) {
               <button
                 onClick={loadAll}
                 disabled={loading}
+                data-tour="refresh-action"
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -555,7 +561,7 @@ export function LabLayout(props) {
           </div>
         </header>
 
-        <main style={{ flex: 1, overflowY: "auto", padding: "24px" }}>
+        <main data-tour="role-content" style={{ flex: 1, overflowY: "auto", padding: "24px" }}>
           <div style={{ maxWidth: "1160px", margin: "0 auto" }}>
             {err && (
               <div

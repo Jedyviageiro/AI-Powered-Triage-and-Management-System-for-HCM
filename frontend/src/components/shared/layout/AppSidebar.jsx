@@ -36,6 +36,7 @@ export default function AppSidebar({
     <aside
       className={`sidebar flex flex-col flex-shrink-0 ${open ? "sidebar-open" : "sidebar-closed"}`}
       style={style}
+      data-tour="role-sidebar"
     >
       <div className={`p-4 flex items-center ${open ? "gap-3" : "justify-center"}`}>
         <button
@@ -118,6 +119,7 @@ export default function AppSidebar({
                       }}
                       type="button"
                       onClick={() => onSelect?.(item.key)}
+                      data-tour={`nav-${item.key}`}
                       className={`sidebar-nav-btn w-full text-left px-3 py-2.5 transition-all flex items-center gap-3 relative ${
                         activeKey === item.key ? "nav-active" : "sidebar-nav-inactive"
                       }`}
@@ -156,6 +158,7 @@ export default function AppSidebar({
             <button
               type="button"
               onClick={onFooterAction}
+              data-tour="role-logout"
               className="sidebar-nav-btn w-full px-3 py-2.5 sidebar-nav-inactive transition-colors flex items-center gap-3"
             >
               <svg

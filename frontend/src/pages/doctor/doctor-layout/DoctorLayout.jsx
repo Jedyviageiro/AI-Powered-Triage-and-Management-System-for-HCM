@@ -213,6 +213,7 @@ export default function DoctorLayout(props) {
           left={
             <div style={{ flex: 1, display: "flex", justifyContent: "flex-start" }}>
               <div
+                data-tour="top-search"
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -263,7 +264,7 @@ export default function DoctorLayout(props) {
               <div
                 style={{ display: "flex", alignItems: "center", gap: "8px", marginRight: "8px" }}
               >
-                <div ref={shiftMenuRef} style={{ position: "relative" }}>
+                <div ref={shiftMenuRef} data-tour="shift-status" style={{ position: "relative" }}>
                   <button
                     type="button"
                     onMouseDown={(event) => event.stopPropagation()}
@@ -388,7 +389,7 @@ export default function DoctorLayout(props) {
                 </div>
               </div>
 
-              <div ref={notificationsPreviewRef} style={{ position: "relative" }}>
+              <div ref={notificationsPreviewRef} data-tour="notifications" style={{ position: "relative" }}>
                 <button
                   type="button"
                   onClick={() => {
@@ -542,7 +543,7 @@ export default function DoctorLayout(props) {
           style={{ padding: "0 24px" }}
         />
 
-        <div className="p-8 max-w-6xl mx-auto">
+        <div className="p-8 max-w-6xl mx-auto" data-tour="role-content">
           <div>
             {activeView === "dashboard" && (
               <div className="dash-animate dash-animate-delay-1">

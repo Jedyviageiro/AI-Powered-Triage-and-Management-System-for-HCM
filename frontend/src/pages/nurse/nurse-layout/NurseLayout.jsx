@@ -15,6 +15,7 @@ import {
   VisitPdfTemplateModal,
 } from "../nurse-patients/PastVisitHistoryModal";
 import ConfirmDialog from "../../../components/shared/ConfirmDialog";
+import RoleJoyrideTour from "../../../components/shared/RoleJoyrideTour";
 
 export function NurseLayout(props) {
   const {
@@ -631,10 +632,12 @@ export function NurseLayout(props) {
           line-height: 1.4;
         }
       `}</style>
+      <RoleJoyrideTour role="nurse" />
 
       {/* Sidebar */}
       <aside
         className={`sidebar flex flex-col flex-shrink-0 ${sidebarOpen ? "sidebar-open" : "sidebar-closed"}`}
+        data-tour="role-sidebar"
       >
         <div className="p-4 flex items-center gap-3">
           <button
@@ -715,6 +718,7 @@ export function NurseLayout(props) {
                             }
                             openView(item.key);
                           }}
+                          data-tour={`nav-${item.key}`}
                           className={`sidebar-nav-btn nav-item-btn w-full text-left px-3 py-2.5 text-[12px] font-medium transition-all flex items-center gap-3 relative focus:outline-none ${activeView === item.key ? "nav-active" : "sidebar-nav-inactive"}`}
                           style={
                             activeView === item.key
@@ -804,6 +808,7 @@ export function NurseLayout(props) {
             }}
           >
             <div
+              data-tour="top-search"
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -855,7 +860,7 @@ export function NurseLayout(props) {
                 <div
                   style={{ display: "flex", alignItems: "center", gap: "8px", marginRight: "8px" }}
                 >
-                  <div style={{ position: "relative" }}>
+                  <div data-tour="shift-status" style={{ position: "relative" }}>
                     <button
                       type="button"
                       onMouseDown={(event) => event.stopPropagation()}
@@ -1000,7 +1005,7 @@ export function NurseLayout(props) {
                   </div>
                 </div>
               )}
-              <div ref={notificationsPreviewRef} style={{ position: "relative" }}>
+              <div ref={notificationsPreviewRef} data-tour="notifications" style={{ position: "relative" }}>
                 <button
                   type="button"
                   onClick={() => {
@@ -1207,6 +1212,7 @@ export function NurseLayout(props) {
 
         <div
           className="p-8 mx-auto"
+          data-tour="role-content"
           style={{ maxWidth: activeView === "patients" ? "none" : "64rem", width: "100%" }}
         >
           {/* ============================================================
