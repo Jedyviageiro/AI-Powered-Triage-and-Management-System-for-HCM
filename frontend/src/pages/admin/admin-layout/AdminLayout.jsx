@@ -1,4 +1,5 @@
 import AppNavbar from "../../../components/shared/layout/AppNavbar.jsx";
+import { HeaderBackButton, HeaderProfile } from "../../../components/shared/layout/HeaderControls.jsx";
 import { ADMIN_VIEW_META } from "../admin-config/adminNavigationConfig.jsx";
 import { AdminButton } from "../admin-helpers/adminUi.jsx";
 
@@ -17,6 +18,7 @@ export function AdminLayout({
   onRefresh,
   onCreateClick,
   onLogout,
+  me,
 }) {
   const meta = ADMIN_VIEW_META[activeView] || { title: "Admin", subtitle: "" };
   const logoImage = "/assets/logo_icon.svg";
@@ -259,18 +261,26 @@ export function AdminLayout({
       <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
         <AppNavbar
           left={
-            <div>
-              <div style={{ fontSize: 18, fontWeight: 800, color: "#0f172a" }}>{meta.title}</div>
-              <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>{meta.subtitle}</div>
+            activeView === "dashboard" ? (
+              <div />
+            ) : (
+              <HeaderBackButton onClick={() => setActiveView("dashboard")} />
+            )
+          }
+          center={
+            <div style={{ minWidth: 220, textAlign: "center" }}>
+              <div style={{ fontSize: 14, fontWeight: 800, color: "#24352d" }}>{meta.title}</div>
+              <div style={{ fontSize: 11, color: "#7b8b82", marginTop: 2 }}>{meta.subtitle}</div>
             </div>
           }
           right={
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-end" }}>
-              <AdminButton onClick={onRefresh}>Actualizar</AdminButton>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-end", alignItems: "center" }}>
+              <AdminButton onClick={onRefresh}>Atualizar</AdminButton>
               <AdminButton primary onClick={onCreateClick}>Novo utilizador</AdminButton>
+              <HeaderProfile user={me} fallback="Admin" subtitle="Administrador" />
             </div>
           }
-          style={{ borderBottom: "1px solid #e2e8f0" }}
+          style={{ borderBottom: "1px solid rgba(220, 229, 224, 0.72)" }}
         />
 
         <main style={{ flex: 1, overflowY: "auto", background: "linear-gradient(180deg, #f8fbf8 0%, #f1f5f9 100%)" }}>

@@ -212,7 +212,7 @@ export function useNurseDerivedState({
           hospital === "BED_REST" ||
           hospital === "IN_HOSPITAL" ||
           disposition === "BED_REST" ||
-          disposition === "ADMIT_URGENT"
+          disposition === "REFER_SPECIALIST"
         );
       }),
     [queue]

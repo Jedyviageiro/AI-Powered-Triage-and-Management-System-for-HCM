@@ -354,9 +354,6 @@ export function useDoctorConsultationActions(args) {
         setQueue((prev) =>
           (Array.isArray(prev) ? prev : []).filter((visit) => Number(visit?.id) !== finishedVisitId)
         );
-        setLabPendingRequests((prev) =>
-          (Array.isArray(prev) ? prev : []).filter((visit) => Number(visit?.id) !== finishedVisitId)
-        );
         clearDoctorConsultationWorkspace({
           setSelectedVisit,
           setTriage,
@@ -484,6 +481,10 @@ export function useDoctorConsultationActions(args) {
           const suggestedFinalDecision = String(
             res?.follow_up_support?.final_decision || ""
           ).trim();
+          const safeSuggestedFinalDecision =
+            suggestedFinalDecision === "ADMIT_URGENT"
+              ? "REFER_SPECIALIST"
+              : suggestedFinalDecision;
 
           if (suggestedEvolution && !followUpDiagnosisEvolution) {
             setFollowUpDiagnosisEvolution(suggestedEvolution);
@@ -495,11 +496,11 @@ export function useDoctorConsultationActions(args) {
             setFollowUpPrescriptionDecision(suggestedPrescriptionDecision);
           }
           if (
-            suggestedFinalDecision &&
-            suggestedFinalDecision !== "LAB_ONLY" &&
+            safeSuggestedFinalDecision &&
+            safeSuggestedFinalDecision !== "LAB_ONLY" &&
             !String(planDraft?.disposition_plan || "").trim()
           ) {
-            updatePlanField("disposition_plan", suggestedFinalDecision);
+            updatePlanField("disposition_plan", safeSuggestedFinalDecision);
           }
         }
         if (persisted) setSelectedVisit(persisted);
@@ -636,11 +637,11 @@ export function useDoctorConsultationActions(args) {
     async (row) => {
       if (!row?.id) return;
       try {
-        await resetDoctorFollowupToWaiting(row.id);
+        await resetDoctorFollowupToWaiting(row.id, { forceFullConsultation: true });
         showPopup(
           "success",
           "Nova consulta criada",
-          "Paciente devolvido ao fluxo normal de triagem."
+          "Criamos uma nova consulta ligada ao atendimento anterior, sem alterar o historico."
         );
         await loadQueue();
       } catch (e) {
@@ -668,10 +669,13 @@ export function useDoctorConsultationActions(args) {
         preview = await reopenDoctorFollowupVisit({ visitId, preview, sourceMeta, loadQueue });
       } catch (e) {
         safeSet(() => setErr(e.message || "Não foi possível preparar a reavaliação."));
+        return;
       }
-      await openVisit(visitId, {
+      const preparedVisitId = preview?.id || visitId;
+      await openVisit(preparedVisitId, {
         ...(preview || sourceMeta || {}),
         is_followup_visit: true,
+        source_visit_id: visitId,
       });
       safeSet(() => {
         setReevaluationContext(buildReevaluationContext(sourceMeta || preview));
@@ -761,6 +765,9 @@ export function useDoctorConsultationActions(args) {
               },
             })
           )
+          .then(async () => {
+            await loadQueue();
+          })
           .catch((error) => {
             setErr(error?.message || "Nao foi possivel enviar o pedido ao laboratorio.");
           });
@@ -775,9 +782,11 @@ export function useDoctorConsultationActions(args) {
   }, [
     labOrderDraft,
     labRequestSupport,
+    loadQueue,
     planDraft,
     selectedLabCollectionRule,
     selectedLabProtocol,
+    selectedVisit,
     setErr,
     setLabOrderConfirmed,
     setLabOrderDraft,

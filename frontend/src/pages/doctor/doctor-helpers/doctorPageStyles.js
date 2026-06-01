@@ -34,10 +34,10 @@ export const doctorPageStyles = `
         .triage-input::placeholder { color: #d1d5db; }
         .triage-input:focus { outline: none; border-color: #165034; }
         .triage-label { font-size: 10px; font-weight: 700; color: #374151; margin-bottom: 4px; display: block; letter-spacing: 0.08em; text-transform: uppercase; }
-        .btn-primary { background: #165034; color: white; border: 1px solid #165034; border-radius: 999px; padding: 11px 20px; font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; transition: background 0.15s, border-color 0.15s; width: 100%; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; line-height: 1.1; }
+        .btn-primary { background: #165034; color: white; border: 1px solid #165034; border-radius: 999px; padding: 0 16px; font-size: 13px; font-weight: 700; font-family: inherit; cursor: pointer; transition: background 0.15s, border-color 0.15s; width: 100%; min-height: 40px; display: inline-flex; align-items: center; justify-content: center; line-height: 1.1; box-shadow: none; }
         .btn-primary:hover:not(:disabled) { background: #0c3a24; border-color: #0c3a24; }
         .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
-        .btn-secondary { background: #f3f4f6; color: #374151; border: 1px solid #e5e7eb; border-radius: 999px; padding: 11px 20px; font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; transition: background 0.15s, border-color 0.15s; width: 100%; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; line-height: 1.1; }
+        .btn-secondary { background: #ffffff; color: #374151; border: 1px solid #d1d5db; border-radius: 999px; padding: 0 16px; font-size: 13px; font-weight: 700; font-family: inherit; cursor: pointer; transition: background 0.15s, border-color 0.15s; width: 100%; min-height: 40px; display: inline-flex; align-items: center; justify-content: center; line-height: 1.1; box-shadow: none; }
         .btn-secondary:hover:not(:disabled) { background: #e5e7eb; }
         .btn-secondary:disabled { opacity: 0.45; cursor: not-allowed; }
         .form-card { background: white; border: 1px solid #f0f0f0; border-radius: 16px; padding: 28px; box-shadow: 0 1px 8px rgba(0,0,0,0.04); }

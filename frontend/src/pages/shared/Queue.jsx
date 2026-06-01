@@ -399,7 +399,7 @@ export default function Queue() {
 
               <button
                 onClick={() => loadQueue({ silent: true })}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-[#165034] bg-[#165034] px-4 text-[13px] font-bold text-white transition hover:bg-[#0c3a24]"
                 title="Atualizar fila"
               >
                 <FiRefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
@@ -408,7 +408,7 @@ export default function Queue() {
 
               <button
                 onClick={logout}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-slate-900 px-4 text-[13px] font-bold text-white transition hover:bg-slate-800"
               >
                 <FiLogOut className="h-4 w-4" />
                 Sair

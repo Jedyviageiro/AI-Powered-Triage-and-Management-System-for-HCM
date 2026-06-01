@@ -601,7 +601,7 @@ export default function DoctorConsultationPlanStep(props) {
                   }
                   if (suggestedTime) updatePlanField("follow_up_when", suggestedTime);
                 }
-                if (nextDisposition !== "BED_REST" && nextDisposition !== "ADMIT_URGENT") {
+                if (nextDisposition !== "BED_REST") {
                   setSelectedRoomCode("");
                 }
               }}
@@ -634,8 +634,8 @@ export default function DoctorConsultationPlanStep(props) {
                 lineHeight: 1.45,
               }}
             >
-              A decisão clínica é do médico. O registo do internamento/repouso e a atribuição de
-              leito ficam a cargo da enfermagem ou da equipa administrativa.
+              A decisão clínica é do médico. O registo de internamento formal, transferência ou
+              leito fica a cargo da enfermagem ou da equipa administrativa.
             </div>
           </div>
         </div>
@@ -654,8 +654,8 @@ export default function DoctorConsultationPlanStep(props) {
               Opções da decisão final
             </div>
             <p style={{ margin: 0, fontSize: 12, color: "#4b5563", lineHeight: 1.55 }}>
-              O médico pode dar alta, agendar novo follow-up, solicitar exame, internar o paciente
-              ou referir para outro médico/departamento, conforme a evolução clínica.
+              O médico pode dar alta, agendar novo follow-up, solicitar exame ou referir para outra
+              avaliação clínica, conforme a evolução.
             </p>
           </div>
         )}
@@ -791,8 +791,7 @@ export default function DoctorConsultationPlanStep(props) {
           </div>
         )}
 
-        {(planDraft.disposition_plan === "BED_REST" ||
-          planDraft.disposition_plan === "ADMIT_URGENT") && (
+        {planDraft.disposition_plan === "BED_REST" && (
           <div
             style={{
               marginTop: 16,
@@ -803,12 +802,12 @@ export default function DoctorConsultationPlanStep(props) {
             }}
           >
             <div className="cf-label" style={{ marginBottom: 6 }}>
-              Admissão do paciente
+              Repouso e observação
             </div>
             <p style={{ margin: 0, fontSize: 12, color: "#4b5563", lineHeight: 1.55 }}>
-              O médico apenas decide pelo internamento ou repouso. Após finalizar a consulta, a
-              enfermagem ou a equipa administrativa irá registrar a admissão e atribuir o
-              leito/sala.
+              O médico recomenda repouso ou observação clínica. Qualquer internamento formal,
+              transferência ou atribuição de leito fica a cargo da enfermagem/administrativo
+              conforme o fluxo do hospital.
             </p>
           </div>
         )}

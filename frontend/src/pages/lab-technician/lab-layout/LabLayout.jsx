@@ -6,6 +6,7 @@ import LabSettingsContent from "../lab-configuracao/LabSettingsContent";
 import { examLabel } from "../lab-helpers/labExamHelpers";
 import { toSafeNotificationText } from "../lab-helpers/labNotificationHelpers";
 import RoleJoyrideTour from "../../../components/shared/RoleJoyrideTour";
+import { HeaderBackButton } from "../../../components/shared/layout/HeaderControls.jsx";
 
 export function LabLayout(props) {
   const {
@@ -255,39 +256,50 @@ export function LabLayout(props) {
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
         <header
           style={{
-            height: "52px",
-            background: "#fff",
+            minHeight: "72px",
+            background: "rgba(246, 248, 247, 0.94)",
             display: "flex",
             alignItems: "center",
             position: "sticky",
             top: 0,
             zIndex: 20,
             flexShrink: 0,
+            borderBottom: "1px solid rgba(220, 229, 224, 0.72)",
+            boxShadow: "0 14px 34px rgba(15, 23, 42, 0.05)",
+            backdropFilter: "blur(14px)",
           }}
         >
           <div
             style={{
-              maxWidth: "1160px",
+              maxWidth: "1320px",
               margin: "0 auto",
               width: "100%",
-              padding: "0 24px",
+              padding: "10px 24px",
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
               gap: 16,
+              minWidth: 0,
             }}
           >
+            {activeView === "dashboard" ? (
+              <div />
+            ) : (
+              <HeaderBackButton onClick={() => openView("dashboard")} />
+            )}
             <div
               data-tour="top-search"
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: "8px",
-                background: "#f2f2f7",
+                gap: "10px",
+                background: "#ffffff",
                 borderRadius: "999px",
-                padding: "8px 14px",
-                width: "280px",
-                border: "0.5px solid rgba(0,0,0,.05)",
+                padding: "10px 18px",
+                width: "min(340px, 34vw)",
+                minWidth: "220px",
+                border: "1px solid rgba(226, 232, 240, 0.88)",
+                boxShadow: "none",
               }}
             >
               <svg
@@ -322,24 +334,25 @@ export function LabLayout(props) {
                   type="button"
                   onClick={() => setNotificationsPreviewOpen((prev) => !prev)}
                   style={{
-                    width: "36px",
-                    height: "36px",
+                    width: "42px",
+                    height: "42px",
                     borderRadius: "50%",
-                    border: "none",
-                    background: "transparent",
+                    border: "1px solid rgba(226, 232, 240, 0.9)",
+                    background: notificationsPreviewOpen ? "#e7f4ee" : "#ffffff",
                     cursor: "pointer",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    color: notificationsPreviewOpen ? "#165034" : "#9ca3af",
+                    color: notificationsPreviewOpen ? "#165034" : "#5f6f66",
                     transition: "background 0.15s",
                     position: "relative",
+                    boxShadow: "0 12px 24px rgba(15, 23, 42, 0.06)",
                   }}
                   onMouseEnter={(event) => {
-                    event.currentTarget.style.background = "#f3f4f6";
+                    event.currentTarget.style.background = "#e7f4ee";
                   }}
                   onMouseLeave={(event) => {
-                    event.currentTarget.style.background = "transparent";
+                    event.currentTarget.style.background = notificationsPreviewOpen ? "#e7f4ee" : "#ffffff";
                   }}
                   title="Notificações"
                 >
@@ -490,15 +503,18 @@ export function LabLayout(props) {
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: "5px",
-                  fontSize: "12px",
-                  fontWeight: "600",
-                  padding: "6px 12px",
-                  borderRadius: "8px",
-                  border: "none",
-                  background: "transparent",
-                  color: "#007aff",
-                  cursor: "pointer",
+                  justifyContent: "center",
+                  gap: "8px",
+                  minHeight: "40px",
+                  fontSize: "13px",
+                  fontWeight: "700",
+                  padding: "0 16px",
+                  borderRadius: "999px",
+                  border: "1px solid #165034",
+                  background: "#165034",
+                  color: "#ffffff",
+                  cursor: loading ? "not-allowed" : "pointer",
+                  opacity: loading ? 0.65 : 1,
                   fontFamily: "inherit",
                 }}
               >

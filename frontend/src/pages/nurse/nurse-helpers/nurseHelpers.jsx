@@ -454,7 +454,7 @@ export const inferHospitalStatus = (visit) => {
   const plan = String(visit?.disposition_plan || "")
     .trim()
     .toUpperCase();
-  if (plan === "ADMIT_URGENT") return "Internado";
+  if (plan === "REFER_SPECIALIST") return "Referido para avaliação";
   if (plan === "BED_REST") return "Repouso / Acamado";
   if (plan === "HOME") return "Alta";
   if (plan === "RETURN_VISIT") return "Alta com Retorno";

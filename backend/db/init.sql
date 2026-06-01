@@ -70,6 +70,10 @@ ALTER TABLE visits ADD COLUMN IF NOT EXISTS no_charge_chronic BOOLEAN NOT NULL D
 ALTER TABLE visits ADD COLUMN IF NOT EXISTS no_charge_reason TEXT NULL;
 ALTER TABLE visits ADD COLUMN IF NOT EXISTS plan_accepted_at TIMESTAMP NULL;
 ALTER TABLE visits ADD COLUMN IF NOT EXISTS plan_accepted_by INTEGER NULL REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE visits ADD COLUMN IF NOT EXISTS visit_type VARCHAR(30) NOT NULL DEFAULT 'NEW_CONSULTATION';
+ALTER TABLE visits ADD COLUMN IF NOT EXISTS parent_visit_id INTEGER NULL REFERENCES visits(id) ON DELETE SET NULL;
+ALTER TABLE visits ADD COLUMN IF NOT EXISTS lab_return_kind VARCHAR(30) NULL;
+ALTER TABLE visits ADD COLUMN IF NOT EXISTS converted_to_consultation_at TIMESTAMP NULL;
 
 -- TRIAGE (1 por visita)
 CREATE TABLE IF NOT EXISTS triage (
@@ -92,4 +96,6 @@ CREATE INDEX IF NOT EXISTS idx_patients_code ON patients(clinical_code);
 CREATE INDEX IF NOT EXISTS idx_patients_name ON patients(full_name);
 CREATE INDEX IF NOT EXISTS idx_visits_status ON visits(status);
 CREATE INDEX IF NOT EXISTS idx_visits_priority ON visits(priority);
+CREATE INDEX IF NOT EXISTS idx_visits_parent ON visits(parent_visit_id);
+CREATE INDEX IF NOT EXISTS idx_visits_type ON visits(visit_type);
 CREATE INDEX IF NOT EXISTS idx_triage_visit ON triage(visit_id);

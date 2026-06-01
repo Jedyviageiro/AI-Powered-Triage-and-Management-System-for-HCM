@@ -109,5 +109,10 @@ router.patch(
   requireRole("DOCTOR", "ADMIN"),
   visitController.scheduleVisitReturn
 );
+router.post(
+  "/:id/open-return",
+  requireRole("DOCTOR", "ADMIN"),
+  visitController.openReturnVisit
+);
 
 module.exports = router;

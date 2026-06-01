@@ -33,11 +33,16 @@ export default function AppButton({
       className={className}
       style={{
         minHeight: 40,
-        padding: "9px 16px",
+        padding: "0 16px",
         borderRadius: 999,
         fontFamily: "'IBM Plex Sans', system-ui, sans-serif",
         fontSize: 13,
-        fontWeight: 600,
+        fontWeight: 700,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        lineHeight: 1.1,
+        boxShadow: "none",
         cursor: disabled ? "not-allowed" : "pointer",
         opacity: disabled ? 0.6 : 1,
         transition: "background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease",

@@ -161,21 +161,26 @@ export function AdminButton({
       onClick={onClick}
       disabled={disabled}
       style={{
-        padding: small ? "5px 10px" : "8px 14px",
-        fontSize: small ? 11 : 12,
-        fontWeight: 600,
+        minHeight: small ? 34 : 40,
+        padding: small ? "0 12px" : "0 16px",
+        fontSize: small ? 12 : 13,
+        fontWeight: 700,
         borderRadius: 999,
         border: `1px solid ${danger ? "#fca5a5" : primary ? "#165034" : "#cbd5e1"}`,
         background: danger
-          ? "linear-gradient(180deg, #fff1f2 0%, #ffe4e6 100%)"
+          ? "#fff1f2"
           : primary
-            ? "linear-gradient(180deg, #1a5b39 0%, #0f4428 100%)"
-            : "linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)",
+            ? "#165034"
+            : "#ffffff",
         color: danger ? "#9f1239" : primary ? "#ffffff" : "#334155",
         cursor: disabled ? "not-allowed" : "pointer",
         opacity: disabled ? 0.65 : 1,
         whiteSpace: "nowrap",
-        boxShadow: primary ? "0 10px 24px rgba(12, 58, 36, 0.16)" : "0 6px 18px rgba(15, 23, 42, 0.05)",
+        boxShadow: "none",
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        lineHeight: 1.1,
         ...style,
       }}
     >

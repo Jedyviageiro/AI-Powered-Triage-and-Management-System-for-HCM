@@ -1,4 +1,12 @@
 import AppNavbar from "../../../components/shared/layout/AppNavbar";
+import {
+  HeaderBackButton,
+  HeaderBellIcon,
+  HeaderIconButton,
+  HeaderMailIcon,
+  HeaderProfile,
+  HeaderSearch,
+} from "../../../components/shared/layout/HeaderControls.jsx";
 import DoctorAgenda from "../doctor-agenda/DoctorAgenda";
 import { DoctorScheduledFollowupsView } from "../doctor-followups/DoctorScheduledFollowups";
 import { DoctorWaitingQueueView } from "../doctor-waitingqueue/DoctorWaitingQueue";
@@ -211,56 +219,24 @@ export default function DoctorLayout(props) {
       <main className="flex-1 overflow-y-auto">
         <AppNavbar
           left={
-            <div style={{ flex: 1, display: "flex", justifyContent: "flex-start" }}>
-              <div
-                data-tour="top-search"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  width: "100%",
-                  maxWidth: "360px",
-                  background: "#f9fafb",
-                  border: `1px solid ${topSearchFocus ? "#86efac" : "#dbe5df"}`,
-                  borderRadius: "999px",
-                  padding: "9px 16px",
-                  transition: "border-color 0.15s",
-                }}
-              >
-                <svg
-                  width="15"
-                  height="15"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="#9ca3af"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <circle cx="11" cy="11" r="8" />
-                  <path d="m21 21-4.35-4.35" />
-                </svg>
-                <input
-                  placeholder="Pesquisar paciente"
-                  value={topNavSearch}
-                  onChange={(e) => setTopNavSearch(e.target.value)}
-                  onFocus={() => setTopSearchFocus(true)}
-                  onBlur={() => setTopSearchFocus(false)}
-                  onKeyDown={(e) => e.key === "Enter" && searchFromTopNav()}
-                  style={{
-                    border: "none",
-                    background: "transparent",
-                    outline: "none",
-                    fontSize: "13px",
-                    color: "#374151",
-                    width: "100%",
-                  }}
-                />
-              </div>
-            </div>
+            activeView === "dashboard" ? (
+              <div />
+            ) : (
+              <HeaderBackButton onClick={() => openView("dashboard")} />
+            )
+          }
+          center={
+            <HeaderSearch
+              placeholder="Pesquisar paciente"
+              value={topNavSearch}
+              onChange={(e) => setTopNavSearch(e.target.value)}
+              onFocus={() => setTopSearchFocus(true)}
+              onBlur={() => setTopSearchFocus(false)}
+              onEnter={searchFromTopNav}
+            />
           }
           right={
-            <div style={{ display: "flex", alignItems: "center", gap: "4px", flexShrink: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
               <div
                 style={{ display: "flex", alignItems: "center", gap: "8px", marginRight: "8px" }}
               >
@@ -389,66 +365,19 @@ export default function DoctorLayout(props) {
                 </div>
               </div>
 
-              <div ref={notificationsPreviewRef} data-tour="notifications" style={{ position: "relative" }}>
-                <button
-                  type="button"
+              <div ref={notificationsPreviewRef} style={{ position: "relative" }}>
+                <HeaderIconButton
                   onClick={() => {
                     setNotificationsPreviewOpen((prev) => !prev);
                     if (!notificationsPreviewOpen) loadNotifications();
                   }}
-                  style={{
-                    width: "36px",
-                    height: "36px",
-                    borderRadius: "50%",
-                    border: "none",
-                    background: "transparent",
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "#9ca3af",
-                    position: "relative",
-                    transition: "background 0.15s",
-                  }}
-                  title="Notificações"
+                  title="Notificacoes"
+                  badge={notificationsUnread}
+                  active={notificationsPreviewOpen}
+                  tour="notifications"
                 >
-                  <svg
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                  </svg>
-                  {notificationsUnread > 0 && (
-                    <span
-                      style={{
-                        position: "absolute",
-                        top: "1px",
-                        right: "1px",
-                        minWidth: "16px",
-                        height: "16px",
-                        borderRadius: "999px",
-                        background: "#ef4444",
-                        border: "1.5px solid white",
-                        color: "white",
-                        fontSize: "10px",
-                        fontWeight: 700,
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        padding: "0 4px",
-                      }}
-                    >
-                      {notificationsUnread > 99 ? "99+" : notificationsUnread}
-                    </span>
-                  )}
-                </button>
+                  <HeaderBellIcon />
+                </HeaderIconButton>
                 {notificationsPreviewOpen && (
                   <div
                     style={{
@@ -523,24 +452,13 @@ export default function DoctorLayout(props) {
                 )}
               </div>
 
-              <div
-                style={{
-                  marginLeft: "6px",
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  color: "#374151",
-                  maxWidth: "220px",
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                }}
-              >
-                {me?.full_name || "Médico(a)"}
-                {!!me?.specialization && ` · ${me.specialization}`}
-              </div>
+              <HeaderIconButton title="Mensagens">
+                <HeaderMailIcon />
+              </HeaderIconButton>
+              <HeaderProfile user={me} fallback="Medico(a)" subtitle={me?.specialization || "Medico"} />
             </div>
           }
-          style={{ padding: "0 24px" }}
+          style={{ padding: "0 12px" }}
         />
 
         <div className="p-8 max-w-6xl mx-auto" data-tour="role-content">

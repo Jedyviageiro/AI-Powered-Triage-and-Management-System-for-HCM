@@ -109,6 +109,7 @@ optgroup {
     background: #165034;
     color: #fff;
     border-color: #165034;
+    box-shadow: none;
   }
 
   .ui-btn-primary:hover:not(:disabled) {
@@ -117,9 +118,10 @@ optgroup {
   }
 
   .ui-btn-secondary {
-    background: #f3f4f6;
+    background: #fff;
     color: #374151;
-    border-color: #e5e7eb;
+    border-color: #d1d5db;
+    box-shadow: none;
   }
 
   .ui-btn-secondary:hover:not(:disabled) {

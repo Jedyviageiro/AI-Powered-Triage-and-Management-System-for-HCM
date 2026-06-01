@@ -4,12 +4,13 @@ const jwt = require("jsonwebtoken");
 const login = async (req, res) => {
   try {
     const { username, password } = req.body;
+    const normalizedUsername = String(username || "").trim();
 
-    if (!username || !password) {
+    if (!normalizedUsername || !password) {
       return res.status(400).json({ error: "username e password são obrigatórios" });
     }
 
-    const result = await userModel.authenticate(username, password);
+    const result = await userModel.authenticate(normalizedUsername, password);
 
     if (!result.ok) {
       if (result.reason === "ACCOUNT_DISABLED") {

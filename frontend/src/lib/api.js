@@ -185,6 +185,12 @@ export const api = {
       body: payload,
     }),
 
+  openReturnVisit: (visitId, payload = {}) =>
+    request(`/visits/${visitId}/open-return`, {
+      method: "POST",
+      body: payload,
+    }),
+
   // atribuir médico
   assignDoctorToVisit: (visitId, doctorId) =>
     request(`/visits/${visitId}/assign-doctor`, {

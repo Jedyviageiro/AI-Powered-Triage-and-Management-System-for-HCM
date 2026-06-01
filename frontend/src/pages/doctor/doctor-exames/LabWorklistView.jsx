@@ -211,16 +211,19 @@ export default function LabWorklistView({
               style={{
                 display: "inline-flex",
                 alignItems: "center",
-                gap: 6,
+                justifyContent: "center",
+                gap: 8,
+                minHeight: 40,
                 borderRadius: 999,
-                border: `1px solid ${BORDER}`,
-                background: "#fff",
-                padding: "6px 14px",
-                fontSize: 12,
-                fontWeight: 600,
-                color: "#374151",
+                border: "1px solid #165034",
+                background: "#165034",
+                padding: "0 16px",
+                fontSize: 13,
+                fontWeight: 700,
+                color: "#ffffff",
                 cursor: loading ? "not-allowed" : "pointer",
                 opacity: loading ? 0.6 : 1,
+                boxShadow: "none",
               }}
             >
               <svg

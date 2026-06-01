@@ -9,10 +9,10 @@ const PRIORITY_META = [
 ];
 
 const DESTINATION_META = {
-  ADMIT_URGENT: "Internamento Urgente",
   BED_REST: "Repouso / Acamado",
   HOME: "Alta para Casa",
   RETURN_VISIT: "Retorno Programado",
+  REFER_SPECIALIST: "Referido para Avaliação",
 };
 
 const formatDate = (iso) => {

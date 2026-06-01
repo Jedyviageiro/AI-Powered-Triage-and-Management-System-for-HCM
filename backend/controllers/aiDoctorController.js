@@ -28,6 +28,14 @@ const clipEnum = (value, allowed = []) => {
   return allowed.includes(normalized) ? normalized : "";
 };
 
+const normalizeDispositionPlan = (value) => {
+  const normalized = String(value || "")
+    .trim()
+    .toUpperCase();
+  if (normalized === "ADMIT_URGENT") return "REFER_SPECIALIST";
+  return clipEnum(normalized, ["BED_REST", "HOME", "RETURN_VISIT", "REFER_SPECIALIST"]);
+};
+
 const normalizeWhoReferences = (value) => {
   if (!Array.isArray(value)) return [];
   return value
@@ -59,7 +67,10 @@ const normalizeDoctorResult = (result = {}) => {
         : { when: "", instructions: "", return_if: "" },
     disposition:
       result.disposition && typeof result.disposition === "object"
-        ? result.disposition
+        ? {
+            ...result.disposition,
+            plan: normalizeDispositionPlan(result.disposition.plan),
+          }
         : { plan: "", reason: "" },
     chronic_no_charge:
       result.chronic_no_charge && typeof result.chronic_no_charge === "object"
@@ -141,7 +152,6 @@ const normalizeDoctorResult = (result = {}) => {
             final_decision: clipEnum(result.follow_up_support.final_decision, [
               "HOME",
               "RETURN_VISIT",
-              "ADMIT_URGENT",
               "REFER_SPECIALIST",
               "LAB_ONLY",
             ]),

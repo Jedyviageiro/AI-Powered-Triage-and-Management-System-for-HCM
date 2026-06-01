@@ -652,7 +652,8 @@ export function NurseNewTriageView({
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                     <div>
                       <label className="triage-label">Sexo</label>
-                      <select className="triage-input" value={pSex} onChange={(e) => setPSex(e.target.value)}>
+                      <select className="triage-input" value={pSex} onChange={(e) => setPSex(e.target.value)} required>
+                        <option value="">Selecionar sexo</option>
                         <option value="M">Masculino</option>
                         <option value="F">Feminino</option>
                       </select>
@@ -676,7 +677,7 @@ export function NurseNewTriageView({
                   </div>
                   <div>
                     <label className="triage-label">Morada</label>
-                    <input className="triage-input" value={pAddress} onChange={(e) => setPAddress(e.target.value)} placeholder="Opcional" />
+                    <input className="triage-input" value={pAddress} onChange={(e) => setPAddress(e.target.value)} placeholder="Bairro, rua ou ponto de referência" required />
                   </div>
                   <button disabled={creatingPatient} className="btn-secondary">
                     {creatingPatient ? "Cadastrando..." : "Cadastrar Paciente"}

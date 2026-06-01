@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Joyride, STATUS } from "react-joyride";
 import { HelpCircle } from "lucide-react";
 
-const ROLE_TOUR_STORAGE_KEY = "pediatric-system-role-tour-seen";
+const SYSTEM_GREEN = "#165034";
 
 const sharedLocale = {
   back: "Voltar",
@@ -149,32 +149,15 @@ const buildSteps = (role) => {
 };
 
 export default function RoleJoyrideTour({ role }) {
-  const storageKey = `${ROLE_TOUR_STORAGE_KEY}:${role}`;
   const steps = useMemo(() => buildSteps(role), [role]);
   const [run, setRun] = useState(false);
   const [tourKey, setTourKey] = useState(0);
 
-  useEffect(() => {
-    if (!role) return;
-    if (window.localStorage.getItem(storageKey) !== "true") {
-      const timerId = window.setTimeout(() => setRun(true), 600);
-      return () => window.clearTimeout(timerId);
+  const handleCallback = useCallback((data) => {
+    if ([STATUS.FINISHED, STATUS.SKIPPED].includes(data.status)) {
+      setRun(false);
     }
-  }, [role, storageKey]);
-
-  const markSeen = useCallback(() => {
-    window.localStorage.setItem(storageKey, "true");
-  }, [storageKey]);
-
-  const handleCallback = useCallback(
-    (data) => {
-      if ([STATUS.FINISHED, STATUS.SKIPPED].includes(data.status)) {
-        setRun(false);
-        markSeen();
-      }
-    },
-    [markSeen]
-  );
+  }, []);
 
   const restartTour = () => {
     setTourKey((value) => value + 1);
@@ -187,10 +170,19 @@ export default function RoleJoyrideTour({ role }) {
         key={tourKey}
         callback={handleCallback}
         continuous
+        floaterProps={{
+          disableAnimation: false,
+          options: {
+            preventOverflow: {
+              boundariesElement: "viewport",
+              padding: 16,
+            },
+          },
+        }}
         hideCloseButton={false}
         locale={sharedLocale}
         run={run}
-        scrollOffset={90}
+        scrollOffset={96}
         showProgress
         showSkipButton
         steps={steps}
@@ -199,13 +191,17 @@ export default function RoleJoyrideTour({ role }) {
             arrowColor: "#ffffff",
             backgroundColor: "#ffffff",
             overlayColor: "rgba(15, 23, 42, 0.42)",
-            primaryColor: "#165034",
+            primaryColor: SYSTEM_GREEN,
             textColor: "#1f2937",
+            width: 360,
             zIndex: 2500,
           },
           tooltip: {
             borderRadius: 8,
             boxShadow: "0 18px 50px rgba(15, 23, 42, 0.18)",
+            maxWidth: "calc(100vw - 32px)",
+            overflow: "hidden",
+            width: "min(360px, calc(100vw - 32px))",
           },
           tooltipTitle: {
             color: "#0f172a",
@@ -216,21 +212,32 @@ export default function RoleJoyrideTour({ role }) {
             fontSize: 13,
             lineHeight: 1.5,
             padding: "8px 0 12px",
+            overflowWrap: "anywhere",
+          },
+          buttonClose: {
+            color: SYSTEM_GREEN,
+            height: 14,
+            padding: 12,
+            width: 14,
           },
           buttonNext: {
+            backgroundColor: SYSTEM_GREEN,
             borderRadius: 999,
+            color: "#ffffff",
             fontSize: 12,
             fontWeight: 700,
             padding: "8px 14px",
           },
           buttonBack: {
-            color: "#4b5563",
+            color: SYSTEM_GREEN,
             fontSize: 12,
+            fontWeight: 700,
             marginRight: 8,
           },
           buttonSkip: {
-            color: "#64748b",
+            color: SYSTEM_GREEN,
             fontSize: 12,
+            fontWeight: 700,
           },
         }}
       />
@@ -249,7 +256,7 @@ export default function RoleJoyrideTour({ role }) {
           height: 42,
           borderRadius: "999px",
           border: "1px solid rgba(22,80,52,0.18)",
-          background: "#165034",
+          background: SYSTEM_GREEN,
           color: "#ffffff",
           display: "inline-flex",
           alignItems: "center",

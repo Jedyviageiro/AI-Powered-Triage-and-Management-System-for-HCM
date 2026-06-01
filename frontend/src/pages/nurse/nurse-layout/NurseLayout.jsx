@@ -16,6 +16,7 @@ import {
 } from "../nurse-patients/PastVisitHistoryModal";
 import ConfirmDialog from "../../../components/shared/ConfirmDialog";
 import RoleJoyrideTour from "../../../components/shared/RoleJoyrideTour";
+import { HeaderBackButton } from "../../../components/shared/layout/HeaderControls.jsx";
 
 export function NurseLayout(props) {
   const {
@@ -359,10 +360,10 @@ export function NurseLayout(props) {
         .ai-card { background: linear-gradient(135deg, #edf5f0 0%, #e7f1ec 100%); border: 1.5px solid #2d6f4e; border-radius: 12px; padding: 14px; }
         .ai-badge { display: inline-flex; align-items: center; gap: 4px; background: #165034; color: white; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 20px; margin-bottom: 8px; }
 
-        .btn-primary { background: #165034; color: white; border: 1px solid #165034; border-radius: 999px; padding: 11px 20px; font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; transition: background 0.15s, border-color 0.15s; width: 100%; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; line-height: 1.1; }
+        .btn-primary { background: #165034; color: white; border: 1px solid #165034; border-radius: 999px; padding: 0 16px; font-size: 13px; font-weight: 700; font-family: inherit; cursor: pointer; transition: background 0.15s, border-color 0.15s; width: 100%; min-height: 40px; display: inline-flex; align-items: center; justify-content: center; line-height: 1.1; box-shadow: none; }
         .btn-primary:hover:not(:disabled) { background: #0c3a24; border-color: #0c3a24; }
         .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
-        .btn-secondary { background: #f3f4f6; color: #374151; border: 1px solid #e5e7eb; border-radius: 999px; padding: 11px 20px; font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; transition: background 0.15s, border-color 0.15s; width: 100%; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; line-height: 1.1; }
+        .btn-secondary { background: #ffffff; color: #374151; border: 1px solid #d1d5db; border-radius: 999px; padding: 0 16px; font-size: 13px; font-weight: 700; font-family: inherit; cursor: pointer; transition: background 0.15s, border-color 0.15s; width: 100%; min-height: 40px; display: inline-flex; align-items: center; justify-content: center; line-height: 1.1; box-shadow: none; }
         .btn-secondary:hover:not(:disabled) { background: #e5e7eb; }
         .btn-secondary:disabled { opacity: 0.45; cursor: not-allowed; }
         .btn-ghost { background: #fff; color: #0c3a24; border: 1px solid #cfe0d6; border-radius: 999px; padding: 10px 20px; font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; transition: background 0.15s, border-color 0.15s; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; line-height: 1.1; }
@@ -702,7 +703,7 @@ export function NurseLayout(props) {
                 )}
                 <div className="space-y-1">
                   {section.items
-                    .filter((item) => item.key !== "logout")
+                    .filter((item) => item.key !== "logout" && item.key !== "destination")
                     .map((item) => (
                       <div key={item.key} className="nav-item-wrap relative">
                         <button
@@ -788,37 +789,46 @@ export function NurseLayout(props) {
             position: "sticky",
             top: 0,
             zIndex: 100,
-            background: "white",
-            borderBottom: "1px solid #f0f0f0",
-            height: "60px",
+            background: "rgba(246, 248, 247, 0.94)",
+            borderBottom: "1px solid rgba(220, 229, 224, 0.72)",
+            boxShadow: "0 14px 34px rgba(15, 23, 42, 0.05)",
+            backdropFilter: "blur(14px)",
+            minHeight: "72px",
             display: "flex",
             alignItems: "center",
           }}
         >
           <div
             style={{
-              maxWidth: "1160px",
+              maxWidth: "1320px",
               margin: "0 auto",
               width: "100%",
-              padding: "0 24px",
+              padding: "10px 24px",
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
               gap: "16px",
+              minWidth: 0,
             }}
           >
+            {activeView === "home" || activeView === "dayStats" ? (
+              <div />
+            ) : (
+              <HeaderBackButton onClick={() => openView("home")} />
+            )}
             <div
               data-tour="top-search"
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: "8px",
-                width: "280px",
+                gap: "10px",
+                width: "min(340px, 34vw)",
+                minWidth: "220px",
                 maxWidth: "100%",
-                background: "#f9fafb",
-                border: "1px solid #dbe5df",
+                background: "#ffffff",
+                border: "1px solid rgba(226, 232, 240, 0.88)",
                 borderRadius: "999px",
-                padding: "9px 16px",
+                padding: "10px 18px",
                 boxShadow: "none",
                 outline: "none",
               }}
@@ -1013,23 +1023,24 @@ export function NurseLayout(props) {
                     if (!notificationsPreviewOpen) loadNotifications();
                   }}
                   style={{
-                    width: "36px",
-                    height: "36px",
+                    width: "42px",
+                    height: "42px",
                     borderRadius: "50%",
-                    border: "none",
-                    background: "transparent",
+                    border: "1px solid rgba(226, 232, 240, 0.9)",
+                    background: notificationsPreviewOpen ? "#e7f4ee" : "#ffffff",
                     cursor: "pointer",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    color: "#9ca3af",
+                    color: notificationsPreviewOpen ? "#165034" : "#5f6f66",
                     position: "relative",
+                    boxShadow: "0 12px 24px rgba(15, 23, 42, 0.06)",
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.background = "#f3f4f6";
+                    e.currentTarget.style.background = "#e7f4ee";
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.background = "transparent";
+                    e.currentTarget.style.background = notificationsPreviewOpen ? "#e7f4ee" : "#ffffff";
                   }}
                 >
                   <svg
@@ -1180,15 +1191,16 @@ export function NurseLayout(props) {
               </div>
               <button
                 style={{
-                  width: "34px",
-                  height: "34px",
+                  width: "42px",
+                  height: "42px",
                   borderRadius: "50%",
-                  border: "2px solid #e5e7eb",
+                  border: "2px solid #ffffff",
                   overflow: "hidden",
                   cursor: "pointer",
-                  marginLeft: "4px",
+                  marginLeft: "2px",
                   padding: 0,
                   background: "linear-gradient(135deg, #0c3a24, #165034)",
+                  boxShadow: "0 12px 24px rgba(15, 23, 42, 0.12)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",

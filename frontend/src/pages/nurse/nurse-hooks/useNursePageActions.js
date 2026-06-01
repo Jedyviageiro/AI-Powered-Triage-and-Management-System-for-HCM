@@ -327,7 +327,7 @@ export function useNursePageActions({
     setVisit(null);
     setPClinicalCode("");
     setPFullName("");
-    setPSex("M");
+    setPSex("");
     setPBirthDate("");
     setPGuardianName("");
     setPGuardianPhone("");
@@ -676,6 +676,14 @@ export function useNursePageActions({
     async (e) => {
       e.preventDefault();
       setErr("");
+      if (!pFullName.trim() || !String(pSex || "").trim() || !pBirthDate || !pGuardianName.trim() || !pGuardianPhone.trim() || !pAddress.trim()) {
+        showPopup(
+          "warning",
+          "Campos obrigatorios",
+          "Preencha nome, sexo, data de nascimento, acompanhante, telefone e morada."
+        );
+        return;
+      }
       const ageYears = calculateAgeYears(pBirthDate);
       if (!Number.isInteger(ageYears) || ageYears < 0) {
         showPopup("warning", "Data invalida", "Informe uma data de nascimento valida.");

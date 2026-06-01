@@ -77,11 +77,12 @@ const getUserById = async (id) => {
 // ========================
 const getUserByUsername = async (username) => {
   await ensureUserProfilePhotoColumns();
+  const normalizedUsername = String(username || "").trim();
   const result = await pool.query(
     `SELECT id, username, password_hash, full_name, specialization, role, is_active, profile_photo_url, profile_photo_public_id, created_at, updated_at, last_login_at
      FROM users
      WHERE username = $1`,
-    [username]
+    [normalizedUsername]
   );
   return result.rows[0];
 };

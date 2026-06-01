@@ -473,14 +473,16 @@ export default function DoctorAgenda({
               style={{
                 ...baseButton,
                 fontSize: 13,
-                padding: "9px 16px",
+                padding: "0 16px",
+                minHeight: 40,
                 borderRadius: 999,
-                border: "1px solid #E7ECE8",
-                background: "#fff",
-                color: "#374151",
-                cursor: "pointer",
+                border: "1px solid #165034",
+                background: "#165034",
+                color: "#ffffff",
+                cursor: loading ? "not-allowed" : "pointer",
                 fontWeight: 700,
                 opacity: loading ? 0.6 : 1,
+                boxShadow: "none",
               }}
             >
               {loading ? "Atualizando..." : "Atualizar"}

@@ -29,7 +29,7 @@ export function NurseDestinationView({
           onClick={loadQueue}
           disabled={loadingQueue}
           className="btn-primary"
-          style={{ width: "auto", padding: "9px 18px", fontSize: "13px" }}
+          style={{ width: "auto" }}
         >
           {loadingQueue ? "Atualizando..." : "Atualizar"}
         </button>
@@ -115,10 +115,10 @@ export function NurseDestinationView({
                 const visitId = Number(row?.id);
                 const disposition = String(row?.disposition_plan || "").toUpperCase();
                 const canDischarge = disposition === "HOME";
-                const canTransfer = disposition === "ADMIT_URGENT";
+                const canTransfer = disposition === "REFER_SPECIALIST";
                 const canRegisterAdmission =
-                  disposition === "ADMIT_URGENT" || disposition === "BED_REST";
-                const admissionStatus = disposition === "ADMIT_URGENT" ? "IN_HOSPITAL" : "BED_REST";
+                  disposition === "REFER_SPECIALIST" || disposition === "BED_REST";
+                const admissionStatus = disposition === "REFER_SPECIALIST" ? "IN_HOSPITAL" : "BED_REST";
                 const location =
                   [row?.inpatient_unit, row?.inpatient_bed].filter(Boolean).join(" • ") ||
                   inferHospitalStatus(row);
@@ -230,7 +230,7 @@ export function NurseDestinationView({
                             onClick={() => registerAdmissionPlacement(row, admissionStatus)}
                             title={
                               admissionStatus === "IN_HOSPITAL"
-                                ? "Registrar internamento e atribuir leito"
+                                ? "Registrar internamento confirmado e atribuir leito"
                                 : "Registrar repouso e atribuir leito/local"
                             }
                             style={{ width: "auto", padding: "7px 12px", fontSize: "12px" }}
@@ -264,7 +264,7 @@ export function NurseDestinationView({
                           title={
                             canTransfer
                               ? "Registrar transferência"
-                              : "Transferência disponível apenas após indicação médica de internamento/urgência."
+                              : "Transferência disponível apenas após referência para avaliação hospitalar."
                           }
                           style={{ width: "auto", padding: "7px 12px", fontSize: "12px" }}
                         >

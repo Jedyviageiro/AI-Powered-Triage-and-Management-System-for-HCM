@@ -25,7 +25,7 @@ const updateDestinationStatus = async (req, res) => {
         error:
           nextStatus === "DISCHARGED"
             ? "Alta só é permitida após o médico definir destino como alta."
-            : "Transferência só é permitida após o médico definir internamento/urgência.",
+            : "Transferência só é permitida após o médico referir para avaliação hospitalar.",
       });
     }
 
@@ -62,7 +62,7 @@ const registerAdmission = async (req, res) => {
       return res.status(403).json({
         error:
           nextStatus === "IN_HOSPITAL"
-            ? "Internamento só é permitido após o médico definir internamento/urgência."
+            ? "Internamento só é permitido após referência clínica e confirmação da enfermagem/administrativo."
             : "Repouso só é permitido após o médico definir repouso/acamado.",
       });
     }

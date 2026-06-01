@@ -33,15 +33,22 @@ export function NurseRoomsAvailableView({ loadQueue, loadingQueue, queue, roomIn
           onClick={loadQueue}
           disabled={loadingQueue}
           style={{
+            minHeight: "40px",
             fontSize: "13px",
-            padding: "8px 18px",
-            borderRadius: "20px",
-            background: "#f3f4f6",
-            border: "0.5px solid #e5e7eb",
-            color: "#374151",
-            cursor: "pointer",
-            fontWeight: "500",
+            padding: "0 16px",
+            borderRadius: "999px",
+            background: "#165034",
+            border: "1px solid #165034",
+            color: "#ffffff",
+            cursor: loadingQueue ? "not-allowed" : "pointer",
+            fontWeight: "700",
             fontFamily: "inherit",
+            opacity: loadingQueue ? 0.65 : 1,
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            lineHeight: 1.1,
+            boxShadow: "none",
           }}
         >
           {loadingQueue ? "Atualizando..." : "Atualizar"}

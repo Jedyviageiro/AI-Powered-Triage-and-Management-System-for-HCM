@@ -10,12 +10,14 @@ const VISIT_MOTIVES = new Set([
   "OTHER",
 ]);
 
+const VISIT_TYPES = new Set(["NEW_CONSULTATION", "FOLLOW_UP", "LAB_RETURN"]);
+const LAB_RETURN_KINDS = new Set(["", "SAMPLE_COLLECTION", "RESULT_REVIEW"]);
+
 const ALLOWED_DISPOSITIONS = new Set([
   "",
   "BED_REST",
   "HOME",
   "RETURN_VISIT",
-  "ADMIT_URGENT",
   "REFER_SPECIALIST",
 ]);
 
@@ -108,6 +110,9 @@ const createVisit = async (req, res) => {
       visit_motive_other,
       skip_triage,
       return_visit_reason,
+      visit_type,
+      parent_visit_id,
+      lab_return_kind,
     } = req.body || {};
 
     if (!patient_id) {
@@ -122,6 +127,26 @@ const createVisit = async (req, res) => {
     const normalizedVisitMotiveOther =
       normalizedVisitMotive === "OTHER" ? String(visit_motive_other || "").trim() || null : null;
     const normalizedReturnVisitReason = String(return_visit_reason || "").trim() || null;
+    const normalizedVisitType = normalizeUpper(
+      visit_type ||
+        (normalizedVisitMotive === "LAB_RESULTS" || normalizedVisitMotive === "LAB_SAMPLE_COLLECTION"
+          ? "LAB_RETURN"
+          : "NEW_CONSULTATION")
+    );
+    if (!VISIT_TYPES.has(normalizedVisitType)) {
+      return res.status(400).json({ error: "visit_type invalido" });
+    }
+    const normalizedLabReturnKind = normalizeUpper(
+      lab_return_kind ||
+        (normalizedVisitMotive === "LAB_RESULTS"
+          ? "RESULT_REVIEW"
+          : normalizedVisitMotive === "LAB_SAMPLE_COLLECTION"
+            ? "SAMPLE_COLLECTION"
+            : "")
+    );
+    if (!LAB_RETURN_KINDS.has(normalizedLabReturnKind)) {
+      return res.status(400).json({ error: "lab_return_kind invalido" });
+    }
 
     const openVisit = await visitModel.findOpenVisitByPatientId(patient_id);
     if (openVisit) {
@@ -145,6 +170,9 @@ const createVisit = async (req, res) => {
           visit_motive: normalizedVisitMotive,
           visit_motive_other: normalizedVisitMotiveOther,
           return_visit_reason: normalizedReturnVisitReason,
+          visit_type: normalizedVisitType,
+          parent_visit_id: parsePositiveInt(parent_visit_id),
+          lab_return_kind: normalizedLabReturnKind || null,
         });
       }
     }
@@ -153,6 +181,9 @@ const createVisit = async (req, res) => {
       visit = await visitModel.createVisit(patient_id, {
         visit_motive: normalizedVisitMotive,
         visit_motive_other: normalizedVisitMotiveOther,
+        visit_type: normalizedVisitType,
+        parent_visit_id: parsePositiveInt(parent_visit_id),
+        lab_return_kind: normalizedLabReturnKind || null,
         return_visit_reason: normalizedReturnVisitReason,
         status: skip_triage ? "WAITING_DOCTOR" : "WAITING",
         priority: skip_triage ? "NON_URGENT" : null,
@@ -434,6 +465,15 @@ const saveMedicalPlan = async (req, res) => {
     if (!ALLOWED_VITAL_STATUSES.has(vital)) {
       return res.status(400).json({ error: "vital_status invalido" });
     }
+    const normalizedLabStatus = normalizeUpper(lab_result_status);
+    const hasLabResultText = !!String(lab_result_text || "").trim();
+    const effectiveLabResultStatus =
+      lab_requested && !hasLabResultText && !normalizedLabStatus
+        ? "PENDING"
+        : lab_result_status;
+
+    const hospitalStatusForPlan =
+      req.user?.role === "ADMIN" ? hospital || null : existingVisit.hospital_status || null;
 
     const updated = await visitModel.saveMedicalPlan(
       visitId,
@@ -457,9 +497,9 @@ const saveMedicalPlan = async (req, res) => {
         lab_sample_collected_at,
         lab_result_text,
         lab_result_json,
-        lab_result_status,
+        lab_result_status: effectiveLabResultStatus,
         lab_result_ready_at,
-        hospital_status: hospital || null,
+        hospital_status: hospitalStatusForPlan,
         vital_status: vital || null,
         is_bedridden: !!is_bedridden,
         inpatient_unit,
@@ -533,6 +573,36 @@ const scheduleVisitReturn = async (req, res) => {
     return res.json(updated);
   } catch (error) {
     return sendServerError(res, "SCHEDULE RETURN ERROR", error, "Erro ao agendar retorno");
+  }
+};
+
+const openReturnVisit = async (req, res) => {
+  try {
+    const visitId = parsePositiveInt(req.params.id);
+    if (!visitId) return res.status(400).json({ error: "id invalido" });
+
+    const child = await visitModel.createReturnVisitFromSource(visitId, {
+      actorId: req.user?.id || null,
+      isAdmin: req.user?.role === "ADMIN",
+      forceFullConsultation: !!req.body?.force_full_consultation,
+    });
+
+    if (child?.blocked && child.reason === "RETURN_DATE_IN_FUTURE") {
+      return res.status(400).json({
+        error: "Este retorno ainda esta agendado para uma data futura.",
+        source: child.source,
+      });
+    }
+
+    if (!child) {
+      return res.status(404).json({
+        error: "Visita finalizada nao encontrada ou sem permissao para abrir retorno.",
+      });
+    }
+
+    return res.status(201).json(child);
+  } catch (error) {
+    return sendServerError(res, "OPEN RETURN VISIT ERROR", error, "Erro ao abrir retorno");
   }
 };
 
@@ -849,6 +919,7 @@ module.exports = {
   listPastVisits,
   markPatientLabResultDelivered,
   notifyPatientLabReady,
+  openReturnVisit,
   removeVisitTriage,
   saveLabResult,
   saveMedicalPlan,

@@ -25,7 +25,7 @@ export function useNursePageShellState() {
 
   const [pClinicalCode, setPClinicalCode] = useState("");
   const [pFullName, setPFullName] = useState("");
-  const [pSex, setPSex] = useState("M");
+  const [pSex, setPSex] = useState("");
   const [pBirthDate, setPBirthDate] = useState("");
   const [pGuardianName, setPGuardianName] = useState("");
   const [pGuardianPhone, setPGuardianPhone] = useState("");

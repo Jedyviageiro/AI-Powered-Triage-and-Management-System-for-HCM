@@ -84,8 +84,7 @@ export const DISPOSITION_OPTIONS = [
   { value: "BED_REST", label: "Repouso (bed rest)" },
   { value: "HOME", label: "Alta para casa" },
   { value: "RETURN_VISIT", label: "Retorno agendado" },
-  { value: "ADMIT_URGENT", label: "Internar / urgência" },
-  { value: "REFER_SPECIALIST", label: "Referir paciente" },
+  { value: "REFER_SPECIALIST", label: "Referir / encaminhar para avaliação hospitalar" },
 ];
 
 export const FOLLOW_UP_DIAGNOSIS_EVOLUTION_OPTIONS = [

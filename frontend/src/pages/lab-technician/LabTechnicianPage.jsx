@@ -23,14 +23,14 @@ const CSS = `
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: #d1d1d6; border-radius: 99px; }
   .lab-field { width:100%; padding:9px 12px; border-radius:10px; border:0.5px solid rgba(0,0,0,.12); background:#fff; font-size:13px; color:#1c1c1e; font-family:inherit; outline:none; appearance:none; transition:border-color .15s, box-shadow .15s; }
-  .lab-field:focus { border-color:#007aff; box-shadow:0 0 0 3px rgba(0,122,255,.1); }
+  .lab-field:focus { border-color:#165034; box-shadow:0 0 0 3px rgba(22,80,52,.1); }
   select.lab-field { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238e8e93' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 10px center; padding-right:28px; }
-  .btn-primary { background:#007aff; color:#fff; font-size:14px; font-weight:600; padding:10px 22px; border-radius:12px; border:none; cursor:pointer; font-family:inherit; transition:background .15s; }
-  .btn-primary:hover:not(:disabled) { background:#0070e8; }
+  .btn-primary { background:#165034; color:#fff; font-size:13px; font-weight:700; padding:0 16px; min-height:40px; border-radius:999px; border:1px solid #165034; cursor:pointer; font-family:inherit; transition:background .15s,border-color .15s; display:inline-flex; align-items:center; justify-content:center; line-height:1.1; box-shadow:none; }
+  .btn-primary:hover:not(:disabled) { background:#0c3a24; border-color:#0c3a24; }
   .btn-primary:disabled { opacity:.5; cursor:not-allowed; }
-  .btn-ghost { background:none; color:#007aff; font-size:13px; font-weight:600; padding:8px 14px; border-radius:10px; border:none; cursor:pointer; font-family:inherit; transition:background .15s; }
-  .btn-ghost:hover { background:rgba(0,122,255,.08); }
-  .btn-secondary { background:#fff; color:#1c1c1e; font-size:13px; font-weight:500; padding:8px 14px; border-radius:10px; border:0.5px solid rgba(0,0,0,.12); cursor:pointer; font-family:inherit; }
+  .btn-ghost { background:none; color:#165034; font-size:13px; font-weight:700; padding:0 14px; min-height:40px; border-radius:999px; border:none; cursor:pointer; font-family:inherit; transition:background .15s; }
+  .btn-ghost:hover { background:rgba(22,80,52,.08); }
+  .btn-secondary { background:#fff; color:#374151; font-size:13px; font-weight:700; padding:0 16px; min-height:40px; border-radius:999px; border:1px solid #d1d5db; cursor:pointer; font-family:inherit; display:inline-flex; align-items:center; justify-content:center; line-height:1.1; box-shadow:none; }
   .card { background:#fff; border-radius:16px; overflow:hidden; border:0.5px solid rgba(0,0,0,.06); }
   .card-head { padding:14px 16px; border-bottom:0.5px solid rgba(0,0,0,.07); }
   .card-title { font-size:14px; font-weight:600; color:#1c1c1e; }
@@ -43,7 +43,7 @@ const CSS = `
   .quick-item { padding:12px 14px; border-bottom:0.5px solid rgba(0,0,0,.06); display:flex; align-items:center; justify-content:space-between; gap:8px; cursor:pointer; transition:background .1s; }
   .quick-item:last-child { border-bottom:none; }
   .quick-item:hover { background:#fafafa; }
-  .open-btn { font-size:11px; font-weight:600; padding:5px 12px; border-radius:8px; border:none; background:#f2f2f7; color:#007aff; cursor:pointer; font-family:inherit; transition:background .1s; white-space:nowrap; }
+  .open-btn { font-size:12px; font-weight:700; padding:0 12px; min-height:34px; border-radius:999px; border:1px solid #d1d5db; background:#fff; color:#165034; cursor:pointer; font-family:inherit; transition:background .1s; white-space:nowrap; display:inline-flex; align-items:center; justify-content:center; }
   .open-btn:hover { background:#e5e5ea; }
   .meta-tile { background:#f2f2f7; border-radius:12px; padding:10px 12px; }
   .mt-lbl { font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:#8e8e93; display:block; margin-bottom:2px; }
@@ -211,7 +211,7 @@ function ResultModal({ visit, protocol, fields, onClose, onSave, saving }) {
                     <div
                       className="step-dot"
                       style={{
-                        background: step >= item.n ? "#007aff" : "#e5e7eb",
+                        background: step >= item.n ? "#165034" : "#e5e7eb",
                         color: step >= item.n ? "#fff" : "#8e8e93",
                       }}
                     >

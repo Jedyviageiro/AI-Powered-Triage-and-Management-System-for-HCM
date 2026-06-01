@@ -85,6 +85,27 @@ const formatVital = (value, unit = "") => {
   return `${Number(value)}${unit}`;
 };
 
+const getVisitTypeMeta = (visit) => {
+  const type = String(visit?.visit_type || "").toUpperCase();
+  const motive = String(visit?.visit_motive || "").toUpperCase();
+  const labKind = String(visit?.lab_return_kind || "").toUpperCase();
+  if (type === "LAB_RETURN" || motive === "LAB_RESULTS" || motive === "LAB_SAMPLE_COLLECTION") {
+    return {
+      label:
+        labKind === "SAMPLE_COLLECTION" || motive === "LAB_SAMPLE_COLLECTION"
+          ? "Colheita"
+          : "Resultado",
+      bg: "#EFF6FF",
+      color: "#1D4ED8",
+      border: "#BFDBFE",
+    };
+  }
+  if (type === "FOLLOW_UP" || visit?.parent_visit_id || visit?.return_visit_date) {
+    return { label: "Retorno", bg: "#ECFDF5", color: "#047857", border: "#A7F3D0" };
+  }
+  return { label: "Nova", bg: "#F8FAFC", color: "#475569", border: "#E2E8F0" };
+};
+
 function Avatar({ name, size = 38 }) {
   const palette = getAvatarPalette(name);
   return (
@@ -157,6 +178,28 @@ function PriorityBadge({ value }) {
       <span
         style={{ width: 6, height: 6, borderRadius: "50%", background: cfg.dot, flexShrink: 0 }}
       />
+      {cfg.label}
+    </span>
+  );
+}
+
+function VisitTypeBadge({ visit }) {
+  const cfg = getVisitTypeMeta(visit);
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        border: `1px solid ${cfg.border}`,
+        background: cfg.bg,
+        color: cfg.color,
+        borderRadius: 999,
+        padding: "3px 10px",
+        fontSize: 11,
+        fontWeight: 700,
+        whiteSpace: "nowrap",
+      }}
+    >
       {cfg.label}
     </span>
   );
@@ -342,16 +385,19 @@ export function DoctorWaitingQueueView({
             style={{
               display: "inline-flex",
               alignItems: "center",
-              gap: 6,
+              justifyContent: "center",
+              gap: 8,
+              minHeight: 40,
               borderRadius: 999,
-              border: `1px solid ${BORDER}`,
-              background: "#fff",
-              padding: "6px 14px",
-              fontSize: 12,
-              fontWeight: 600,
-              color: "#374151",
+              border: "1px solid #165034",
+              background: "#165034",
+              padding: "0 16px",
+              fontSize: 13,
+              fontWeight: 700,
+              color: "#ffffff",
               cursor: loading ? "not-allowed" : "pointer",
               opacity: loading ? 0.6 : 1,
+              boxShadow: "none",
             }}
           >
             <svg
@@ -400,7 +446,7 @@ export function DoctorWaitingQueueView({
           >
             <thead>
               <tr style={{ background: HEADER_BG }}>
-                {["Chegada", "Espera", "Paciente", "Prioridade", "Código", "Ação"].map(
+                {["Chegada", "Espera", "Paciente", "Fluxo", "Prioridade", "Código", "Ação"].map(
                   (header, index, all) => (
                     <th
                       key={header}
@@ -505,6 +551,9 @@ export function DoctorWaitingQueueView({
                           <StatusBadge value={row.status} />
                         </div>
                       </div>
+                    </td>
+                    <td style={tdBase}>
+                      <VisitTypeBadge visit={row} />
                     </td>
                     <td style={tdBase}>
                       <PriorityBadge value={row.priority} />
@@ -636,6 +685,7 @@ export function DoctorWaitingQueueView({
 
           <div style={{ padding: "18px 22px", display: "flex", flexDirection: "column", gap: 14 }}>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <VisitTypeBadge visit={selectedRow} />
               <StatusBadge value={selectedRow.status} />
               <PriorityBadge value={selectedRow.priority} />
             </div>

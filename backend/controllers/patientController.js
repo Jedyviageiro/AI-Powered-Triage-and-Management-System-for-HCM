@@ -30,9 +30,15 @@ const createPatient = async (req, res) => {
   try {
     const { full_name, sex, birth_date, guardian_name, guardian_phone, alt_phone, address } =
       req.body;
+    const normalizedSex = String(sex || "").trim().toUpperCase();
+    const normalizedAddress = String(address || "").trim();
 
-    if (!full_name || !sex || !birth_date || !guardian_name || !guardian_phone) {
-      return res.status(400).json({ error: "Preencha todos os campos" });
+    if (!full_name || !normalizedSex || !birth_date || !guardian_name || !guardian_phone || !normalizedAddress) {
+      return res.status(400).json({ error: "Preencha todos os campos obrigatorios, incluindo sexo e morada." });
+    }
+
+    if (!["M", "F"].includes(normalizedSex)) {
+      return res.status(400).json({ error: "Sexo invalido." });
     }
 
     const ageValidationError = validatePediatricBirthDate(birth_date);
@@ -42,12 +48,12 @@ const createPatient = async (req, res) => {
 
     const patient = await patientModel.createPatient({
       full_name,
-      sex,
+      sex: normalizedSex,
       birth_date,
       guardian_name,
       guardian_phone,
       alt_phone,
-      address,
+      address: normalizedAddress,
     });
 
     return res.status(201).json(patient);
@@ -112,13 +118,27 @@ const searchPatients = async (req, res) => {
 const updatePatient = async (req, res) => {
   try {
     const { id } = req.params;
+    const normalizedSex = String(req.body?.sex || "").trim().toUpperCase();
+    const normalizedAddress = String(req.body?.address || "").trim();
+
+    if (!req.body?.full_name || !normalizedSex || !req.body?.birth_date || !req.body?.guardian_name || !req.body?.guardian_phone || !normalizedAddress) {
+      return res.status(400).json({ error: "Preencha todos os campos obrigatorios, incluindo sexo e morada." });
+    }
+
+    if (!["M", "F"].includes(normalizedSex)) {
+      return res.status(400).json({ error: "Sexo invalido." });
+    }
 
     const ageValidationError = validatePediatricBirthDate(req.body?.birth_date);
     if (ageValidationError) {
       return res.status(400).json({ error: ageValidationError });
     }
 
-    const updated = await patientModel.updatePatient(id, req.body);
+    const updated = await patientModel.updatePatient(id, {
+      ...req.body,
+      sex: normalizedSex,
+      address: normalizedAddress,
+    });
     if (!updated) return res.status(404).json({ error: "Paciente nao encontrado" });
 
     return res.json(updated);

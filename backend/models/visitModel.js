@@ -12,6 +12,22 @@ const ensureVisitMotiveColumns = async () => {
 
       ALTER TABLE visits
       ADD COLUMN IF NOT EXISTS visit_motive_other TEXT;
+
+      ALTER TABLE visits
+      ADD COLUMN IF NOT EXISTS visit_type VARCHAR(30) NOT NULL DEFAULT 'NEW_CONSULTATION';
+
+      ALTER TABLE visits
+      ADD COLUMN IF NOT EXISTS parent_visit_id INTEGER NULL REFERENCES visits(id) ON DELETE SET NULL;
+
+      ALTER TABLE visits
+      ADD COLUMN IF NOT EXISTS lab_return_kind VARCHAR(30) NULL;
+
+      ALTER TABLE visits
+      ADD COLUMN IF NOT EXISTS converted_to_consultation_at TIMESTAMP NULL;
+
+      CREATE INDEX IF NOT EXISTS idx_visits_parent ON visits(parent_visit_id);
+
+      CREATE INDEX IF NOT EXISTS idx_visits_type ON visits(visit_type);
     `);
   }
   return ensureVisitMotiveColumnsPromise;
@@ -179,6 +195,9 @@ const createVisit = async (
   {
     visit_motive = "MEDICAL_CONSULTATION",
     visit_motive_other = null,
+    visit_type = "NEW_CONSULTATION",
+    parent_visit_id = null,
+    lab_return_kind = null,
     return_visit_reason = null,
     status = "WAITING",
     priority = null,
@@ -187,14 +206,29 @@ const createVisit = async (
 ) => {
   await ensureVisitMotiveColumns();
   const result = await pool.query(
-    `INSERT INTO visits (patient_id, status, arrival_time, visit_motive, visit_motive_other, return_visit_reason, priority, max_wait_minutes)
-     VALUES ($1, $2, NOW(), $3, $4, $5, $6, $7)
+    `INSERT INTO visits (
+       patient_id,
+       status,
+       arrival_time,
+       visit_motive,
+       visit_motive_other,
+       visit_type,
+       parent_visit_id,
+       lab_return_kind,
+       return_visit_reason,
+       priority,
+       max_wait_minutes
+     )
+     VALUES ($1, $2, NOW(), $3, $4, $5, $6, $7, $8, $9, $10)
      RETURNING *`,
     [
       patient_id,
       status,
       visit_motive,
       visit_motive_other,
+      visit_type,
+      parent_visit_id,
+      lab_return_kind,
       return_visit_reason,
       priority,
       max_wait_minutes,
@@ -211,8 +245,21 @@ const getVisitById = async (id) => {
   const visitId = Number(id);
   if (!Number.isInteger(visitId) || visitId <= 0) return null;
 
+  await ensureVisitMotiveColumns();
   await ensureLabStructuredResultColumns();
-  const result = await pool.query(`SELECT * FROM visits WHERE id = $1`, [visitId]);
+  const result = await pool.query(
+    `SELECT
+       v.*,
+       parent.id AS parent_visit_id_resolved,
+       parent.likely_diagnosis AS parent_likely_diagnosis,
+       parent.prescription_text AS parent_prescription_text,
+       parent.return_visit_reason AS parent_return_visit_reason,
+       parent.consultation_ended_at AS parent_consultation_ended_at
+     FROM visits v
+     LEFT JOIN visits parent ON parent.id = v.parent_visit_id
+     WHERE v.id = $1`,
+    [visitId]
+  );
   return result.rows[0];
 };
 
@@ -285,9 +332,23 @@ const createVisitForLabFollowup = async (
     String(sourceVisit?.lab_result_text || "").trim()
       ? "LAB_RESULTS"
       : "LAB_SAMPLE_COLLECTION");
+  const labReturnKind = normalizedMotive === "LAB_RESULTS" ? "RESULT_REVIEW" : "SAMPLE_COLLECTION";
   const result = await pool.query(
-    `INSERT INTO visits (patient_id, status, arrival_time, doctor_id, priority, max_wait_minutes, return_visit_reason, visit_motive, visit_motive_other)
-     VALUES ($1, 'WAITING', NOW(), NULL, NULL, NULL, $2, $3, $4)
+    `INSERT INTO visits (
+       patient_id,
+       status,
+       arrival_time,
+       doctor_id,
+       priority,
+       max_wait_minutes,
+       return_visit_reason,
+       visit_motive,
+       visit_motive_other,
+       visit_type,
+       parent_visit_id,
+       lab_return_kind
+     )
+     VALUES ($1, 'WAITING', NOW(), NULL, NULL, NULL, $2, $3, $4, 'LAB_RETURN', $5, $6)
      RETURNING *`,
     [
       patient_id,
@@ -297,19 +358,156 @@ const createVisitForLabFollowup = async (
           : "Retorno laboratorial"),
       normalizedMotive,
       visit_motive_other,
+      sourceVisit?.id || null,
+      labReturnKind,
     ]
   );
   return result.rows[0];
+};
+
+const findActiveChildVisit = async (parentVisitId, visitType = null) => {
+  await ensureVisitMotiveColumns();
+  const params = [parentVisitId];
+  const typeFilter = visitType ? "AND v.visit_type = $2" : "";
+  if (visitType) params.push(visitType);
+  const result = await pool.query(
+    `SELECT v.*
+     FROM visits v
+     WHERE v.parent_visit_id = $1
+       ${typeFilter}
+       AND v.status NOT IN ('FINISHED','CANCELLED')
+     ORDER BY v.arrival_time DESC
+     LIMIT 1`,
+    params
+  );
+  return result.rows[0] || null;
+};
+
+const createReturnVisitFromSource = async (
+  sourceVisitId,
+  {
+    actorId = null,
+    isAdmin = false,
+    forceFullConsultation = false,
+  } = {}
+) => {
+  await ensureVisitMotiveColumns();
+  await ensureVisitHistoryColumns();
+
+  const sourceResult = await pool.query(
+    `SELECT *
+     FROM visits
+     WHERE id = $1
+       AND status = 'FINISHED'
+     LIMIT 1`,
+    [sourceVisitId]
+  );
+  const source = sourceResult.rows[0] || null;
+  if (!source) return null;
+  if (!isAdmin && source.doctor_id && Number(source.doctor_id) !== Number(actorId)) return null;
+
+  const hasScheduledDate = !!source.return_visit_date;
+  const todayResult = await pool.query(`SELECT CURRENT_DATE AS today`);
+  const today = String(todayResult.rows[0]?.today || "").slice(0, 10);
+  const scheduled = String(source.return_visit_date || "").slice(0, 10);
+  if (hasScheduledDate && scheduled && scheduled > today) {
+    return { blocked: true, reason: "RETURN_DATE_IN_FUTURE", source };
+  }
+
+  const sourceMotive = String(source.visit_motive || "").toUpperCase();
+  const isLabSource =
+    source.lab_requested &&
+    (sourceMotive === "LAB_RESULTS" ||
+      sourceMotive === "LAB_SAMPLE_COLLECTION" ||
+      String(source.lab_result_status || "").toUpperCase() === "READY" ||
+      String(source.lab_result_text || "").trim());
+  const visitType = forceFullConsultation ? "NEW_CONSULTATION" : isLabSource ? "LAB_RETURN" : "FOLLOW_UP";
+  const labReturnKind =
+    visitType === "LAB_RETURN"
+      ? String(source.lab_result_status || "").toUpperCase() === "READY" ||
+        String(source.lab_result_text || "").trim()
+        ? "RESULT_REVIEW"
+        : "SAMPLE_COLLECTION"
+      : null;
+  const childStatus = visitType === "NEW_CONSULTATION" ? "WAITING" : "WAITING_DOCTOR";
+
+  const activeChild = await findActiveChildVisit(source.id, visitType);
+  if (activeChild) return activeChild;
+
+  const result = await pool.query(
+    `INSERT INTO visits (
+       patient_id,
+       status,
+       arrival_time,
+       doctor_id,
+       priority,
+       max_wait_minutes,
+       return_visit_date,
+       return_visit_reason,
+       visit_motive,
+       visit_type,
+       parent_visit_id,
+       lab_return_kind,
+       lab_requested,
+       lab_exam_type,
+       lab_sample_type,
+       lab_tests,
+       lab_sample_collected_at,
+       lab_result_text,
+       lab_result_json,
+       lab_result_status,
+       lab_result_ready_at
+     )
+     VALUES (
+       $1, $20, NOW(), $2, COALESCE($3, 'NON_URGENT'), COALESCE($4, 120),
+       $5, $6, $7, $8, $9, $10,
+       $11, $12, $13, $14, $15, $16, $17::jsonb, $18, $19
+     )
+     RETURNING *`,
+    [
+      source.patient_id,
+      visitType === "NEW_CONSULTATION" ? null : source.doctor_id || actorId || null,
+      source.priority,
+      source.max_wait_minutes,
+      source.return_visit_date,
+      source.return_visit_reason ||
+        (visitType === "LAB_RETURN" ? `Retorno laboratorial da visita #${source.id}` : `Retorno da visita #${source.id}`),
+      visitType === "LAB_RETURN"
+        ? labReturnKind === "RESULT_REVIEW"
+          ? "LAB_RESULTS"
+          : "LAB_SAMPLE_COLLECTION"
+        : "MEDICAL_CONSULTATION",
+      visitType,
+      source.id,
+      labReturnKind,
+      visitType === "LAB_RETURN" ? !!source.lab_requested : false,
+      visitType === "LAB_RETURN" ? source.lab_exam_type : null,
+      visitType === "LAB_RETURN" ? source.lab_sample_type : null,
+      visitType === "LAB_RETURN" ? source.lab_tests : null,
+      visitType === "LAB_RETURN" ? source.lab_sample_collected_at : null,
+      visitType === "LAB_RETURN" ? source.lab_result_text : null,
+      visitType === "LAB_RETURN" && source.lab_result_json ? JSON.stringify(source.lab_result_json) : null,
+      visitType === "LAB_RETURN" ? source.lab_result_status : null,
+      visitType === "LAB_RETURN" ? source.lab_result_ready_at : null,
+      childStatus,
+    ]
+  );
+  return result.rows[0] || null;
 };
 
 // ========================
 // LIST ACTIVE VISITS (fila)
 // ========================
 const listActiveVisits = async () => {
+  await ensureVisitMotiveColumns();
   await recoverStaleConsultations();
   const result = await pool.query(
     `SELECT
        v.*,
+       parent.id AS parent_visit_id_resolved,
+       parent.consultation_ended_at AS parent_consultation_ended_at,
+       parent.likely_diagnosis AS parent_likely_diagnosis,
+       parent.prescription_text AS parent_prescription_text,
        p.full_name,
        p.clinical_code,
        COALESCE(
@@ -403,6 +601,7 @@ const listActiveVisits = async () => {
      ) lf ON TRUE
      LEFT JOIN users n ON n.id = t.nurse_id
      LEFT JOIN users d ON d.id = v.doctor_id
+     LEFT JOIN visits parent ON parent.id = v.parent_visit_id
      WHERE v.status NOT IN ('FINISHED','CANCELLED')
      ORDER BY
        CASE v.priority
@@ -418,10 +617,15 @@ const listActiveVisits = async () => {
 };
 
 const listActiveVisitsByDoctor = async (doctorId) => {
+  await ensureVisitMotiveColumns();
   await recoverStaleConsultations();
   const result = await pool.query(
     `SELECT
        v.*,
+       parent.id AS parent_visit_id_resolved,
+       parent.consultation_ended_at AS parent_consultation_ended_at,
+       parent.likely_diagnosis AS parent_likely_diagnosis,
+       parent.prescription_text AS parent_prescription_text,
        p.full_name,
        p.clinical_code,
        COALESCE(
@@ -515,6 +719,7 @@ const listActiveVisitsByDoctor = async (doctorId) => {
      ) lf ON TRUE
      LEFT JOIN users n ON n.id = t.nurse_id
      LEFT JOIN users d ON d.id = v.doctor_id
+     LEFT JOIN visits parent ON parent.id = v.parent_visit_id
      WHERE v.status NOT IN ('FINISHED','CANCELLED')
        AND v.doctor_id = $1
      ORDER BY
@@ -532,6 +737,7 @@ const listActiveVisitsByDoctor = async (doctorId) => {
 };
 
 const listPastVisits = async (limit = 200) => {
+  await ensureVisitMotiveColumns();
   await ensureVisitHistoryColumns();
   const result = await pool.query(
     `SELECT
@@ -539,6 +745,10 @@ const listPastVisits = async (limit = 200) => {
        v.patient_id,
        v.doctor_id,
        v.status,
+       v.visit_type,
+       v.parent_visit_id,
+       v.lab_return_kind,
+       v.converted_to_consultation_at,
        v.priority,
        v.arrival_time,
        v.consultation_started_at,
@@ -602,10 +812,14 @@ const listPastVisits = async (limit = 200) => {
 };
 
 const listDoctorAgenda = async (doctorId) => {
+  await ensureVisitMotiveColumns();
   const assignedTodayResult = await pool.query(
     `SELECT
        v.id,
        v.status,
+       v.visit_type,
+       v.parent_visit_id,
+       v.lab_return_kind,
        v.priority,
        v.arrival_time,
        v.return_visit_date,
@@ -624,18 +838,35 @@ const listDoctorAgenda = async (doctorId) => {
     `SELECT
        v.id,
        v.status,
+       v.visit_type,
+       v.parent_visit_id,
+       v.lab_return_kind,
        v.priority,
        v.arrival_time,
        v.return_visit_date,
        v.follow_up_when,
        v.return_visit_reason,
+       child.id AS active_child_visit_id,
+       child.status AS active_child_status,
        p.full_name,
        p.clinical_code
      FROM visits v
      JOIN patients p ON p.id = v.patient_id
+     LEFT JOIN LATERAL (
+       SELECT c.id, c.status
+       FROM visits c
+       WHERE c.parent_visit_id = v.id
+         AND c.status NOT IN ('FINISHED','CANCELLED')
+       ORDER BY c.arrival_time DESC
+       LIMIT 1
+     ) child ON TRUE
      WHERE v.doctor_id = $1
        AND v.return_visit_date >= CURRENT_DATE
-       AND v.status NOT IN ('CANCELLED','FINISHED')
+       AND v.status NOT IN ('CANCELLED')
+       AND (
+         v.status <> 'FINISHED'
+         OR child.id IS NULL
+       )
      ORDER BY v.return_visit_date ASC, COALESCE(v.follow_up_when, TO_CHAR(v.arrival_time, 'HH24:MI')) ASC, v.arrival_time ASC`,
     [doctorId]
   );
@@ -883,6 +1114,7 @@ const assignDoctor = async (visitId, doctorId) => {
 // 2) existe triagem (triages.visit_id = visits.id)
 // ========================
 const startConsultation = async (visitId, doctorId) => {
+  await ensureVisitMotiveColumns();
   const result = await pool.query(
     `
     UPDATE visits v
@@ -894,7 +1126,11 @@ const startConsultation = async (visitId, doctorId) => {
     WHERE v.id = $2
       AND v.status = 'WAITING_DOCTOR'
       AND (v.doctor_id = $1 OR v.doctor_id IS NULL)
-      AND EXISTS (SELECT 1 FROM triage t WHERE t.visit_id = v.id)
+      AND (
+        EXISTS (SELECT 1 FROM triage t WHERE t.visit_id = v.id)
+        OR UPPER(COALESCE(v.visit_type, '')) IN ('FOLLOW_UP', 'LAB_RETURN')
+        OR UPPER(COALESCE(v.visit_motive, '')) IN ('LAB_RESULTS', 'LAB_SAMPLE_COLLECTION')
+      )
     RETURNING v.*;
     `,
     [doctorId, visitId]
@@ -1369,7 +1605,7 @@ const updateDestinationStatusByNurse = async (
       AND (
         ($1 = 'DISCHARGED' AND UPPER(COALESCE(TRIM(disposition_plan), '')) = 'HOME')
         OR
-        ($1 = 'TRANSFERRED' AND UPPER(COALESCE(TRIM(disposition_plan), '')) = 'ADMIT_URGENT')
+        ($1 = 'TRANSFERRED' AND UPPER(COALESCE(TRIM(disposition_plan), '')) = 'REFER_SPECIALIST')
       )
     RETURNING *
     `,
@@ -1407,7 +1643,7 @@ const registerAdmissionByNurse = async (
     WHERE id = $5
       AND status NOT IN ('CANCELLED', 'FINISHED')
       AND (
-        ($1 = 'IN_HOSPITAL' AND UPPER(COALESCE(TRIM(disposition_plan), '')) = 'ADMIT_URGENT')
+        ($1 = 'IN_HOSPITAL' AND UPPER(COALESCE(TRIM(disposition_plan), '')) = 'REFER_SPECIALIST')
         OR
         ($1 = 'BED_REST' AND UPPER(COALESCE(TRIM(disposition_plan), '')) = 'BED_REST')
       )
@@ -1424,6 +1660,8 @@ module.exports = {
   createVisit,
   findLatestFinishedLabFollowup,
   createVisitForLabFollowup,
+  createReturnVisitFromSource,
+  findActiveChildVisit,
   getVisitById,
   getLabNotificationContextByVisitId,
   listActiveVisits,

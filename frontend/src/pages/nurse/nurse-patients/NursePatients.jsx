@@ -41,16 +41,22 @@ export function NursePatientsView({
           onClick={loadPastVisits}
           disabled={loadingPastVisits}
           style={{
+            minHeight: "40px",
             fontSize: "13px",
-            padding: "7px 18px",
-            borderRadius: "20px",
-            border: "0.5px solid #e5e7eb",
-            background: "#0f172a",
+            padding: "0 16px",
+            borderRadius: "999px",
+            border: "1px solid #165034",
+            background: "#165034",
             color: "white",
-            cursor: "pointer",
-            fontWeight: "500",
+            cursor: loadingPastVisits ? "not-allowed" : "pointer",
+            fontWeight: "700",
             fontFamily: "inherit",
             opacity: loadingPastVisits ? 0.6 : 1,
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            lineHeight: 1.1,
+            boxShadow: "none",
           }}
         >
           {loadingPastVisits ? "Atualizando..." : "Atualizar"}
@@ -185,9 +191,10 @@ export function NursePatientsView({
                     ) {
                       return { background: "#e9f8ed", color: "#1a7a3c" };
                     }
-                    if (s === "IN_HOSPITAL" || s === "ADMIT_URGENT") {
+                    if (s === "IN_HOSPITAL") {
                       return { background: "#e6f1fb", color: "#0c447c" };
                     }
+                    if (s === "REFER_SPECIALIST") return { background: "#eef2ff", color: "#3730a3" };
                     if (s === "BED_REST") return { background: "#faeeda", color: "#633806" };
                     if (s === "TRANSFERRED") return { background: "#f1effd", color: "#3c3489" };
                     if (s === "DECEASED") return { background: "#fde8e8", color: "#791f1f" };

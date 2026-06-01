@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../lib/api";
-import { saveAuth } from "../../lib/auth";
+import { clearAuth, saveAuth } from "../../lib/auth";
 
 const logoImage = "/assets/logo_icon.svg";
 const loginImage = "/assets/login-image.png";
@@ -18,11 +18,20 @@ export default function Login() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    if (loading) return;
+    const normalizedUsername = username.trim();
+    if (!normalizedUsername || !password) {
+      setError("Introduza o utilizador e a palavra-passe.");
+      setErrorPopupOpen(true);
+      return;
+    }
     setError("");
+    setErrorPopupOpen(false);
+    clearAuth();
     setLoading(true);
 
     try {
-      const res = await api.login(username, password);
+      const res = await api.login(normalizedUsername, password);
       saveAuth(res.token, res.user);
 
       if (res.user.role === "ADMIN") navigate("/admin");
