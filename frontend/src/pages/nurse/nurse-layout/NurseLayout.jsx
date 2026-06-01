@@ -15,7 +15,6 @@ import {
   VisitPdfTemplateModal,
 } from "../nurse-patients/PastVisitHistoryModal";
 import ConfirmDialog from "../../../components/shared/ConfirmDialog";
-import RoleJoyrideTour from "../../../components/shared/RoleJoyrideTour";
 import { HeaderBackButton } from "../../../components/shared/layout/HeaderControls.jsx";
 
 export function NurseLayout(props) {
@@ -633,7 +632,6 @@ export function NurseLayout(props) {
           line-height: 1.4;
         }
       `}</style>
-      <RoleJoyrideTour role="nurse" />
 
       {/* Sidebar */}
       <aside

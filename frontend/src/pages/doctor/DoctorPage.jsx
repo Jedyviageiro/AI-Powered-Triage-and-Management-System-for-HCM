@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { getUser } from "../../lib/auth";
 import AppSidebar from "../../components/shared/layout/AppSidebar";
-import RoleJoyrideTour from "../../components/shared/RoleJoyrideTour";
 import {
   buildFollowUpInstructionsText,
   buildFollowUpReasonText,
@@ -584,7 +583,6 @@ export default function DoctorPage({ forcedView = "dashboard" }) {
       }}
     >
       <style>{doctorPageStyles}</style>
-      <RoleJoyrideTour role="doctor" />
 
       <AppSidebar
         open={sidebarOpen}

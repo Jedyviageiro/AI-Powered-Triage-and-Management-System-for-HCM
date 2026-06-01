@@ -5,7 +5,6 @@ import LabInsertContent from "../lab-insert/LabInsertContent";
 import LabSettingsContent from "../lab-configuracao/LabSettingsContent";
 import { examLabel } from "../lab-helpers/labExamHelpers";
 import { toSafeNotificationText } from "../lab-helpers/labNotificationHelpers";
-import RoleJoyrideTour from "../../../components/shared/RoleJoyrideTour";
 import { HeaderBackButton } from "../../../components/shared/layout/HeaderControls.jsx";
 
 export function LabLayout(props) {
@@ -63,7 +62,6 @@ export function LabLayout(props) {
       }}
     >
       <style>{CSS}</style>
-      <RoleJoyrideTour role="lab" />
 
       <aside
         data-tour="role-sidebar"
