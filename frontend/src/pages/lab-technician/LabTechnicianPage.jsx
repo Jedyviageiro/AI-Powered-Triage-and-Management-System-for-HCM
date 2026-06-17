@@ -25,8 +25,8 @@ const CSS = `
   .lab-field { width:100%; padding:9px 12px; border-radius:10px; border:0.5px solid rgba(0,0,0,.12); background:#fff; font-size:13px; color:#1c1c1e; font-family:inherit; outline:none; appearance:none; transition:border-color .15s, box-shadow .15s; }
   .lab-field:focus { border-color:#165034; box-shadow:0 0 0 3px rgba(22,80,52,.1); }
   select.lab-field { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238e8e93' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 10px center; padding-right:28px; }
-  .btn-primary { background:#165034; color:#fff; font-size:13px; font-weight:700; padding:0 16px; min-height:40px; border-radius:999px; border:1px solid #165034; cursor:pointer; font-family:inherit; transition:background .15s,border-color .15s; display:inline-flex; align-items:center; justify-content:center; line-height:1.1; box-shadow:none; }
-  .btn-primary:hover:not(:disabled) { background:#0c3a24; border-color:#0c3a24; }
+  .btn-primary { background:var(--hcm-primary-green); color:#fff; font-size:13px; font-weight:600; padding:0 16px; min-height:40px; border-radius:999px; border:1px solid var(--hcm-primary-green); cursor:pointer; font-family:inherit; transition:background .15s,border-color .15s; display:inline-flex; align-items:center; justify-content:center; line-height:1.1; box-shadow:none; }
+  .btn-primary:hover:not(:disabled) { background:var(--hcm-primary-green-hover); border-color:var(--hcm-primary-green-hover); }
   .btn-primary:disabled { opacity:.5; cursor:not-allowed; }
   .btn-ghost { background:none; color:#165034; font-size:13px; font-weight:700; padding:0 14px; min-height:40px; border-radius:999px; border:none; cursor:pointer; font-family:inherit; transition:background .15s; }
   .btn-ghost:hover { background:rgba(22,80,52,.08); }

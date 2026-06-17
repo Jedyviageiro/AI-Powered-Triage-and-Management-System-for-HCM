@@ -34,8 +34,8 @@ export const doctorPageStyles = `
         .triage-input::placeholder { color: #d1d5db; }
         .triage-input:focus { outline: none; border-color: #165034; }
         .triage-label { font-size: 10px; font-weight: 700; color: #374151; margin-bottom: 4px; display: block; letter-spacing: 0.08em; text-transform: uppercase; }
-        .btn-primary { background: #165034; color: white; border: 1px solid #165034; border-radius: 999px; padding: 0 16px; font-size: 13px; font-weight: 700; font-family: inherit; cursor: pointer; transition: background 0.15s, border-color 0.15s; width: 100%; min-height: 40px; display: inline-flex; align-items: center; justify-content: center; line-height: 1.1; box-shadow: none; }
-        .btn-primary:hover:not(:disabled) { background: #0c3a24; border-color: #0c3a24; }
+        .btn-primary { background: var(--hcm-primary-green); color: white; border: 1px solid var(--hcm-primary-green); border-radius: 999px; padding: 0 16px; font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; transition: background 0.15s, border-color 0.15s; width: 100%; min-height: 40px; display: inline-flex; align-items: center; justify-content: center; line-height: 1.1; box-shadow: none; }
+        .btn-primary:hover:not(:disabled) { background: var(--hcm-primary-green-hover); border-color: var(--hcm-primary-green-hover); }
         .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
         .btn-secondary { background: #ffffff; color: #374151; border: 1px solid #d1d5db; border-radius: 999px; padding: 0 16px; font-size: 13px; font-weight: 700; font-family: inherit; cursor: pointer; transition: background 0.15s, border-color 0.15s; width: 100%; min-height: 40px; display: inline-flex; align-items: center; justify-content: center; line-height: 1.1; box-shadow: none; }
         .btn-secondary:hover:not(:disabled) { background: #e5e7eb; }
@@ -105,13 +105,13 @@ export const doctorPageStyles = `
           transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
         }
         .cf-btn-primary {
-          background: #165034;
-          border: 1px solid #165034;
+          background: var(--hcm-primary-green);
+          border: 1px solid var(--hcm-primary-green);
           color: #ffffff;
         }
         .cf-btn-primary:hover:not(:disabled) {
-          background: #0c3a24;
-          border-color: #0c3a24;
+          background: var(--hcm-primary-green-hover);
+          border-color: var(--hcm-primary-green-hover);
         }
         .cf-btn-sec {
           background: #f8fafc;

@@ -35,7 +35,6 @@ export function NurseLayout(props) {
     shiftMenuOpen,
     setShiftMenuOpen,
     shiftButtonMeta,
-    shiftIcon,
     shiftStartDisabled,
     startShift,
     startingShift,
@@ -234,13 +233,163 @@ export function NurseLayout(props) {
     savePatientEdit,
     saveQueueTriageEdit,
   } = props;
+  const nurseFirstName = me?.full_name?.split(" ")?.[0] || "Ana";
+  const todayLabel = new Intl.DateTimeFormat("pt-PT", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  })
+    .formatToParts(new Date())
+    .map((part) =>
+      part.type === "weekday" || part.type === "month"
+        ? `${part.value.charAt(0).toUpperCase()}${part.value.slice(1)}`
+        : part.value
+    )
+    .join("");
+  const compactNavLabelFor = (item) => {
+    const key = String(item?.key || "");
+    const label = String(item?.label || "").toLowerCase();
+    if (key === "shiftReport") return null;
+    if (key === "notifications") return "Notifica\u00e7\u00f5es";
+    if (key === "patients") return "Pacientes Antigos";
+    if (key === "doctors") return "M\u00e9dicos";
+    if (key === "preferences") return "Configura\u00e7\u00f5es";
+    if (label.includes("notifica")) return "Notifica\u00e7\u00f5es";
+    if (label.includes("medicos") || label.includes("dicos")) return "M\u00e9dicos";
+    if (label.includes("relat")) return null;
+    if (label.includes("config")) return "Configura\u00e7\u00f5es";
+    if (key === "notifications" || label.includes("notifica")) return "Notificações";
+    if (key === "shiftReport" || label.includes("relat")) return null;
+    if (key === "notifications" || label.includes("notifica")) return "NotificaÃ§Ãµes";
+    if (key === "home" || label.includes("dashboard")) return "Dashboard";
+    if (key === "newTriage" || label.includes("nova triagem") || label === "triagem") return "Triagem";
+    if (key === "queue" || label.includes("fila")) return "Fila de Espera";
+    if (key === "patientsInTriage" || label.includes("pacientes em triag")) return "Pacientes";
+    if (key === "doctors" || label.includes("médicos") || label.includes("medicos")) return "Médicos";
+    if (key === "roomsAvailable" || label.includes("quartos") || label.includes("consult")) return "Quartos";
+    if (key === "shiftReport" || label.includes("relatório") || label.includes("relatorio")) return null;
+    if (key === "preferences" || label.includes("config")) return "Configurações";
+    return null;
+  };
+  const sidebarNavOrder = {
+    home: 0,
+    newTriage: 1,
+    patientsInTriage: 2,
+    queue: 3,
+    doctors: 4,
+    roomsAvailable: 5,
+    patients: 6,
+    notifications: 7,
+    preferences: 8,
+  };
+  const sidebarNavItems = navSections
+    .flatMap((section) => section.items || [])
+    .filter(
+      (item) =>
+        item.key !== "logout" &&
+        item.key !== "destination" &&
+        item.key !== "shiftReport" &&
+        compactNavLabelFor(item)
+    )
+    .sort((a, b) => (sidebarNavOrder[a.key] ?? 99) - (sidebarNavOrder[b.key] ?? 99));
+  const sidebarIconFor = (key) => {
+    const props = {
+      className: "w-5 h-5 flex-shrink-0",
+      fill: "none",
+      viewBox: "0 0 24 24",
+      stroke: "currentColor",
+      strokeWidth: "2",
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+      "aria-hidden": "true",
+    };
+    switch (key) {
+      case "home":
+        return (
+          <svg {...props}>
+            <path d="m3 11 9-8 9 8" />
+            <path d="M5 10v10h5v-6h4v6h5V10" />
+          </svg>
+        );
+      case "newTriage":
+        return (
+          <svg {...props}>
+            <path d="M12 5v14" />
+            <path d="M5 12h14" />
+          </svg>
+        );
+      case "patientsInTriage":
+      case "patients":
+        return (
+          <svg {...props}>
+            <circle cx="9" cy="8" r="3" />
+            <path d="M3 20a6 6 0 0 1 12 0" />
+            <path d="M16 11a3 3 0 1 0-1-5.83" />
+            <path d="M18 20a5 5 0 0 0-4-4.9" />
+          </svg>
+        );
+      case "queue":
+        return (
+          <svg {...props}>
+            <rect x="5" y="4" width="14" height="16" rx="2" />
+            <path d="M9 4V3h6v1" />
+            <path d="M9 12h6" />
+            <path d="M12 9v6" />
+          </svg>
+        );
+      case "doctors":
+        return (
+          <svg {...props}>
+            <circle cx="12" cy="7" r="4" />
+            <path d="M5 21a7 7 0 0 1 14 0" />
+          </svg>
+        );
+      case "roomsAvailable":
+        return (
+          <svg {...props}>
+            <path d="M4 8h16" />
+            <path d="M6 8V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2" />
+            <path d="M7 8v11" />
+            <path d="M17 8v11" />
+            <path d="M5 19h14" />
+          </svg>
+        );
+      case "shiftReport":
+        return (
+          <svg {...props}>
+            <path d="M7 3h7l5 5v13H7z" />
+            <path d="M14 3v5h5" />
+            <path d="M10 17v-4" />
+            <path d="M13 17v-7" />
+            <path d="M16 17v-2" />
+          </svg>
+        );
+      case "preferences":
+        return (
+          <svg {...props}>
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+          </svg>
+        );
+      case "notifications":
+        return (
+          <svg {...props}>
+            <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+          </svg>
+        );
+      default:
+        return null;
+    }
+  };
   return (
     <div
       className={`triage-page flex h-screen ${
         Number(preferences?.font_scale_percent || 100) !== 100 ? "nurse-font-scaled" : ""
       }`}
       style={{
-        "--nurse-page-bg": "#eaebea",
+        "--nurse-page-bg": "#f7f8fa",
         background: "var(--nurse-page-bg)",
         "--nurse-font-scale": Number(preferences?.font_scale_percent || 100) === 105 ? 1.05 : 1,
       }}
@@ -248,7 +397,7 @@ export function NurseLayout(props) {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
         * { font-family: 'IBM Plex Sans', system-ui, sans-serif; box-sizing: border-box; }
-        .triage-page button { border-radius: 999px !important; box-shadow: none !important; font-family: inherit; }
+        .triage-page button { border-radius: 8px !important; box-shadow: none !important; font-family: inherit; }
 
         input:focus, textarea:focus, select:focus {
           outline: none;
@@ -256,39 +405,92 @@ export function NurseLayout(props) {
           box-shadow: 0 0 0 3px rgba(22,80,52,0.12);
         }
 
-        .sidebar { transition: width 0.3s cubic-bezier(0.4,0,0.2,1); overflow: hidden; background: #0c3a24; color: #ffffff; }
-        .sidebar-open { width: 256px; }
+        .sidebar { transition: width 0.3s cubic-bezier(0.4,0,0.2,1); overflow: hidden; background: #ffffff; color: #101827; border-right: 1px solid #e7ebf0; box-shadow: none; }
+        .sidebar-open { width: 190px; }
         .sidebar-closed { width: 76px; }
-        .sidebar nav { overflow-x: hidden; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(220,235,226,0.55) transparent; }
+        .sidebar nav { overflow-x: hidden; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(102,112,133,0.35) transparent; }
         .sidebar nav::-webkit-scrollbar { width: 8px; }
-        .sidebar nav::-webkit-scrollbar-thumb { background: rgba(220,235,226,0.45); border-radius: 9999px; border: 2px solid transparent; background-clip: padding-box; }
+        .sidebar nav::-webkit-scrollbar-thumb { background: rgba(102,112,133,0.28); border-radius: 9999px; border: 2px solid transparent; background-clip: padding-box; }
         .sidebar button:focus { outline: none; }
-        .sidebar-closed nav { padding-left: 8px !important; padding-right: 8px !important; }
-        .sidebar-closed .nav-item-wrap > button { justify-content: center; gap: 0 !important; padding-left: 10px !important; padding-right: 10px !important; }
-        .sidebar-nav-btn { position: relative; border-radius: 0 !important; margin-left: 0; width: 100% !important; font-size: 12px; font-weight: 500; }
-        .sidebar-open .sidebar-nav-btn { padding-left: 20px !important; }
-        .nav-indicator { position: absolute; left: 0; width: 3px; background: #7fe0a0; border-radius: 0; transition: top 0.22s cubic-bezier(0.4,0,0.2,1), height 0.22s cubic-bezier(0.4,0,0.2,1), opacity 0.18s ease; pointer-events: none; }
+        .sidebar-footer { flex: 0 0 auto; position: sticky; bottom: 0; background: #ffffff; z-index: 2; }
+        .sidebar-closed nav { padding-left: 6px !important; padding-right: 6px !important; }
+        .sidebar-closed .nav-item-wrap > button { justify-content: center; gap: 0 !important; padding-left: 8px !important; padding-right: 8px !important; }
+        .sidebar-nav-btn { position: relative; border-radius: 8px !important; margin-left: 0; width: 100% !important; font-size: 12px !important; font-weight: 500; min-height: 36px !important; }
+        .sidebar-nav-btn svg { width: 16px !important; height: 16px !important; }
+        .sidebar-open .sidebar-nav-btn { padding-left: 13px !important; padding-right: 13px !important; }
+        .nav-indicator { display: none; }
         .sidebar-closed .nav-indicator { left: -8px; }
 
         .nav-label { transition: opacity 0.2s ease, max-width 0.3s cubic-bezier(0.4,0,0.2,1); white-space: nowrap; overflow: hidden; }
-        .sidebar-open .nav-label { opacity: 1; max-width: 200px; }
+        .sidebar-open .nav-label { opacity: 1; max-width: 132px; font-size: 12px; }
         .sidebar-closed .nav-label { opacity: 0; max-width: 0; }
         .logo-text { transition: opacity 0.2s ease, max-width 0.3s cubic-bezier(0.4,0,0.2,1); white-space: nowrap; overflow: hidden; }
         .sidebar-open .logo-text { opacity: 1; max-width: 200px; }
         .sidebar-closed .logo-text { opacity: 0; max-width: 0; }
 
         .sidebar-closed .nav-badge { position: absolute; top: 2px; right: 2px; width: 18px; height: 18px; font-size: 10px; border-radius: 9999px; }
-        .nav-badge-open { width: 20px; height: 20px; border-radius: 9999px; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; }
+        .nav-badge-open { width: 18px; height: 18px; border-radius: 9999px; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; }
         .nav-tooltip { position: absolute; left: calc(100% + 12px); top: 50%; transform: translateY(-50%); background: #111827; color: #fff; font-size: 12px; font-weight: 500; padding: 4px 10px; border-radius: 6px; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity 0.15s ease; z-index: 50; }
         .sidebar-closed .nav-item-wrap:hover .nav-tooltip { opacity: 1; }
         .sidebar-open .nav-tooltip { display: none; }
 
+        .hcm-brand-mark { width: 52px; height: 52px; border-radius: 9px; overflow: hidden; flex: 0 0 auto; position: relative; background: #ffffff; }
+        .hcm-brand-mark img { position: absolute; width: 138px; height: auto; left: 50%; top: 50%; transform: translate(-50%, -50%); }
+        .hcm-dashboard-header { position: sticky; top: 0; z-index: 100; background: var(--nurse-page-bg); border-bottom: 0; box-shadow: none; min-height: 104px; display: flex; align-items: center; }
+        .hcm-dashboard-header__inner { max-width: 1240px; margin: 0 auto; width: 100%; padding: 28px 36px 14px; display: grid; grid-template-columns: minmax(300px, 1fr) 324px auto; align-items: center; gap: 30px; min-width: 0; }
+        .hcm-dashboard-header__copy { min-width: 260px; }
+        .hcm-dashboard-header__title { margin: 0; color: #101827; font-size: 25px !important; line-height: 1.1; font-weight: 800 !important; letter-spacing: 0 !important; }
+        .hcm-dashboard-header__date { margin: 10px 0 0; color: #758096; font-size: 14px !important; line-height: 1.2; text-transform: none; }
+        .hcm-dashboard-header__search { height: 43px; display: flex; align-items: center; gap: 12px; width: 324px; min-width: 0; max-width: 100%; background: #ffffff; border: 1px solid #dbe2ea; border-radius: 8px; padding: 0 13px; box-shadow: none; outline: none; }
+        .hcm-dashboard-header__search input { font-size: 13px !important; color: #374151; }
+        .hcm-dashboard-header__search-kbd { min-width: 35px; height: 21px; border-radius: 6px; background: #f7f8fa; color: #8a94a6; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; }
+        .hcm-dashboard-header__actions { display: flex; align-items: center; justify-content: flex-end; gap: 0; white-space: nowrap; }
+        .hcm-dashboard-header__shift-wrap { display: flex; align-items: center; margin-right: 22px; padding-right: 28px; border-right: 1px solid #edf0f4; }
+        .hcm-dashboard-header__shift { height: 48px; min-width: 125px; padding: 0; border: 0 !important; background: transparent !important; color: #101827 !important; display: inline-flex; align-items: center; gap: 12px; justify-content: flex-start; cursor: pointer; }
+        .hcm-dashboard-header__shift small { display: block; color: #69758a; font-size: 12px; font-weight: 500; line-height: 1.05; }
+        .hcm-dashboard-header__shift strong { display: block; color: #101827; font-size: 13px; font-weight: 800; line-height: 1.05; margin-top: 3px; }
+        .hcm-dashboard-header__notification-wrap { position: relative; padding: 0 23px; border-right: 1px solid #edf0f4; display: flex; align-items: center; justify-content: center; }
+        .hcm-dashboard-header__notification { width: 42px; height: 42px; padding: 0 !important; border: 0 !important; border-radius: 8px !important; background: #ffffff; color: #101827; position: relative; display: inline-grid !important; place-items: center !important; cursor: pointer; }
+        .hcm-dashboard-header__notification svg { display: block; }
+        .hcm-dashboard-header__badge { position: absolute; top: 2px; right: 2px; min-width: 17px; height: 17px; border-radius: 999px; background: #ff333d; border: 2px solid #fff; color: #fff; display: inline-flex; align-items: center; justify-content: center; padding: 0 4px; font-size: 10px; font-weight: 800; }
+        .hcm-dashboard-header__profile { margin-left: 24px; display: inline-flex; align-items: center; gap: 13px; border: 0 !important; background: transparent !important; padding: 0 !important; color: #101827; cursor: pointer; }
+        .hcm-dashboard-header__avatar { width: 42px; height: 42px; border-radius: 50% !important; overflow: hidden; flex: 0 0 auto; background: linear-gradient(135deg, #0c3a24, #165034); display: grid; place-items: center; color: #fff; font-size: 13px; font-weight: 800; }
+        .hcm-dashboard-header__avatar img { border-radius: 50%; display: block; }
+        .triage-page .hcm-dashboard-header__shift-wrap { border-right: 0 !important; padding-right: 0 !important; }
+        .triage-page .hcm-dashboard-header__notification-wrap { width: 74px !important; min-width: 74px !important; padding: 0 !important; border-left: 0 !important; border-right: 0 !important; position: relative !important; display: flex !important; align-items: center !important; justify-content: center !important; }
+        .triage-page .hcm-dashboard-header__notification-wrap::before,
+        .triage-page .hcm-dashboard-header__notification-wrap::after { content: ""; position: absolute; top: 4px; bottom: 4px; width: 1px; background: #edf0f4; pointer-events: none; }
+        .triage-page .hcm-dashboard-header__notification-wrap::before { left: 0; }
+        .triage-page .hcm-dashboard-header__notification-wrap::after { right: 0; }
+        .triage-page button.hcm-dashboard-header__notification { width: 42px !important; height: 42px !important; margin: 0 auto !important; padding: 0 !important; display: inline-grid !important; place-items: center !important; line-height: 0 !important; }
+        .triage-page button.hcm-dashboard-header__notification svg { margin: 0 !important; transform: none !important; }
+        .triage-page .hcm-dashboard-header__badge { top: 2px !important; right: 4px !important; }
+        .triage-page button.hcm-dashboard-header__avatar,
+        .triage-page .hcm-dashboard-header__avatar { width: 42px !important; height: 42px !important; min-width: 42px !important; border-radius: 9999px !important; overflow: hidden !important; padding: 0 !important; aspect-ratio: 1 / 1; }
+        .triage-page button.hcm-dashboard-header__avatar img,
+        .triage-page .hcm-dashboard-header__avatar img { width: 100% !important; height: 100% !important; object-fit: cover !important; border-radius: 9999px !important; display: block; }
+        .hcm-dashboard-header__profile-text { display: grid; gap: 5px; line-height: 1; text-align: left; }
+        .hcm-dashboard-header__profile-text strong { color: #101827; font-size: 13px; font-weight: 800; white-space: nowrap; }
+        .hcm-dashboard-header__profile-text span { color: #69758a; font-size: 12px; font-weight: 500; white-space: nowrap; }
+        .triage-page .hcm-dashboard-header + div { padding: 14px 36px 28px !important; }
+
+        @media (max-width: 1180px) {
+          .hcm-dashboard-header__inner { grid-template-columns: 1fr 300px; gap: 18px; padding: 28px 26px 14px; }
+          .hcm-dashboard-header__actions { grid-column: 1 / -1; justify-content: flex-end; }
+        }
+
+        @media (max-width: 760px) {
+          .hcm-dashboard-header__inner { grid-template-columns: 1fr; gap: 14px; padding: 22px 18px 14px; }
+          .hcm-dashboard-header__search { width: 100%; }
+          .hcm-dashboard-header__actions { justify-content: flex-start; flex-wrap: wrap; }
+        }
+
         .step-line { flex: 1; height: 2px; background: #e5e7eb; margin: 0 8px; border-radius: 2px; transition: background 0.3s; }
-        .step-line.done { background: #165034; }
+        .step-line.done { background: var(--hcm-primary-green); }
         .step-circle { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; transition: all 0.3s; flex-shrink: 0; }
         .step-circle.pending { background: #f3f4f6; color: #9ca3af; border: 2px solid #e5e7eb; }
-        .step-circle.active { background: #165034; color: white; border: 2px solid #165034; }
-        .step-circle.done { background: #165034; color: white; border: 2px solid #165034; }
+        .step-circle.active { background: var(--hcm-primary-green); color: white; border: 2px solid var(--hcm-primary-green); }
+        .step-circle.done { background: var(--hcm-primary-green); color: white; border: 2px solid var(--hcm-primary-green); }
 
         .triage-input { width: 100%; padding: 10px 14px; border: 1.5px solid #e5e7eb; border-radius: 18px; font-size: 13px; color: #111827; background: #fff; transition: border-color 0.15s; box-shadow: none; }
         .triage-input::placeholder { color: #d1d5db; }
@@ -319,7 +521,7 @@ export function NurseLayout(props) {
         .patient-entry-panel.inactive { height: 0; overflow: hidden; opacity: 0; pointer-events: none; }
         .patient-entry-panel.active { height: auto; opacity: 1; }
         .triage-part-segment { position: relative; display: grid; grid-template-columns: 1fr 1fr; height: 46px; padding: 4px; background: #f3f4f6; border-radius: 999px; overflow: hidden; margin-bottom: 2px; }
-        .triage-part-indicator { position: absolute; left: 4px; top: 4px; width: calc((100% - 8px) / 2); height: calc(100% - 8px); background: #165034; border-radius: 999px; transition: transform 0.24s cubic-bezier(0.4,0,0.2,1); z-index: 0; }
+        .triage-part-indicator { position: absolute; left: 4px; top: 4px; width: calc((100% - 8px) / 2); height: calc(100% - 8px); background: var(--hcm-primary-green); border-radius: 999px; transition: transform 0.24s cubic-bezier(0.4,0,0.2,1); z-index: 0; }
         .triage-part-tab { position: relative; z-index: 1; height: 38px; padding: 0 12px; border: none; border-radius: 999px !important; background: transparent !important; color: #6b7280; font-size: 12px; font-weight: 750; cursor: pointer; transition: color 0.16s; }
         .triage-part-tab.active { color: #fff; }
         .triage-part-slider { overflow: hidden; width: 100%; }
@@ -334,15 +536,15 @@ export function NurseLayout(props) {
         .triage-start-actions-register { margin-top: 14px; }
         .patient-register-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 16px; }
         .patient-register-cta { width: 100%; display: flex; align-items: center; gap: 12px; border: none !important; border-radius: 0 !important; background: transparent; color: #0c3a24; padding: 8px 2px 14px; margin: -2px 0 14px; text-align: left; cursor: pointer; box-shadow: none !important; }
-        .patient-register-cta-icon { width: 36px; height: 36px; border-radius: 999px; background: #165034; color: #fff; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; transition: transform 0.16s, background 0.16s; }
+        .patient-register-cta-icon { width: 36px; height: 36px; border-radius: 999px; background: var(--hcm-primary-green); color: #fff; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; transition: transform 0.16s, background 0.16s; }
         .patient-register-cta strong { display: block; font-size: 13px; font-weight: 750; color: #0f172a; line-height: 1.2; }
         .patient-register-cta span span { display: block; margin-top: 2px; font-size: 12px; font-weight: 600; color: #5f6f66; }
-        .patient-register-cta:hover .patient-register-cta-icon { transform: translateX(2px); background: #0c3a24; }
+        .patient-register-cta:hover .patient-register-cta-icon { transform: translateX(2px); background: var(--hcm-primary-green-hover); }
         .patient-entry-back { width: auto !important; padding: 0 !important; margin: 0; white-space: nowrap; }
         .patient-entry-back .patient-register-cta-icon { width: 32px; height: 32px; }
         .patient-entry-back:hover .patient-register-cta-icon { transform: translateX(-2px); }
         .search-segment { position: relative; display: grid; grid-template-columns: 1fr 1fr; height: 52px; padding: 4px; background: #f3f4f6; border-radius: 999px; overflow: hidden; }
-        .search-segment-indicator { position: absolute; left: 4px; top: 4px; width: calc((100% - 8px) / 2); height: calc(100% - 8px); background: #165034; border-radius: 999px; transition: transform 0.22s cubic-bezier(0.4,0,0.2,1); z-index: 0; }
+        .search-segment-indicator { position: absolute; left: 4px; top: 4px; width: calc((100% - 8px) / 2); height: calc(100% - 8px); background: var(--hcm-primary-green); border-radius: 999px; transition: transform 0.22s cubic-bezier(0.4,0,0.2,1); z-index: 0; }
         .search-tab { position: relative; z-index: 1; height: 44px; padding: 0 12px; font-size: 13px; font-weight: 700; border-radius: 999px !important; transition: color 0.15s; border: none; cursor: pointer; background: transparent !important; }
         .search-tab.active { color: white; }
         .search-tab.inactive { color: #6b7280; }
@@ -357,12 +559,12 @@ export function NurseLayout(props) {
         .patient-result-code { display: block; margin-top: 4px; font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; font-weight: 600; color: #6b7280; letter-spacing: 0; }
         .patient-confirmed { background: linear-gradient(135deg, #e7f1ec 0%, #dcebe2 100%); border: 1.5px solid #2d6f4e; border-radius: 12px; padding: 16px; }
         .ai-card { background: linear-gradient(135deg, #edf5f0 0%, #e7f1ec 100%); border: 1.5px solid #2d6f4e; border-radius: 12px; padding: 14px; }
-        .ai-badge { display: inline-flex; align-items: center; gap: 4px; background: #165034; color: white; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 20px; margin-bottom: 8px; }
+        .ai-badge { display: inline-flex; align-items: center; gap: 4px; background: var(--hcm-primary-green); color: white; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 20px; margin-bottom: 8px; }
 
-        .btn-primary { background: #165034; color: white; border: 1px solid #165034; border-radius: 999px; padding: 0 16px; font-size: 13px; font-weight: 700; font-family: inherit; cursor: pointer; transition: background 0.15s, border-color 0.15s; width: 100%; min-height: 40px; display: inline-flex; align-items: center; justify-content: center; line-height: 1.1; box-shadow: none; }
-        .btn-primary:hover:not(:disabled) { background: #0c3a24; border-color: #0c3a24; }
+        .btn-primary { background: var(--hcm-primary-green); color: white; border: 1px solid var(--hcm-primary-green); border-radius: 8px; padding: 0 16px; font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; transition: background 0.15s, border-color 0.15s; width: 100%; min-height: 40px; display: inline-flex; align-items: center; justify-content: center; line-height: 1.1; box-shadow: none; }
+        .btn-primary:hover:not(:disabled) { background: var(--hcm-primary-green-hover); border-color: var(--hcm-primary-green-hover); }
         .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
-        .btn-secondary { background: #ffffff; color: #374151; border: 1px solid #d1d5db; border-radius: 999px; padding: 0 16px; font-size: 13px; font-weight: 700; font-family: inherit; cursor: pointer; transition: background 0.15s, border-color 0.15s; width: 100%; min-height: 40px; display: inline-flex; align-items: center; justify-content: center; line-height: 1.1; box-shadow: none; }
+        .btn-secondary { background: #ffffff; color: #374151; border: 1px solid #d1d5db; border-radius: 8px; padding: 0 16px; font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; transition: background 0.15s, border-color 0.15s; width: 100%; min-height: 40px; display: inline-flex; align-items: center; justify-content: center; line-height: 1.1; box-shadow: none; }
         .btn-secondary:hover:not(:disabled) { background: #e5e7eb; }
         .btn-secondary:disabled { opacity: 0.45; cursor: not-allowed; }
         .btn-ghost { background: #fff; color: #0c3a24; border: 1px solid #cfe0d6; border-radius: 999px; padding: 10px 20px; font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; transition: background 0.15s, border-color 0.15s; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; line-height: 1.1; }
@@ -370,14 +572,14 @@ export function NurseLayout(props) {
         .btn-ghost:disabled { opacity: 0.45; cursor: not-allowed; }
 
         .section-divider { border: none; border-top: 1.5px dashed #e5e7eb; margin: 20px 0; }
-        .form-card { background: white; border: 1px solid #f0f0f0; border-radius: 16px; padding: 28px; box-shadow: 0 8px 22px rgba(12,58,36,0.075); }
+        .form-card { background: white; border: 1px solid #f0f0f0; border-radius: 14px; padding: 24px; box-shadow: 0 8px 22px rgba(12,58,36,0.06); }
 
-        .nav-active { background: rgba(134, 214, 163, 0.14) !important; color: #ffffff !important; margin-right: -12px !important; width: calc(100% + 12px) !important; padding-left: 20px !important; border-radius: 0 !important; box-shadow: none !important; }
+        .nav-active { background: var(--hcm-primary-green-soft) !important; color: var(--hcm-primary-green) !important; margin-right: 0 !important; width: 100% !important; padding-left: 13px !important; border-radius: 8px !important; box-shadow: none !important; font-weight: 600 !important; }
         .sidebar .nav-item-wrap,
-        .sidebar .nav-item-wrap > button { border-radius: 0 !important; }
-        .sidebar-closed .nav-active { margin-left: -8px !important; margin-right: -8px !important; width: calc(100% + 16px) !important; padding-left: 0 !important; justify-content: center !important; }
-        .sidebar-nav-inactive { color: rgba(255,255,255,0.78) !important; }
-        .sidebar-nav-inactive:hover { background: rgba(255,255,255,0.06) !important; color: #ffffff !important; }
+        .sidebar .nav-item-wrap > button { border-radius: 8px !important; }
+        .sidebar-closed .nav-active { margin-left: 0 !important; margin-right: 0 !important; width: 100% !important; padding-left: 0 !important; justify-content: center !important; }
+        .sidebar-nav-inactive { color: #66738b !important; }
+        .sidebar-nav-inactive:hover { background: #f4f7f8 !important; color: var(--hcm-primary-green) !important; }
         .nav-item-btn:focus-visible { outline: none; }
 
         .chip { display: inline-flex; align-items: center; padding: 5px 12px; border: 1.5px solid #e5e7eb; border-radius: 20px; font-size: 12px; font-weight: 500; color: #4b5563; cursor: pointer; transition: all 0.15s; background: white; }
@@ -637,53 +839,39 @@ export function NurseLayout(props) {
       <aside
         className={`sidebar flex flex-col flex-shrink-0 ${sidebarOpen ? "sidebar-open" : "sidebar-closed"}`}
         data-tour="role-sidebar"
+        style={{
+          width: sidebarOpen ? 190 : 76,
+          minWidth: sidebarOpen ? 190 : 76,
+          maxWidth: sidebarOpen ? 190 : 76,
+        }}
       >
-        <div className="p-4 flex items-center gap-3">
+        <div className="flex items-center gap-3" style={{ padding: "24px 16px 29px" }}>
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="w-9 h-9 flex-shrink-0 flex items-center justify-center hover:bg-white/20 rounded-full transition-colors text-white"
+            className="hcm-brand-mark"
+            style={{
+              border: "none",
+              padding: 0,
+              cursor: "pointer",
+            }}
+            aria-label={sidebarOpen ? "Recolher menu" : "Abrir menu"}
           >
-            {sidebarOpen ? (
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            ) : (
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <line x1="3" y1="6" x2="21" y2="6" />
-                <line x1="3" y1="12" x2="21" y2="12" />
-                <line x1="3" y1="18" x2="21" y2="18" />
-              </svg>
-            )}
+            <img src="/assets/hcm logo.png" alt="" aria-hidden="true" />
           </button>
           <div className="logo-text min-w-0">
-            <div className="text-sm font-bold text-white leading-tight">Triagem</div>
-            <div className="text-xs font-medium" style={{ color: "#dcebe2" }}>
-              Painel Enfermagem
+            <div className="font-extrabold leading-none" style={{ color: "#101827", fontSize: 23 }}>
+              HCM
+            </div>
+            <div className="font-medium" style={{ color: "#152033", lineHeight: 1.22, marginTop: 6, fontSize: 13 }}>
+              Hospital Central
+              <br />
+              de Maputo
             </div>
           </div>
         </div>
 
-        <nav className="flex-1 py-3 pr-3 pl-0 overflow-y-auto overflow-x-hidden">
-          <div ref={navListRef} className="space-y-4 relative">
+        <nav className="flex-1 overflow-y-auto overflow-x-hidden" style={{ padding: "0 14px" }}>
+          <div ref={navListRef} className="relative" style={{ display: "grid", gap: 8 }}>
             <span
               className="nav-indicator"
               style={{
@@ -692,72 +880,62 @@ export function NurseLayout(props) {
                 opacity: navIndicator?.opacity || 0,
               }}
             />
-            {navSections.map((section) => (
-              <div key={section.title}>
-                {sidebarOpen && (
-                  <div className="px-3 pb-1 text-[11px] uppercase tracking-[0.08em] font-semibold text-white/35">
-                    {section.title}
-                  </div>
-                )}
-                <div className="space-y-1">
-                  {section.items
-                    .filter((item) => item.key !== "logout" && item.key !== "destination")
-                    .map((item) => (
-                      <div key={item.key} className="nav-item-wrap relative">
-                        <button
-                          ref={(el) => {
-                            if (!navItemRefs?.current) return;
-                            if (el) navItemRefs.current[item.key] = el;
-                            else delete navItemRefs.current[item.key];
-                          }}
-                          onClick={() => {
-                            if (item.onClick) {
-                              item.onClick();
-                              return;
-                            }
-                            openView(item.key);
-                          }}
-                          data-tour={`nav-${item.key}`}
-                          className={`sidebar-nav-btn nav-item-btn w-full text-left px-3 py-2.5 text-[12px] font-medium transition-all flex items-center gap-3 relative focus:outline-none ${activeView === item.key ? "nav-active" : "sidebar-nav-inactive"}`}
-                          style={
-                            activeView === item.key
-                              ? { borderRadius: 0, paddingLeft: sidebarOpen ? 20 : 0 }
-                              : undefined
-                          }
-                        >
-                          {item.icon}
-                          <span className="nav-label">{item.label}</span>
-                          {item.badge && sidebarOpen && (
-                            <span
-                              className="ml-auto nav-badge-open text-white"
-                              style={{ background: "#165034" }}
-                            >
-                              {item.badge}
-                            </span>
-                          )}
-                          {item.badge && !sidebarOpen && (
-                            <span
-                              className="nav-badge absolute top-1 right-1 text-white text-xs px-1 py-0.5 rounded-full flex items-center justify-center"
-                              style={{ background: "#165034" }}
-                            >
-                              {item.badge}
-                            </span>
-                          )}
-                        </button>
-                        <span className="nav-tooltip">{item.label}</span>
-                      </div>
-                    ))}
+            {sidebarNavItems.map((item) => {
+              const compactLabel = compactNavLabelFor(item);
+              return (
+                <div key={item.key} className="nav-item-wrap relative">
+                  <button
+                    ref={(el) => {
+                      if (!navItemRefs?.current) return;
+                      if (el) navItemRefs.current[item.key] = el;
+                      else delete navItemRefs.current[item.key];
+                    }}
+                    onClick={() => {
+                      if (item.onClick) {
+                        item.onClick();
+                        return;
+                      }
+                      openView(item.key);
+                    }}
+                    data-tour={`nav-${item.key}`}
+                    className={`sidebar-nav-btn nav-item-btn w-full text-left transition-all flex items-center relative focus:outline-none ${activeView === item.key ? "nav-active" : "sidebar-nav-inactive"}`}
+                    style={{
+                      borderRadius: 8,
+                      padding: "0 13px",
+                      minHeight: 36,
+                      fontSize: 12,
+                      gap: 12,
+                    }}
+                  >
+                    {sidebarIconFor(item.key)}
+                    <span className="nav-label">{compactLabel}</span>
+                    {item.badge && sidebarOpen && (
+                      <span className="ml-auto nav-badge-open text-white" style={{ background: "#ff333d" }}>
+                        {item.badge}
+                      </span>
+                    )}
+                    {item.badge && !sidebarOpen && (
+                      <span
+                        className="nav-badge absolute top-1 right-1 text-white text-xs px-1 py-0.5 rounded-full flex items-center justify-center"
+                        style={{ background: "#ff333d" }}
+                      >
+                        {item.badge}
+                      </span>
+                    )}
+                  </button>
+                  <span className="nav-tooltip">{compactLabel}</span>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </nav>
 
-        <div className="p-3 border-t border-white/20">
+        <div className="sidebar-footer" style={{ borderTop: "1px solid #eef2f5", padding: "14px", display: "grid", gap: 10 }}>
           <div className="nav-item-wrap relative">
             <button
               onClick={logout}
-              className="sidebar-nav-btn w-full px-3 py-2.5 text-[12px] font-medium sidebar-nav-inactive transition-colors flex items-center gap-3"
+              className="sidebar-nav-btn w-full font-medium sidebar-nav-inactive transition-colors flex items-center"
+              style={{ minHeight: 36, fontSize: 12, gap: 12, padding: "0 13px" }}
             >
               <svg
                 className="w-5 h-5 flex-shrink-0"
@@ -782,53 +960,78 @@ export function NurseLayout(props) {
       {/* Main */}
       <main className="flex-1 overflow-y-auto" style={{ background: "var(--nurse-page-bg)" }}>
         {/* Top Nav */}
-        <div
+        <header
+          className="hcm-dashboard-header"
           style={{
             position: "sticky",
             top: 0,
             zIndex: 100,
-            background: "rgba(246, 248, 247, 0.94)",
-            borderBottom: "1px solid rgba(220, 229, 224, 0.72)",
-            boxShadow: "0 14px 34px rgba(15, 23, 42, 0.05)",
-            backdropFilter: "blur(14px)",
-            minHeight: "72px",
+            background: "var(--nurse-page-bg)",
+            borderBottom: "0",
+            boxShadow: "none",
+            minHeight: "104px",
             display: "flex",
             alignItems: "center",
           }}
         >
           <div
+            className="hcm-dashboard-header__inner"
             style={{
-              maxWidth: "1320px",
+              maxWidth: 1240,
               margin: "0 auto",
               width: "100%",
-              padding: "10px 24px",
-              display: "flex",
+              padding: "28px 36px 14px",
+              display: "grid",
+              gridTemplateColumns: "minmax(300px, 1fr) 324px auto",
               alignItems: "center",
-              justifyContent: "space-between",
-              gap: "16px",
+              gap: 30,
               minWidth: 0,
             }}
           >
             {activeView === "home" || activeView === "dayStats" ? (
-              <div />
+              <div className="hcm-dashboard-header__copy">
+                <div
+                  className="hcm-dashboard-header__title"
+                  style={{
+                    margin: 0,
+                    color: "#101827",
+                    fontSize: 25,
+                    lineHeight: 1.1,
+                    fontWeight: 800,
+                  }}
+                >
+                  {activeView === "dayStats" ? "Estatísticas do Dia" : `Bom dia, ${nurseFirstName} 👋`}
+                </div>
+                <p
+                  className="hcm-dashboard-header__date"
+                  style={{
+                    margin: "8px 0 0",
+                    color: "#758096",
+                    fontSize: 14,
+                    lineHeight: 1.2,
+                    textTransform: "none",
+                  }}
+                >
+                  {activeView === "dayStats" ? "Resumo operacional detalhado" : todayLabel}
+                </p>
+              </div>
             ) : (
               <HeaderBackButton onClick={() => openView("home")} />
             )}
             <div
               data-tour="top-search"
+              className="hcm-dashboard-header__search"
               style={{
+                width: 324,
+                height: 43,
                 display: "flex",
                 alignItems: "center",
-                gap: "10px",
-                width: "min(340px, 34vw)",
-                minWidth: "220px",
-                maxWidth: "100%",
-                background: "#ffffff",
-                border: "1px solid rgba(226, 232, 240, 0.88)",
-                borderRadius: "999px",
-                padding: "10px 18px",
-                boxShadow: "none",
-                outline: "none",
+                gap: 12,
+                border: "1px solid #dbe2ea",
+                borderRadius: 8,
+                padding: "0 13px",
+                background: "#fff",
+                boxSizing: "border-box",
               }}
             >
               <svg
@@ -845,7 +1048,7 @@ export function NurseLayout(props) {
                 <path d="m21 21-4.35-4.35" />
               </svg>
               <input
-                placeholder="Pesquisar paciente"
+                placeholder="Pesquisar paciente..."
                 value={topNavSearch}
                 onChange={(e) => setTopNavSearch(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && searchFromTopNav()}
@@ -862,33 +1065,43 @@ export function NurseLayout(props) {
                   appearance: "none",
                 }}
               />
+              <span className="hcm-dashboard-header__search-kbd">⌘ K</span>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "4px", flexShrink: 0 }}>
+            <div
+              className="hcm-dashboard-header__actions"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "flex-end",
+                gap: 0,
+                whiteSpace: "nowrap",
+              }}
+            >
               {String(me?.role || "").toUpperCase() === "NURSE" && (
-                <div
-                  style={{ display: "flex", alignItems: "center", gap: "8px", marginRight: "8px" }}
-                >
+                <div className="hcm-dashboard-header__shift-wrap">
                   <div data-tour="shift-status" style={{ position: "relative" }}>
                     <button
                       type="button"
+                      className="hcm-dashboard-header__shift"
                       onMouseDown={(event) => event.stopPropagation()}
                       onClick={() => setShiftMenuOpen((prev) => !prev)}
                       disabled={loadingShift || shiftMenuBusy}
                       style={{
-                        padding: "8px 12px",
-                        borderRadius: "999px",
-                        border: `1px solid ${shiftButtonMeta.border}`,
-                        background: shiftButtonMeta.background,
-                        color: shiftButtonMeta.color,
+                        height: "48px",
+                        padding: 0,
+                        borderRadius: "8px",
+                        border: "0",
+                        background: "transparent",
+                        color: "#101827",
                         fontSize: "0",
                         fontWeight: "700",
                         cursor: loadingShift || shiftMenuBusy ? "not-allowed" : "pointer",
                         opacity: loadingShift || shiftMenuBusy ? 0.7 : 1,
                         display: "inline-flex",
                         alignItems: "center",
-                        gap: "10px",
+                        gap: "12px",
                         justifyContent: "space-between",
-                        minWidth: "170px",
+                        minWidth: "125px",
                       }}
                       title="Abrir menu do turno"
                     >
@@ -913,7 +1126,26 @@ export function NurseLayout(props) {
                           }}
                           aria-hidden="true"
                         >
-                          {shiftIcon}
+                          <svg
+                            width="19"
+                            height="19"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="#ff9700"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <circle cx="12" cy="12" r="4" />
+                            <path d="M12 2v2" />
+                            <path d="M12 20v2" />
+                            <path d="m4.93 4.93 1.41 1.41" />
+                            <path d="m17.66 17.66 1.41 1.41" />
+                            <path d="M2 12h2" />
+                            <path d="M20 12h2" />
+                            <path d="m6.34 17.66-1.41 1.41" />
+                            <path d="m19.07 4.93-1.41 1.41" />
+                          </svg>
                         </span>
                         <span
                           style={{
@@ -922,6 +1154,7 @@ export function NurseLayout(props) {
                             borderRadius: "999px",
                             background: shiftButtonMeta.dot,
                             flexShrink: 0,
+                            display: "none",
                           }}
                         />
                         <span
@@ -933,30 +1166,8 @@ export function NurseLayout(props) {
                             minWidth: 0,
                           }}
                         >
-                          <span>{shiftButtonMeta.label}</span>
-                          <span
-                            style={{
-                              fontSize: "11px",
-                              fontWeight: 600,
-                              opacity: 0.82,
-                              whiteSpace: "nowrap",
-                            }}
-                          >
-                            {shiftButtonMeta.detail}
-                          </span>
-                          {shiftButtonMeta.subdetail ? (
-                            <span
-                              style={{
-                                fontSize: "10px",
-                                fontWeight: 600,
-                                opacity: 0.72,
-                                whiteSpace: "nowrap",
-                                marginTop: "2px",
-                              }}
-                            >
-                              {shiftButtonMeta.subdetail}
-                            </span>
-                          ) : null}
+                          <small>Turno</small>
+                          <strong>Manhã</strong>
                         </span>
                       </span>
                       <svg
@@ -1013,9 +1224,14 @@ export function NurseLayout(props) {
                   </div>
                 </div>
               )}
-              <div ref={notificationsPreviewRef} data-tour="notifications" style={{ position: "relative" }}>
+              <div
+                ref={notificationsPreviewRef}
+                data-tour="notifications"
+                className="hcm-dashboard-header__notification-wrap"
+              >
                 <button
                   type="button"
+                  className="hcm-dashboard-header__notification"
                   onClick={() => {
                     setNotificationsPreviewOpen((prev) => !prev);
                     if (!notificationsPreviewOpen) loadNotifications();
@@ -1023,8 +1239,8 @@ export function NurseLayout(props) {
                   style={{
                     width: "42px",
                     height: "42px",
-                    borderRadius: "50%",
-                    border: "1px solid rgba(226, 232, 240, 0.9)",
+                    borderRadius: "8px",
+                    border: "none",
                     background: notificationsPreviewOpen ? "#e7f4ee" : "#ffffff",
                     cursor: "pointer",
                     display: "flex",
@@ -1032,7 +1248,7 @@ export function NurseLayout(props) {
                     justifyContent: "center",
                     color: notificationsPreviewOpen ? "#165034" : "#5f6f66",
                     position: "relative",
-                    boxShadow: "0 12px 24px rgba(15, 23, 42, 0.06)",
+                    boxShadow: "none",
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.background = "#e7f4ee";
@@ -1056,6 +1272,7 @@ export function NurseLayout(props) {
                   </svg>
                   {notificationsUnread > 0 && (
                     <span
+                      className="hcm-dashboard-header__badge"
                       style={{
                         position: "absolute",
                         top: "1px",
@@ -1063,8 +1280,8 @@ export function NurseLayout(props) {
                         minWidth: "16px",
                         height: "16px",
                         borderRadius: "999px",
-                        background: "#ef4444",
-                        border: "1.5px solid white",
+                        background: "#ff333d",
+                        border: "2px solid white",
                         color: "white",
                         fontSize: "10px",
                         fontWeight: 700,
@@ -1174,20 +1391,36 @@ export function NurseLayout(props) {
                 )}
               </div>
               <div
+                className="hcm-dashboard-header__profile-text"
                 style={{
-                  marginLeft: "6px",
-                  fontSize: "13px",
-                  fontWeight: 600,
+                  marginLeft: "13px",
+                  order: 3,
                   color: "#374151",
                   maxWidth: "180px",
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "4px",
+                  lineHeight: 1,
                 }}
               >
-                {me?.full_name || "Utilizador"}
+                <strong
+                  style={{
+                    fontSize: "13px",
+                    fontWeight: 800,
+                    color: "#101827",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  {me?.full_name || "Utilizador"}
+                </strong>
+                <small style={{ fontSize: "12px", color: "#69758a" }}>
+                  {String(me?.role || "").toUpperCase() === "NURSE" ? "Enfermeira" : me?.role || "Utilizador"}
+                </small>
               </div>
               <button
+                className="hcm-dashboard-header__avatar"
                 style={{
                   width: "42px",
                   height: "42px",
@@ -1195,13 +1428,14 @@ export function NurseLayout(props) {
                   border: "2px solid #ffffff",
                   overflow: "hidden",
                   cursor: "pointer",
-                  marginLeft: "2px",
+                  marginLeft: "24px",
                   padding: 0,
                   background: "linear-gradient(135deg, #0c3a24, #165034)",
                   boxShadow: "0 12px 24px rgba(15, 23, 42, 0.12)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
+                  order: 2,
                 }}
               >
                 {String(me?.profile_photo_url || "").trim() ? (
@@ -1216,14 +1450,32 @@ export function NurseLayout(props) {
                   </span>
                 )}
               </button>
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#667085"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                style={{ order: 4, marginLeft: 10, flexShrink: 0 }}
+                aria-hidden="true"
+              >
+                <path d="m6 9 6 6 6-6" />
+              </svg>
             </div>
           </div>
-        </div>
+        </header>
 
         <div
-          className="p-8 mx-auto"
+          className="mx-auto"
           data-tour="role-content"
-          style={{ maxWidth: activeView === "patients" ? "none" : "64rem", width: "100%" }}
+          style={{
+            maxWidth: activeView === "patients" ? "none" : "1240px",
+            width: "100%",
+            padding: activeView === "patients" ? "14px 24px 24px" : "14px 36px 28px",
+          }}
         >
           {/* ============================================================
               MODERNIZED HOME / DAY STATS VIEW

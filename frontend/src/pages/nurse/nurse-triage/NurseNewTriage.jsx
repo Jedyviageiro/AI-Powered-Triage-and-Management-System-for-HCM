@@ -358,7 +358,10 @@ export function NurseNewTriageView({
   const [nurseInterventions, setNurseInterventions] = useState({});
   const [manualOpen, setManualOpen] = useState(false);
   const [manualPage, setManualPage] = useState(0);
-  const canProceedToTriage = !!patient?.id;
+  const [registeredPatientId, setRegisteredPatientId] = useState(null);
+  const isRegisteringNewPatient = patientEntryMode === "register";
+  const registrationCompleted = isRegisteringNewPatient && !!patient?.id && registeredPatientId === patient.id;
+  const canProceedToTriage = !!patient?.id && (!isRegisteringNewPatient || registrationCompleted);
   const hasLegacyClinicalRiskFlags =
     needsOxygen ||
     suspectedSevereDehydration ||
@@ -372,6 +375,7 @@ export function NurseNewTriageView({
     setTriagePart("vitals");
     setNurseInterventions({});
     setManualPage(0);
+    setRegisteredPatientId(null);
     setNeedsOxygen?.(false);
     setSuspectedSevereDehydration?.(false);
     setExcessiveLethargy?.(false);
@@ -428,6 +432,11 @@ export function NurseNewTriageView({
       return cleaned ? `${cleaned}\n${interventionNote}${riskNote}` : `${interventionNote}${riskNote}`;
     });
     setTriageStep(3);
+  };
+
+  const registerPatient = async (event) => {
+    const created = await createPatient(event);
+    if (created?.id) setRegisteredPatientId(created.id);
   };
 
   const renderStartActions = (className = "") => (
@@ -569,7 +578,14 @@ export function NurseNewTriageView({
                   {searchLoading ? "Buscando..." : "Buscar Paciente"}
                 </button>
 
-                <button type="button" className="patient-register-cta" onClick={() => setPatientEntryMode("register")}>
+                <button
+                  type="button"
+                  className="patient-register-cta"
+                  onClick={() => {
+                    setRegisteredPatientId(null);
+                    setPatientEntryMode("register");
+                  }}
+                >
                   <span className="patient-register-cta-icon" aria-hidden="true">
                     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="m13 6 6 6-6 6" /></svg>
                   </span>
@@ -632,7 +648,14 @@ export function NurseNewTriageView({
                     <div className="triage-label" style={{ marginBottom: "4px" }}>Cadastrar Novo Paciente</div>
                     <div style={{ fontSize: "13px", color: "#6b7280" }}>Preencha os dados essenciais para criar o registo pediatrico.</div>
                   </div>
-                  <button type="button" className="patient-register-cta patient-entry-back" onClick={() => setPatientEntryMode("locate")}>
+                  <button
+                    type="button"
+                    className="patient-register-cta patient-entry-back"
+                    onClick={() => {
+                      setRegisteredPatientId(null);
+                      setPatientEntryMode("locate");
+                    }}
+                  >
                     <span className="patient-register-cta-icon" aria-hidden="true">
                       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5" /><path d="m11 6-6 6 6 6" /></svg>
                     </span>
@@ -640,7 +663,7 @@ export function NurseNewTriageView({
                   </button>
                 </div>
 
-                <form onSubmit={createPatient} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                <form onSubmit={registerPatient} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                   <div>
                     <label className="triage-label">Código Clínico</label>
                     <input className="triage-input" value={pClinicalCode} readOnly disabled placeholder="A gerar automaticamente" title="Codigo clinico gerado automaticamente" style={{ background: "#f8fafc", color: "#0f172a", cursor: "not-allowed" }} />
@@ -679,8 +702,8 @@ export function NurseNewTriageView({
                     <label className="triage-label">Morada</label>
                     <input className="triage-input" value={pAddress} onChange={(e) => setPAddress(e.target.value)} placeholder="Bairro, rua ou ponto de referência" required />
                   </div>
-                  <button disabled={creatingPatient} className="btn-secondary">
-                    {creatingPatient ? "Cadastrando..." : "Cadastrar Paciente"}
+                  <button disabled={creatingPatient || registrationCompleted} className="btn-secondary">
+                    {registrationCompleted ? "Paciente Cadastrado" : creatingPatient ? "Cadastrando..." : "Cadastrar Paciente"}
                   </button>
                 </form>
                 {renderStartActions("triage-start-actions-register")}

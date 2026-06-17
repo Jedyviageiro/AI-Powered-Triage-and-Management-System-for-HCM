@@ -399,7 +399,7 @@ export default function Queue() {
 
               <button
                 onClick={() => loadQueue({ silent: true })}
-                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-[#165034] bg-[#165034] px-4 text-[13px] font-bold text-white transition hover:bg-[#0c3a24]"
+                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-[var(--hcm-primary-green)] bg-[var(--hcm-primary-green)] px-4 text-[13px] font-semibold text-white transition hover:border-[var(--hcm-primary-green-hover)] hover:bg-[var(--hcm-primary-green-hover)]"
                 title="Atualizar fila"
               >
                 <FiRefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />

@@ -723,8 +723,10 @@ export function useNursePageActions({
         setSelectedDoctorId("");
         setForceTriageForLabFollowup(false);
         await loadNextClinicalCode();
+        return created;
       } catch (e2) {
         setErr(e2.message);
+        return null;
       } finally {
         setCreatingPatient(false);
       }
