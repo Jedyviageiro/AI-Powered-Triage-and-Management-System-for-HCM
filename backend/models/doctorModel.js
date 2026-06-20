@@ -4,7 +4,7 @@ const pool = require("../config/db");
 // (O nurse panel vai chamar /doctors/availability frequentemente,
 // então last_seen vai manter atualizado enquanto o médico estiver na app.)
 const ONLINE_TTL_SECONDS = 60;
-const STALE_CONSULTATION_OFFLINE_MINUTES = 10;
+const STALE_CONSULTATION_OFFLINE_MINUTES = 5;
 const STALE_CONSULTATION_MAX_MINUTES = 180;
 
 const recoverStaleConsultations = async () => {
@@ -47,7 +47,12 @@ const listDoctorsWithAvailability = async () => {
       u.full_name,
       COALESCE(u.specialization, '') AS specialization,
       u.profile_photo_url,
-      u.is_available,
+      (
+        u.is_available = TRUE
+        AND u.is_online = TRUE
+        AND u.last_seen IS NOT NULL
+        AND u.last_seen >= NOW() - ($1::int * INTERVAL '1 second')
+      ) AS is_available,
       u.is_online,
       u.last_seen,
       u.is_active,

@@ -373,10 +373,6 @@ export function DoctorDashboardView({
         </aside>
       </div>
 
-      <footer className="doctor-dash-footer">
-        <span>Sistema de Gestao Hospitalar</span>
-        <span>Versao 2.1.0</span>
-      </footer>
     </div>
   );
 }

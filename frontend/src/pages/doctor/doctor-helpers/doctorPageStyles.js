@@ -196,6 +196,19 @@ export const doctorPageStyles = `
           display: inline-flex; align-items: center; justify-content: center;
           font-size: 11px; font-weight: 600;
         }
+        .nav-badge-dot {
+          width: 9px;
+          height: 9px;
+          border-radius: 9999px;
+          background: #2563eb;
+          box-shadow: 0 0 0 3px #eff6ff;
+          flex: 0 0 auto;
+        }
+        .nav-badge-dot-closed {
+          position: absolute;
+          top: 7px;
+          right: 7px;
+        }
 
         .nav-tooltip {
           position: absolute; left: calc(100% + 12px); top: 50%;
@@ -254,7 +267,17 @@ export const doctorPageStyles = `
         .hcm-dashboard-header__actions { display: flex; align-items: center; justify-content: flex-end; gap: 0; white-space: nowrap; min-width: 0; }
         .hcm-dashboard-header__notification-wrap { position: relative; padding: 0 23px; border-right: 1px solid #edf0f4; display: flex; align-items: center; justify-content: center; }
         .hcm-dashboard-header__notification { width: 42px; height: 42px; padding: 0 !important; border: 0 !important; border-radius: 8px !important; background: #ffffff; color: #101827; position: relative; display: inline-grid !important; place-items: center !important; cursor: pointer; }
-        .hcm-dashboard-header__badge { position: absolute; top: 2px; right: 2px; min-width: 17px; height: 17px; border-radius: 999px; background: #ff333d; border: 2px solid #fff; color: #fff; display: inline-flex; align-items: center; justify-content: center; padding: 0 4px; font-size: 10px; font-weight: 800; }
+        .hcm-dashboard-header__badge { position: absolute; top: 1px; right: 1px; min-width: 17px; height: 17px; border-radius: 999px; background: #d92d20; border: 2px solid #fff; color: #fff; display: inline-flex; align-items: center; justify-content: center; padding: 0 4px; font-size: 10px; font-weight: 800; }
+        .doctor-notification-popover { position: absolute; top: calc(100% + 10px); right: 0; width: min(420px, calc(100vw - 32px)); max-height: min(460px, calc(100vh - 150px)); background: #ffffff; border: 1px solid #dfe7ee; border-radius: 12px; box-shadow: 0 18px 44px rgba(15, 23, 42, 0.14); z-index: 220; overflow: hidden; white-space: normal; }
+        .doctor-notification-popover__head { padding: 14px 16px; border-bottom: 1px solid #edf2f7; display: flex; justify-content: space-between; align-items: center; gap: 14px; }
+        .doctor-notification-popover__title { font-size: 13px; font-weight: 800; color: #111827; line-height: 1.2; }
+        .doctor-notification-popover__meta { margin-top: 4px; font-size: 11px; color: #667085; font-weight: 600; }
+        .doctor-notification-popover__link { border: 0 !important; background: transparent !important; color: var(--hcm-primary-green) !important; font-size: 12px !important; font-weight: 800 !important; cursor: pointer; width: auto !important; min-height: 0 !important; padding: 4px 0 !important; white-space: nowrap; }
+        .doctor-notification-popover__body { padding: 14px 16px; max-height: 340px; overflow-y: auto; }
+        .doctor-notification-popover__item { display: grid; gap: 7px; min-width: 0; }
+        .doctor-notification-popover__item-title { color: #111827; font-size: 13px; font-weight: 800; line-height: 1.35; overflow-wrap: anywhere; }
+        .doctor-notification-popover__message { color: #475467; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+        .doctor-notification-popover__empty { color: #98a2b3; font-size: 12px; font-weight: 600; }
         .hcm-dashboard-header__profile { margin-left: 24px; min-width: 166px; display: inline-flex; align-items: center; gap: 13px; border: 0 !important; background: transparent !important; padding: 0 !important; color: #101827; cursor: pointer; }
         .hcm-dashboard-header__avatar { width: 42px; height: 42px; border-radius: 50% !important; overflow: hidden; flex: 0 0 auto; background: linear-gradient(135deg, #0c3a24, #165034); display: grid; place-items: center; color: #fff; font-size: 13px; font-weight: 800; }
         .hcm-dashboard-header__avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block; }

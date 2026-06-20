@@ -263,6 +263,30 @@ const formatFriendlyAlertStatus = (status, formatStatus) => {
   return formatted && formatted !== status ? formatted : "Precisa de atencao";
 };
 
+const formatAlertElapsed = (visit) => {
+  const rawDate =
+    visit?.consultation_started_at ||
+    visit?.queued_at ||
+    visit?.arrival_time ||
+    visit?.created_at ||
+    visit?.updated_at;
+  const startedAt = rawDate ? new Date(rawDate).getTime() : NaN;
+  if (!Number.isFinite(startedAt)) return "";
+
+  const minutes = Math.max(0, Math.floor((Date.now() - startedAt) / 60000));
+  if (minutes >= 1440) {
+    const days = Math.floor(minutes / 1440);
+    const hours = Math.floor((minutes % 1440) / 60);
+    return `${days} dia${days === 1 ? "" : "s"}${hours ? ` ${hours}h` : ""}`;
+  }
+  if (minutes >= 60) {
+    const hours = Math.floor(minutes / 60);
+    const rest = minutes % 60;
+    return `${hours}h${rest ? ` ${rest}min` : ""}`;
+  }
+  return `${minutes} min`;
+};
+
 export const buildDoctorDashboardAlertPreview = ({ activeAlertRows, formatStatus }) => {
   const rows = Array.isArray(activeAlertRows) ? activeAlertRows : [];
   return rows.slice(0, 3).map((visit, idx) => {
@@ -273,10 +297,15 @@ export const buildDoctorDashboardAlertPreview = ({ activeAlertRows, formatStatus
         })
       : "";
     const statusLabel = formatFriendlyAlertStatus(visit?.status, formatStatus);
+    const elapsedLabel = formatAlertElapsed(visit);
     return {
       id: visit?.id || idx,
       title: `${visit?.full_name || "Paciente"}${visit?.room_name ? ` - ${visit.room_name}` : ""}`,
-      detail: time ? `${statusLabel} desde ${time}` : statusLabel,
+      detail: elapsedLabel
+        ? `${statusLabel} ha ${elapsedLabel}`
+        : time
+          ? `${statusLabel} desde ${time}`
+          : statusLabel,
       tone: idx === 0 ? "red" : idx === 1 ? "orange" : "amber",
     };
   });

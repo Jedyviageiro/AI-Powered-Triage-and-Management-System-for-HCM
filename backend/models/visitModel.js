@@ -1,6 +1,6 @@
 const pool = require("../config/db");
 
-const STALE_CONSULTATION_OFFLINE_MINUTES = 10;
+const STALE_CONSULTATION_OFFLINE_MINUTES = 5;
 const STALE_CONSULTATION_MAX_MINUTES = 180;
 
 let ensureVisitMotiveColumnsPromise = null;

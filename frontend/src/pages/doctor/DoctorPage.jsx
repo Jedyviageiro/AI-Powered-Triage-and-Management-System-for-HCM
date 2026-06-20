@@ -545,6 +545,24 @@ export default function DoctorPage({ forcedView = "dashboard" }) {
     selectedReturnDate,
   });
 
+  const sidebarNavSections = useMemo(
+    () =>
+      (Array.isArray(navSections) ? navSections : []).map((section) => ({
+        ...section,
+        items: (section.items || []).map((item) => {
+          const count = Number(item?.badge || 0);
+          const hasUnreadNotifications = item.key === "notifications" && notificationsUnread > 0;
+          return {
+            ...item,
+            badge: null,
+            badgeDot: hasUnreadNotifications,
+            badgeCount: count,
+          };
+        }),
+      })),
+    [navSections, notificationsUnread]
+  );
+
   const openView = useCallback(
     (viewKey) => {
       const path = DOCTOR_VIEW_ROUTES[viewKey];
@@ -555,6 +573,16 @@ export default function DoctorPage({ forcedView = "dashboard" }) {
       setActiveView(viewKey);
     },
     [location.pathname, navigate, setActiveView]
+  );
+
+  const selectSidebarView = useCallback(
+    (viewKey) => {
+      if (viewKey === "notifications" && notificationsUnread > 0) {
+        markAllNotificationsRead();
+      }
+      openView(viewKey);
+    },
+    [markAllNotificationsRead, notificationsUnread, openView]
   );
 
   const performLogout = async () => {
@@ -594,10 +622,10 @@ export default function DoctorPage({ forcedView = "dashboard" }) {
       <AppSidebar
         open={sidebarOpen}
         title="Painel Medico"
-        sections={navSections}
+        sections={sidebarNavSections}
         activeKey={activeView}
         onToggle={() => setSidebarOpen((prev) => !prev)}
-        onSelect={openView}
+        onSelect={selectSidebarView}
         navListRef={navListRef}
         navItemRefs={navItemRefs}
         navIndicator={navIndicator}

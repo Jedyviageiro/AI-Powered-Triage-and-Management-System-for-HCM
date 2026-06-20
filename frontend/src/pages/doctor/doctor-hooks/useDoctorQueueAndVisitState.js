@@ -299,7 +299,6 @@ export function useDoctorQueueAndVisitState({
 
   const canOpenConsultationForDate = useCallback(
     (meta) => {
-      if (meta?.return_visit_date || meta?.date) return true;
       const rawDate = meta?.return_visit_date || meta?.date || null;
       if (!rawDate) return true;
       const date = new Date(rawDate);

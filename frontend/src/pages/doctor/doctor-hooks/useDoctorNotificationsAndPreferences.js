@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../../../lib/api";
 import {
   buildLiveDoctorNotifications,
@@ -37,6 +37,7 @@ export function useDoctorNotificationsAndPreferences({
   const [localNotificationReads, setLocalNotificationReads] = useState(() =>
     loadLocalDoctorNotificationReadMap()
   );
+  const previewMarkedRef = useRef(false);
   const [notifyingPatientVisitId, setNotifyingPatientVisitId] = useState(null);
   const [markingDeliveredVisitId, setMarkingDeliveredVisitId] = useState(null);
 
@@ -120,6 +121,7 @@ export function useDoctorNotificationsAndPreferences({
     );
     return [...remoteNotifications, ...doctorLiveNotifications]
       .filter((notification) => shouldShowNotificationByPreferences(notification, preferences))
+      .filter((notification) => !notification?.read_at)
       .sort(
         (a, b) => new Date(b?.created_at || 0).getTime() - new Date(a?.created_at || 0).getTime()
       );
@@ -266,6 +268,16 @@ export function useDoctorNotificationsAndPreferences({
   useEffect(() => {
     saveLocalDoctorNotificationReadMap(localNotificationReads);
   }, [localNotificationReads]);
+
+  useEffect(() => {
+    if (!notificationsPreviewOpen) {
+      previewMarkedRef.current = false;
+      return;
+    }
+    if (previewMarkedRef.current || loadingNotifications || !latestNotification?.id) return;
+    previewMarkedRef.current = true;
+    markNotificationRead(latestNotification.id);
+  }, [latestNotification, loadingNotifications, markNotificationRead, notificationsPreviewOpen]);
 
   useEffect(() => {
     if (activeView === "notifications") {

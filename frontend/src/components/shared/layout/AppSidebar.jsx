@@ -83,7 +83,10 @@ export default function AppSidebar({
                 >
                   {item.icon}
                   <span className="nav-label">{item.label}</span>
-                  {item.badge && open ? (
+                  {item.badgeDot && open ? (
+                    <span className="ml-auto nav-badge-dot" aria-label="Novos itens" />
+                  ) : null}
+                  {item.badge && !item.badgeDot && open ? (
                     <span
                       className="ml-auto nav-badge-open text-white"
                       style={{ background: item.alertBadge ? "#dc2626" : "#165034" }}
@@ -91,7 +94,10 @@ export default function AppSidebar({
                       {item.badge}
                     </span>
                   ) : null}
-                  {item.badge && !open ? (
+                  {item.badgeDot && !open ? (
+                    <span className="nav-badge-dot nav-badge-dot-closed" aria-label="Novos itens" />
+                  ) : null}
+                  {item.badge && !item.badgeDot && !open ? (
                     <span
                       className="nav-badge absolute top-1 right-1 text-white text-xs px-1 py-0.5 rounded-full flex items-center justify-center"
                       style={{ background: item.alertBadge ? "#dc2626" : "#165034" }}

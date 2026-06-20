@@ -271,8 +271,8 @@ export default function DoctorLayout(props) {
                   title="Notificacoes"
                   data-tour="notifications"
                   style={{
-                    background: notificationsPreviewOpen ? "#e7f4ee" : "#ffffff",
-                    color: notificationsPreviewOpen ? "#165034" : "#5f6f66",
+                    background: notificationsPreviewOpen ? "#edf7f2" : "#ffffff",
+                    color: notificationsPreviewOpen ? "#0f5132" : "#526173",
                   }}
                 >
                   <HeaderBellIcon />
@@ -283,34 +283,13 @@ export default function DoctorLayout(props) {
                   ) : null}
                 </button>
                 {notificationsPreviewOpen && (
-                  <div
-                    style={{
-                      position: "absolute",
-                      top: "calc(100% + 8px)",
-                      right: 0,
-                      width: "340px",
-                      background: "#fff",
-                      border: "1px solid #e5e7eb",
-                      borderRadius: "18px",
-                      zIndex: 220,
-                      overflow: "hidden",
-                    }}
-                  >
-                    <div
-                      style={{
-                        padding: "10px 12px",
-                        borderBottom: "1px solid #f1f5f9",
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        gap: "10px",
-                      }}
-                    >
+                  <div className="doctor-notification-popover" role="status">
+                    <div className="doctor-notification-popover__head">
                       <div>
-                        <div style={{ fontSize: "12px", fontWeight: 700, color: "#111827" }}>
+                        <div className="doctor-notification-popover__title">
                           Notificações
                         </div>
-                        <div style={{ fontSize: "11px", color: "#94a3b8" }}>
+                        <div className="doctor-notification-popover__meta">
                           {notificationsUnread > 0
                             ? `${notificationsUnread} por ler`
                             : "Tudo em dia"}
@@ -322,32 +301,25 @@ export default function DoctorLayout(props) {
                           setNotificationsPreviewOpen(false);
                           openView("notifications");
                         }}
-                        style={{
-                          border: "none",
-                          background: "transparent",
-                          color: "#165034",
-                          fontSize: "12px",
-                          fontWeight: 700,
-                          cursor: "pointer",
-                        }}
+                        className="doctor-notification-popover__link"
                       >
                         Ver todas
                       </button>
                     </div>
-                    <div style={{ padding: "12px" }}>
+                    <div className="doctor-notification-popover__body">
                       {loadingNotifications ? (
                         <div className="skeleton-line" style={{ height: "16px", width: "100%" }} />
                       ) : latestNotification ? (
-                        <div style={{ display: "grid", gap: "6px" }}>
-                          <div style={{ fontSize: "13px", fontWeight: 700, color: "#111827" }}>
+                        <div className="doctor-notification-popover__item">
+                          <div className="doctor-notification-popover__item-title">
                             {latestNotification?.title || "Notificação"}
                           </div>
-                          <div style={{ fontSize: "12px", color: "#4b5563", lineHeight: 1.4 }}>
+                          <div className="doctor-notification-popover__message">
                             {latestNotification?.message || "-"}
                           </div>
                         </div>
                       ) : (
-                        <div style={{ fontSize: "12px", color: "#9ca3af" }}>
+                        <div className="doctor-notification-popover__empty">
                           Sem notificações recentes.
                         </div>
                       )}

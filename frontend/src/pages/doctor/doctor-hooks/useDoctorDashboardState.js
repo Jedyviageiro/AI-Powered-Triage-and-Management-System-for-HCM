@@ -310,7 +310,19 @@ export function useDoctorDashboardState({
     [filteredQueue, meId]
   );
   const activeAlertRows = useMemo(
-    () => filteredQueue.filter((visit) => String(visit?.priority || "").toUpperCase() === "URGENT"),
+    () =>
+      filteredQueue
+        .filter((visit) => String(visit?.priority || "").toUpperCase() === "URGENT")
+        .slice()
+        .sort((a, b) => {
+          const aTs = new Date(
+            a?.consultation_started_at || a?.queued_at || a?.arrival_time || a?.created_at || 0
+          ).getTime();
+          const bTs = new Date(
+            b?.consultation_started_at || b?.queued_at || b?.arrival_time || b?.created_at || 0
+          ).getTime();
+          return (Number.isFinite(aTs) ? aTs : 0) - (Number.isFinite(bTs) ? bTs : 0);
+        }),
     [filteredQueue]
   );
   const activeAlertCount = activeAlertRows.length;
