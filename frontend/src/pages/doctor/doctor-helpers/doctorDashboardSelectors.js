@@ -253,12 +253,31 @@ export const buildDoctorDashboardHourSeries = ({ assignedToday }) => {
   return { labels, consults, triages, max };
 };
 
+const formatFriendlyAlertStatus = (status, formatStatus) => {
+  const raw = String(status || "").toUpperCase();
+  if (raw === "IN_CONSULTATION") return "Em consulta";
+  if (raw === "WAITING_DOCTOR") return "Aguardando medico";
+  if (raw === "WAITING" || raw === "IN_TRIAGE") return "Aguardando triagem";
+  if (raw === "READY_FOR_REVIEW") return "Resultado pronto para revisar";
+  const formatted = formatStatus?.(status);
+  return formatted && formatted !== status ? formatted : "Precisa de atencao";
+};
+
 export const buildDoctorDashboardAlertPreview = ({ activeAlertRows, formatStatus }) => {
   const rows = Array.isArray(activeAlertRows) ? activeAlertRows : [];
-  return rows.slice(0, 3).map((visit, idx) => ({
-    id: visit?.id || idx,
-    title: `${visit?.full_name || "Paciente"}${visit?.room_name ? ` - ${visit.room_name}` : ""}`,
-    detail: `${formatStatus(visit?.status)}${visit?.arrival_time ? ` - ${new Date(visit.arrival_time).toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" })}` : ""}`,
-    tone: idx === 0 ? "red" : idx === 1 ? "orange" : "amber",
-  }));
+  return rows.slice(0, 3).map((visit, idx) => {
+    const time = visit?.arrival_time
+      ? new Date(visit.arrival_time).toLocaleTimeString("pt-PT", {
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : "";
+    const statusLabel = formatFriendlyAlertStatus(visit?.status, formatStatus);
+    return {
+      id: visit?.id || idx,
+      title: `${visit?.full_name || "Paciente"}${visit?.room_name ? ` - ${visit.room_name}` : ""}`,
+      detail: time ? `${statusLabel} desde ${time}` : statusLabel,
+      tone: idx === 0 ? "red" : idx === 1 ? "orange" : "amber",
+    };
+  });
 };

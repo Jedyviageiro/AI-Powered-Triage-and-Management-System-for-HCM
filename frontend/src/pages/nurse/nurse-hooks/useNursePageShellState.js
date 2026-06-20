@@ -4,6 +4,7 @@ import {
   createPastVisitModalState,
   loadLocalNotificationReadMap,
 } from "../nurse-helpers/nurseHelpers";
+import { toFriendlyErrorMessage } from "../../../lib/friendlyErrors";
 
 export function useNursePageShellState() {
   const navListRef = useRef(null);
@@ -161,7 +162,7 @@ export function useNursePageShellState() {
   const [triageStep, setTriageStep] = useState(1);
 
   const showPopup = useCallback((type, title, message) => {
-    setPopup({ open: true, type, title, message });
+    setPopup({ open: true, type, title, message: toFriendlyErrorMessage(message) });
   }, []);
   const closePopup = useCallback(() => {
     setPopup({ open: false, type: "warning", title: "", message: "" });

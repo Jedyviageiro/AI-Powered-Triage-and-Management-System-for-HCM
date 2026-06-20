@@ -21,6 +21,28 @@ body {
     sans-serif;
 }
 
+.app-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  background: #ffffff;
+  opacity: 1;
+  transition: opacity 320ms ease;
+}
+
+.app-splash--leaving {
+  opacity: 0;
+}
+
+.app-splash__video {
+  width: 100vw;
+  height: 100vh;
+  object-fit: contain;
+  background: #ffffff;
+}
+
 h1 {
   font-family:
     "IBM Plex Sans",

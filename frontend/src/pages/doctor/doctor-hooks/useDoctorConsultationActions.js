@@ -136,6 +136,7 @@ export function useDoctorConsultationActions(args) {
     detailsPanelRef,
     currentLabEtaPreview,
     finishMissingFields,
+    finishBlockingMessage,
     planDraft,
     useAIQuestionnaire,
     complaintQuestions,
@@ -310,7 +311,10 @@ export function useDoctorConsultationActions(args) {
     }
     if (finishMissingFields.length > 0) {
       safeSet(() =>
-        setErr(`Não é possível finalizar a consulta. Falta: ${finishMissingFields.join(", ")}.`)
+        setErr(
+          finishBlockingMessage ||
+            "Antes de finalizar, complete os pontos pendentes da consulta."
+        )
       );
       return;
     }
@@ -379,6 +383,7 @@ export function useDoctorConsultationActions(args) {
     buildFollowUpReasonText,
     complaintQuestions,
     currentLabEtaPreview,
+    finishBlockingMessage,
     finishMissingFields,
     followUpDiagnosisEvolution,
     followUpPrescriptionDecision,

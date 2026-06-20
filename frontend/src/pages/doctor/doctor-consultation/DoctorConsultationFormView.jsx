@@ -36,6 +36,8 @@ export default function DoctorConsultationFormView(props) {
     retakeVitals,
     setRetakeVitals,
     isFollowUpConsultation,
+    consultationMode,
+    consultationModeMeta,
     currentComplaintSummary,
     followUpGrowthSummary,
     previousDiagnosis,
@@ -94,6 +96,7 @@ export default function DoctorConsultationFormView(props) {
     aiEnabled,
     hasGeneratedAiSuggestion,
     finishMissingFields,
+    finishChecklistItems,
     planAccepted,
     finishConsultation,
     canFinishStrict,
@@ -113,10 +116,10 @@ export default function DoctorConsultationFormView(props) {
         >
           <div>
             <h2 style={{ fontSize: 24, fontWeight: 700, color: "#111827", margin: 0 }}>
-              Consulta Médica
+              {consultationModeMeta?.title || "Consulta medica"}
             </h2>
             <p style={{ fontSize: 12, color: "#9ca3af", marginTop: 2 }}>
-              Formulário clínico · Preencha por fases
+              {consultationModeMeta?.eyebrow || "Formulario clinico"}
             </p>
           </div>
           <button
@@ -212,6 +215,18 @@ export default function DoctorConsultationFormView(props) {
                   </span>
                 )}
               </div>
+              {consultationModeMeta?.summary && (
+                <p
+                  style={{
+                    margin: "8px 0 0",
+                    color: "rgba(255,255,255,0.72)",
+                    fontSize: 12,
+                    lineHeight: 1.45,
+                  }}
+                >
+                  {consultationModeMeta.summary}
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -333,6 +348,7 @@ export default function DoctorConsultationFormView(props) {
             {consultFormStep === 4 && (
               <DoctorConsultationPlanStep
                 isFollowUpConsultation={isFollowUpConsultation}
+                consultationMode={consultationMode}
                 previousPrescription={previousPrescription}
                 followUpPrescriptionDecision={followUpPrescriptionDecision}
                 setFollowUpPrescriptionDecision={setFollowUpPrescriptionDecision}
@@ -390,6 +406,8 @@ export default function DoctorConsultationFormView(props) {
                 aiEnabled={aiEnabled}
                 hasGeneratedAiSuggestion={hasGeneratedAiSuggestion}
                 finishMissingFields={finishMissingFields}
+                finishChecklistItems={finishChecklistItems}
+                setConsultFormStep={setConsultFormStep}
                 planAccepted={planAccepted}
                 finishConsultation={finishConsultation}
                 canFinishStrict={canFinishStrict}

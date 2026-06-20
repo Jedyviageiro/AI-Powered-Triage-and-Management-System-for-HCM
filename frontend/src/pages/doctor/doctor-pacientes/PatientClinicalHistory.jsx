@@ -217,19 +217,6 @@ export function PatientClinicalHistoryView({
                 Pesquisa por paciente · histórico completo pediátrico
               </p>
             </div>
-            <span
-              style={{
-                borderRadius: 999,
-                border: "1px solid #DBE7DF",
-                background: "#fff",
-                padding: "4px 12px",
-                fontSize: 12,
-                fontWeight: 700,
-                color: G,
-              }}
-            >
-              Histórico
-            </span>
           </div>
 
           <div ref={historySearchRef} style={{ position: "relative" }}>
@@ -237,95 +224,114 @@ export function PatientClinicalHistoryView({
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: 10,
-                background: "#fff",
-                border: `1.5px solid ${focused ? "#86EFAC" : BORDER}`,
-                borderRadius: 999,
-                padding: "10px 18px",
-                transition: "border-color 0.15s, box-shadow 0.15s",
-                boxShadow: focused ? "0 0 0 3px rgba(134,239,172,0.14)" : "none",
+                gap: 12,
               }}
             >
-              <svg
-                width="15"
-                height="15"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#9CA3AF"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <circle cx="11" cy="11" r="8" />
-                <path d="m21 21-4.35-4.35" />
-              </svg>
-              <input
-                ref={inputRef}
-                placeholder="Digite o nome do paciente..."
-                value={historyQuery}
-                onFocus={() => {
-                  setFocused(true);
-                  setHistorySuggestOpen(true);
-                }}
-                onBlur={() => setFocused(false)}
-                onChange={(event) => {
-                  setHistoryQuery(event.target.value);
-                  setHistorySuggestOpen(true);
-                }}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") onSearchHistoryPatients?.({ notifyEmpty: true });
-                  if (event.key === "Escape") setHistorySuggestOpen(false);
-                }}
+              <div
                 style={{
-                  border: "none",
-                  outline: "none",
-                  background: "transparent",
+                  minHeight: 40,
                   flex: 1,
-                  fontSize: 14,
-                  color: "#374151",
+                  minWidth: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  background: "#fff",
+                  border: `1.5px solid ${focused ? "#86EFAC" : BORDER}`,
+                  borderRadius: 8,
+                  padding: "0 13px",
+                  transition: "border-color 0.15s, box-shadow 0.15s",
+                  boxShadow: focused ? "0 0 0 3px rgba(134,239,172,0.14)" : "none",
                 }}
-              />
-              {historyQuery ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setHistoryQuery("");
-                    setHistorySuggestOpen(false);
+              >
+                <svg
+                  width="15"
+                  height="15"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#9CA3AF"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="m21 21-4.35-4.35" />
+                </svg>
+                <input
+                  ref={inputRef}
+                  placeholder="Digite o nome do paciente..."
+                  value={historyQuery}
+                  onFocus={() => {
+                    setFocused(true);
+                    setHistorySuggestOpen(true);
+                  }}
+                  onBlur={() => setFocused(false)}
+                  onChange={(event) => {
+                    setHistoryQuery(event.target.value);
+                    setHistorySuggestOpen(true);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") onSearchHistoryPatients?.({ notifyEmpty: true });
+                    if (event.key === "Escape") setHistorySuggestOpen(false);
                   }}
                   style={{
                     border: "none",
+                    outline: "none",
                     background: "transparent",
-                    cursor: "pointer",
-                    color: "#9CA3AF",
-                    padding: 2,
-                    flexShrink: 0,
+                    flex: 1,
+                    minWidth: 0,
+                    fontSize: 13,
+                    color: "#374151",
                   }}
-                >
-                  <svg
-                    width="13"
-                    height="13"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
+                />
+                {historyQuery ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setHistoryQuery("");
+                      setHistorySuggestOpen(false);
+                    }}
+                    style={{
+                      width: 28,
+                      height: 28,
+                      border: "none",
+                      background: "transparent",
+                      cursor: "pointer",
+                      color: "#9CA3AF",
+                      padding: 0,
+                      flexShrink: 0,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
                   >
-                    <line x1="18" y1="6" x2="6" y2="18" />
-                    <line x1="6" y1="6" x2="18" y2="18" />
-                  </svg>
-                </button>
-              ) : null}
+                    <svg
+                      width="13"
+                      height="13"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <line x1="18" y1="6" x2="6" y2="18" />
+                      <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                  </button>
+                ) : null}
+              </div>
               <button
                 type="button"
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => onSearchHistoryPatients?.({ notifyEmpty: true })}
                 style={{
-                  border: "none",
-                  borderRadius: 999,
+                  minWidth: 132,
+                  minHeight: 40,
+                  border: `1px solid ${G}`,
+                  borderRadius: 8,
                   background: G,
                   color: "#fff",
-                  padding: "7px 13px",
+                  padding: "0 16px",
                   fontSize: 12,
                   fontWeight: 700,
                   cursor: "pointer",

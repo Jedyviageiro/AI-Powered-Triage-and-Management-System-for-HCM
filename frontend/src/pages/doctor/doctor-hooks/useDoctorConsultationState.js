@@ -42,6 +42,42 @@ export function useDoctorConsultationState({
   setReturnVisitCount,
   setReturnVisitDates,
 }) {
+  const consultationMode = useMemo(() => {
+    const motive = String(selectedVisit?.visit_motive || "").toUpperCase();
+    if (motive === "LAB_SAMPLE_COLLECTION") return "LAB_SAMPLE_COLLECTION";
+    if (motive === "LAB_RESULTS" || selectedVisit?.is_lab_followup) return "LAB_RESULT_REVIEW";
+    if (selectedVisit?.is_followup_visit || String(selectedVisit?.return_visit_reason || "").trim()) {
+      return "FOLLOW_UP";
+    }
+    return "NORMAL";
+  }, [selectedVisit]);
+
+  const consultationModeMeta = useMemo(() => {
+    const meta = {
+      NORMAL: {
+        title: "Consulta medica",
+        eyebrow: "Atendimento vindo da triagem",
+        summary: "Veja a triagem, registe a avaliacao clinica e decida o plano de cuidado.",
+      },
+      FOLLOW_UP: {
+        title: "Consulta de seguimento",
+        eyebrow: "Reavaliacao clinica",
+        summary: "Compare com a consulta anterior, confirme a evolucao e ajuste o plano.",
+      },
+      LAB_RESULT_REVIEW: {
+        title: "Revisao de resultado",
+        eyebrow: "Retorno laboratorial",
+        summary: "Revise o resultado, atualize a decisao clinica e oriente a familia.",
+      },
+      LAB_SAMPLE_COLLECTION: {
+        title: "Colheita laboratorial",
+        eyebrow: "Retorno para amostra",
+        summary: "Confirme o exame, a colheita e os proximos passos do paciente.",
+      },
+    };
+    return meta[consultationMode] || meta.NORMAL;
+  }, [consultationMode]);
+
   const hasTriageForConsult = useMemo(
     () =>
       !!(
@@ -264,6 +300,124 @@ export function useDoctorConsultationState({
     useAIQuestionnaire,
   ]);
 
+  const finishChecklistItems = useMemo(() => {
+    const itemMeta = {
+      "questionÃ¡rio clÃ­nico": {
+        label: "Completar as perguntas clinicas ou escrever uma nota breve.",
+        step: 2,
+      },
+      "diagnÃ³stico provÃ¡vel": { label: "Adicionar o diagnostico do paciente.", step: 3 },
+      "justificativa clÃ­nica": {
+        label: "Explicar rapidamente o raciocinio clinico.",
+        step: 3,
+      },
+      "prescriÃ§Ã£o": { label: "Adicionar a prescricao ou orientacao terapeutica.", step: 4 },
+      "evoluÃ§Ã£o do diagnÃ³stico": {
+        label: "Indicar se o diagnostico melhorou, piorou ou mudou.",
+        step: 3,
+      },
+      "decisÃ£o sobre a prescriÃ§Ã£o": {
+        label: "Escolher se a prescricao anterior continua ou deve ser ajustada.",
+        step: 4,
+      },
+      "destino do paciente": { label: "Escolher o proximo passo do paciente.", step: 4 },
+      "especialista/departamento de referÃªncia": {
+        label: "Informar para onde o paciente sera encaminhado.",
+        step: 4,
+      },
+      "data de retorno": { label: "Escolher a data de retorno.", step: 4 },
+      "critÃ©rio clÃ­nico do retorno": {
+        label: "Escolher o motivo clinico do retorno.",
+        step: 4,
+      },
+      "hora do retorno": { label: "Escolher a hora do retorno.", step: 4 },
+      "hora do retorno dentro do turno": {
+        label: "Ajustar a hora para dentro do turno disponivel.",
+        step: 4,
+      },
+      "tipo de exame laboratorial": {
+        label: "Escolher o tipo de exame laboratorial.",
+        step: 4,
+      },
+      "detalhe do exame (outro)": { label: "Descrever qual exame deve ser feito.", step: 4 },
+      "confirmar pedido de exame": {
+        label: "Confirmar o pedido de exame antes de finalizar.",
+        step: 4,
+      },
+      "prioridade do exame": { label: "Escolher a prioridade do exame.", step: 4 },
+      "hora da colheita": { label: "Registar a hora prevista para a colheita.", step: 4 },
+    };
+    void itemMeta;
+    const describeMissingField = (field) => {
+      const normalized = String(field || "").toLowerCase();
+      if (normalized.includes("question")) {
+        return { label: "Completar as perguntas clinicas ou escrever uma nota breve.", step: 2 };
+      }
+      if (normalized.includes("diagn")) {
+        return normalized.includes("evolu")
+          ? { label: "Indicar se o diagnostico melhorou, piorou ou mudou.", step: 3 }
+          : { label: "Adicionar o diagnostico do paciente.", step: 3 };
+      }
+      if (normalized.includes("justificativa") || normalized.includes("racioc")) {
+        return { label: "Explicar rapidamente o raciocinio clinico.", step: 3 };
+      }
+      if (normalized.includes("prescri")) {
+        return normalized.includes("decis")
+          ? {
+              label: "Escolher se a prescricao anterior continua ou deve ser ajustada.",
+              step: 4,
+            }
+          : { label: "Adicionar a prescricao ou orientacao terapeutica.", step: 4 };
+      }
+      if (normalized.includes("destino")) {
+        return { label: "Escolher o proximo passo do paciente.", step: 4 };
+      }
+      if (normalized.includes("especialista") || normalized.includes("refer")) {
+        return { label: "Informar para onde o paciente sera encaminhado.", step: 4 };
+      }
+      if (normalized.includes("data")) return { label: "Escolher a data de retorno.", step: 4 };
+      if (normalized.includes("criter") || normalized.includes("crit")) {
+        return { label: "Escolher o motivo clinico do retorno.", step: 4 };
+      }
+      if (normalized.includes("hora") && normalized.includes("turno")) {
+        return { label: "Ajustar a hora para dentro do turno disponivel.", step: 4 };
+      }
+      if (normalized.includes("hora")) return { label: "Escolher a hora do retorno.", step: 4 };
+      if (normalized.includes("tipo") && normalized.includes("exame")) {
+        return { label: "Escolher o tipo de exame laboratorial.", step: 4 };
+      }
+      if (normalized.includes("detalhe")) {
+        return { label: "Descrever qual exame deve ser feito.", step: 4 };
+      }
+      if (normalized.includes("confirmar")) {
+        return { label: "Confirmar o pedido de exame antes de finalizar.", step: 4 };
+      }
+      if (normalized.includes("prioridade")) {
+        return { label: "Escolher a prioridade do exame.", step: 4 };
+      }
+      if (normalized.includes("colheita")) {
+        return { label: "Registar a hora prevista para a colheita.", step: 4 };
+      }
+      return { label: `Completar: ${field}.`, step: 4 };
+    };
+
+    return finishMissingFields.map((field) => ({
+      field,
+      ...describeMissingField(field),
+    }));
+  }, [finishMissingFields]);
+
+  const finishBlockingMessage = useMemo(() => {
+    if (finishChecklistItems.length === 0) return "";
+    const preview = finishChecklistItems
+      .slice(0, 3)
+      .map((item) => item.label)
+      .join(" ");
+    return `Antes de finalizar, complete estes pontos: ${preview}${
+      finishChecklistItems.length > 3 ? " ..." : ""
+    }`;
+  }, [finishChecklistItems]);
+
   const canFinishStrict = canFinish && finishMissingFields.length === 0;
   const consultationSteps = useMemo(
     () => [
@@ -334,6 +488,8 @@ export function useDoctorConsultationState({
       followUpShiftWindow,
       isClinicalReturnVisit,
       isFollowUpConsultation,
+      consultationMode,
+      consultationModeMeta,
       previousDiagnosis,
       previousPrescription,
       currentComplaintSummary,
@@ -344,6 +500,8 @@ export function useDoctorConsultationState({
       followUpRuleMeta,
       followUpTimeWithinShift,
       finishMissingFields,
+      finishChecklistItems,
+      finishBlockingMessage,
       canFinishStrict,
       consultationSteps,
       updatePlanField,
@@ -356,6 +514,8 @@ export function useDoctorConsultationState({
       consultationSteps,
       currentClinicalSnapshot,
       currentComplaintSummary,
+      finishBlockingMessage,
+      finishChecklistItems,
       finishMissingFields,
       followUpComparisonRows,
       followUpGrowthRow,
@@ -367,6 +527,8 @@ export function useDoctorConsultationState({
       inferredFollowUpRuleKey,
       isClinicalReturnVisit,
       isFollowUpConsultation,
+      consultationMode,
+      consultationModeMeta,
       previousClinicalSnapshot,
       previousConsultation,
       previousDiagnosis,

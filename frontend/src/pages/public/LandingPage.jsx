@@ -11,7 +11,7 @@ import {
 import { motion } from "framer-motion";
 
 const Motion = motion;
-const logoFullImage = "/assets/logo_full.svg";
+const systemLogoImage = "/assets/system%27s%20logo%20v2.png";
 const teamHeroImage = "/assets/foto-da-equipa-pediatrica-do-hcm.png";
 const consultationImage = "/assets/foto-de-medico-enfermeiro-pediatrico.png";
 const doctorFatimaImage = "/assets/dra-fatima-machava.png";
@@ -108,16 +108,20 @@ export default function LandingPage() {
         >
           <Link to="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
             <img
-              src={logoFullImage}
+              src={systemLogoImage}
               alt="HCM Gestao Pediatrica"
               style={{
-                width: 150,
-                height: 48,
-                borderRadius: 8,
+                width: 42,
+                height: 42,
+                borderRadius: 10,
                 objectFit: "contain",
                 background: "transparent",
               }}
             />
+            <span style={{ display: "grid", lineHeight: 1.05 }}>
+              <span style={{ fontSize: 15, fontWeight: 800, color: "#0c3a24" }}>STGP</span>
+              <span style={{ fontSize: 10, fontWeight: 700, color: "#64748b" }}>Gestao Pediatrica</span>
+            </span>
           </Link>
 
           <nav style={{ display: "flex", alignItems: "center", gap: 28 }}>
@@ -372,7 +376,11 @@ export default function LandingPage() {
         <div style={{ maxWidth: 1160, margin: "0 auto", display: "grid", gridTemplateColumns: "1.4fr 1fr 1fr", gap: 36 }}>
           <div>
             <Link to="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
-              <img src={logoFullImage} alt="HCM Gestao Pediatrica" style={{ width: 146, height: 46, objectFit: "contain" }} />
+              <img src={systemLogoImage} alt="HCM Gestao Pediatrica" style={{ width: 42, height: 42, borderRadius: 10, objectFit: "contain" }} />
+              <span style={{ display: "grid", lineHeight: 1.05 }}>
+                <span style={{ fontSize: 15, fontWeight: 800, color: "#0c3a24" }}>STGP</span>
+                <span style={{ fontSize: 10, fontWeight: 700, color: "#64748b" }}>Gestao Pediatrica</span>
+              </span>
             </Link>
             <p style={{ marginTop: 10, fontSize: 12, color: "#94a3b8" }}>HCM. Todos os direitos reservados.</p>
             <div style={{ marginTop: 14, display: "flex", gap: 8 }}>

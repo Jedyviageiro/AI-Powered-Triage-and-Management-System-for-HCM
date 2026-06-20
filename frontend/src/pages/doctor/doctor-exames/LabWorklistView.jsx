@@ -214,7 +214,7 @@ export default function LabWorklistView({
                 justifyContent: "center",
                 gap: 8,
                 minHeight: 40,
-                borderRadius: 999,
+                borderRadius: 8,
                 border: "1px solid #165034",
                 background: "#165034",
                 padding: "0 16px",
@@ -408,7 +408,7 @@ export default function LabWorklistView({
 
                   return (
                     <tr
-                      key={row.id}
+                      key={`${tab}-${row.id}-${idx}`}
                       onClick={() => setSelectedId(row.id)}
                       style={{
                         background: selected ? "#F3F7F4" : idx % 2 === 0 ? "#fff" : "#FBFCFB",

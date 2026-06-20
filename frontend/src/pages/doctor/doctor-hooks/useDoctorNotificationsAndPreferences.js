@@ -186,7 +186,20 @@ export function useDoctorNotificationsAndPreferences({
             : "O sistema registou que o paciente ja foi avisado de que o exame esta pronto."
         );
       } catch (e) {
-        const channelDetails = "";
+        const providerDetails = Array.isArray(e?.data?.details)
+          ? e.data.details
+          : Array.isArray(e?.data?.channels)
+            ? e.data.channels
+            : [];
+        const channelDetails = providerDetails.length
+          ? providerDetails
+              .map((item) => {
+                const provider = item?.provider ? String(item.provider).toUpperCase() : "Canal";
+                const reason = item?.error || item?.reason || "falhou";
+                return `${provider}: ${reason}`;
+              })
+              .join("\n")
+          : "";
         showPopup(
           "warning",
           "Atenção",

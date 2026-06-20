@@ -1,11 +1,6 @@
-import AppNavbar from "../../../components/shared/layout/AppNavbar";
 import {
   HeaderBackButton,
   HeaderBellIcon,
-  HeaderIconButton,
-  HeaderMailIcon,
-  HeaderProfile,
-  HeaderSearch,
 } from "../../../components/shared/layout/HeaderControls.jsx";
 import DoctorAgenda from "../doctor-agenda/DoctorAgenda";
 import { DoctorScheduledFollowupsView } from "../doctor-followups/DoctorScheduledFollowups";
@@ -25,23 +20,11 @@ import { DoctorPacientesView } from "../doctor-pacientes/DoctorPacientes";
 
 export default function DoctorLayout(props) {
   const {
-    shiftMenuRef,
     notificationsPreviewRef,
-    topSearchFocus,
     topNavSearch,
     setTopNavSearch,
     setTopSearchFocus,
     searchFromTopNav,
-    shiftMenuOpen,
-    setShiftMenuOpen,
-    loadingShift,
-    shiftMenuBusy,
-    shiftFeatureAvailable,
-    shiftButtonMeta,
-    shiftIcon,
-    shiftStartDisabled,
-    startShift,
-    startingShift,
     notificationsUnread,
     notificationsPreviewOpen,
     setNotificationsPreviewOpen,
@@ -125,6 +108,8 @@ export default function DoctorLayout(props) {
     retakeVitals,
     setRetakeVitals,
     isFollowUpConsultation,
+    consultationMode,
+    consultationModeMeta,
     currentComplaintSummary,
     followUpGrowthSummary,
     previousDiagnosis,
@@ -182,6 +167,7 @@ export default function DoctorLayout(props) {
     aiEnabled,
     hasGeneratedAiSuggestion,
     finishMissingFields,
+    finishChecklistItems,
     planAccepted,
     finishConsultation,
     canFinishStrict,
@@ -213,171 +199,89 @@ export default function DoctorLayout(props) {
     aiResult,
     setAiSuggestionOpen,
   } = props;
+  const doctorFirstName = me?.full_name?.split(" ")?.[0] || "Doutor";
+  const todayLabel = new Intl.DateTimeFormat("pt-PT", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  })
+    .formatToParts(new Date())
+    .map((part) =>
+      part.type === "weekday" || part.type === "month"
+        ? `${part.value.charAt(0).toUpperCase()}${part.value.slice(1)}`
+        : part.value
+    )
+    .join("");
+  const profileInitials = (me?.full_name || me?.username || "M")
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0))
+    .join("")
+    .toUpperCase();
+  const profilePhotoUrl = String(
+    me?.profile_photo_url || me?.photo_url || me?.avatar_url || me?.image_url || ""
+  ).trim();
 
   return (
     <>
-      <main className="flex-1 overflow-y-auto">
-        <AppNavbar
-          left={
-            activeView === "dashboard" ? (
-              <div />
-            ) : (
-              <HeaderBackButton onClick={() => openView("dashboard")} />
-            )
-          }
-          center={
-            <HeaderSearch
-              placeholder="Pesquisar paciente"
-              value={topNavSearch}
-              onChange={(e) => setTopNavSearch(e.target.value)}
-              onFocus={() => setTopSearchFocus(true)}
-              onBlur={() => setTopSearchFocus(false)}
-              onEnter={searchFromTopNav}
-            />
-          }
-          right={
-            <div style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
-              <div
-                style={{ display: "flex", alignItems: "center", gap: "8px", marginRight: "8px" }}
-              >
-                <div ref={shiftMenuRef} data-tour="shift-status" style={{ position: "relative" }}>
-                  <button
-                    type="button"
-                    onMouseDown={(event) => event.stopPropagation()}
-                    onClick={() => setShiftMenuOpen((prev) => !prev)}
-                    disabled={loadingShift || shiftMenuBusy || !shiftFeatureAvailable}
-                    style={{
-                      padding: "8px 12px",
-                      borderRadius: "999px",
-                      border: `1px solid ${shiftButtonMeta.border}`,
-                      background: shiftButtonMeta.background,
-                      color: shiftButtonMeta.color,
-                      fontWeight: "700",
-                      cursor:
-                        loadingShift || shiftMenuBusy || !shiftFeatureAvailable
-                          ? "not-allowed"
-                          : "pointer",
-                      opacity: loadingShift || shiftMenuBusy || !shiftFeatureAvailable ? 0.7 : 1,
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "flex-start",
-                    }}
-                    title="Abrir menu do turno"
-                  >
-                    <span
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "10px",
-                        minWidth: 0,
-                        fontSize: "12px",
-                      }}
-                    >
-                      <span
-                        style={{
-                          width: "15px",
-                          height: "15px",
-                          lineHeight: 0,
-                          flexShrink: 0,
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                        aria-hidden="true"
-                      >
-                        {shiftIcon}
-                      </span>
-                      <span
-                        style={{
-                          width: "8px",
-                          height: "8px",
-                          borderRadius: "999px",
-                          background: shiftButtonMeta.dot,
-                          flexShrink: 0,
-                        }}
-                      />
-                      <span
-                        style={{
-                          display: "flex",
-                          flexDirection: "column",
-                          alignItems: "flex-start",
-                          lineHeight: 1.1,
-                          minWidth: 0,
-                        }}
-                      >
-                        <span>{shiftButtonMeta.label}</span>
-                        <span
-                          style={{
-                            fontSize: "11px",
-                            fontWeight: 600,
-                            opacity: 0.82,
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {shiftButtonMeta.detail}
-                        </span>
-                      </span>
-                    </span>
-                  </button>
-                  {shiftMenuOpen && shiftFeatureAvailable && (
-                    <div
-                      onMouseDown={(event) => event.stopPropagation()}
-                      style={{
-                        position: "absolute",
-                        top: "calc(100% + 8px)",
-                        left: 0,
-                        width: "100%",
-                        background: "#ffffff",
-                        border: "1px solid #dcebe2",
-                        borderRadius: "12px",
-                        padding: "6px",
-                        zIndex: 220,
-                      }}
-                    >
-                      <button
-                        type="button"
-                        onMouseDown={(event) => {
-                          event.preventDefault();
-                          event.stopPropagation();
-                          if (!shiftStartDisabled) void startShift();
-                        }}
-                        onClick={(event) => event.preventDefault()}
-                        disabled={shiftStartDisabled}
-                        style={{
-                          width: "100%",
-                          textAlign: "left",
-                          border: "none",
-                          borderRadius: "999px",
-                          background: "transparent",
-                          padding: "8px 10px",
-                          minHeight: "36px",
-                          fontSize: "12px",
-                          fontWeight: 600,
-                          color: "#111827",
-                          cursor: shiftStartDisabled ? "not-allowed" : "pointer",
-                          opacity: shiftStartDisabled ? 0.5 : 1,
-                        }}
-                      >
-                        {startingShift ? "A iniciar..." : "Iniciar Turno"}
-                      </button>
-                    </div>
-                  )}
+      <main className="flex-1 overflow-y-auto" style={{ background: "var(--doctor-page-bg)" }}>
+        <header className="hcm-dashboard-header">
+          <div className="hcm-dashboard-header__inner">
+            {activeView === "dashboard" ? (
+              <div className="hcm-dashboard-header__copy">
+                <div className="hcm-dashboard-header__title">
+                  Bom dia, Dr. {doctorFirstName}
                 </div>
+                <p className="hcm-dashboard-header__date">{todayLabel}</p>
               </div>
+            ) : (
+              <div className="hcm-dashboard-header__copy">
+                <HeaderBackButton onClick={() => openView("dashboard")} />
+              </div>
+            )}
+            <label className="hcm-dashboard-header__search" aria-label="Pesquisar paciente">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8a94a6" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <circle cx="11" cy="11" r="8" />
+                <path d="m21 21-4.35-4.35" />
+              </svg>
+              <input
+                value={topNavSearch}
+                onChange={(e) => setTopNavSearch(e.target.value)}
+                onFocus={() => setTopSearchFocus(true)}
+                onBlur={() => setTopSearchFocus(false)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") searchFromTopNav();
+                }}
+                placeholder="Pesquisar paciente"
+                style={{ flex: 1, minWidth: 0, border: 0, outline: "none", background: "transparent" }}
+              />
+            </label>
 
-              <div ref={notificationsPreviewRef} style={{ position: "relative" }}>
-                <HeaderIconButton
+            <div className="hcm-dashboard-header__actions">
+              <div ref={notificationsPreviewRef} className="hcm-dashboard-header__notification-wrap">
+                <button
+                  type="button"
+                  className="hcm-dashboard-header__notification"
                   onClick={() => {
                     setNotificationsPreviewOpen((prev) => !prev);
                     if (!notificationsPreviewOpen) loadNotifications();
                   }}
                   title="Notificacoes"
-                  badge={notificationsUnread}
-                  active={notificationsPreviewOpen}
-                  tour="notifications"
+                  data-tour="notifications"
+                  style={{
+                    background: notificationsPreviewOpen ? "#e7f4ee" : "#ffffff",
+                    color: notificationsPreviewOpen ? "#165034" : "#5f6f66",
+                  }}
                 >
                   <HeaderBellIcon />
-                </HeaderIconButton>
+                  {notificationsUnread ? (
+                    <span className="hcm-dashboard-header__badge">
+                      {notificationsUnread > 9 ? "9+" : notificationsUnread}
+                    </span>
+                  ) : null}
+                </button>
                 {notificationsPreviewOpen && (
                   <div
                     style={{
@@ -452,16 +356,20 @@ export default function DoctorLayout(props) {
                 )}
               </div>
 
-              <HeaderIconButton title="Mensagens">
-                <HeaderMailIcon />
-              </HeaderIconButton>
-              <HeaderProfile user={me} fallback="Medico(a)" subtitle={me?.specialization || "Medico"} />
+              <button type="button" className="hcm-dashboard-header__profile" title={me?.full_name || me?.username || "Medico(a)"}>
+                <span className="hcm-dashboard-header__profile-text">
+                  <strong>{me?.full_name || me?.username || "Medico(a)"}</strong>
+                  <span>{me?.specialization || "Medico"}</span>
+                </span>
+                <span className="hcm-dashboard-header__avatar">
+                  {profilePhotoUrl ? <img src={profilePhotoUrl} alt="" /> : profileInitials}
+                </span>
+              </button>
             </div>
-          }
-          style={{ padding: "0 12px" }}
-        />
+          </div>
+        </header>
 
-        <div className="p-8 max-w-6xl mx-auto" data-tour="role-content">
+        <div className="doctor-content-shell" data-tour="role-content">
           <div>
             {activeView === "dashboard" && (
               <div className="dash-animate dash-animate-delay-1">
@@ -489,6 +397,7 @@ export default function DoctorLayout(props) {
                   dashboardStatusRows={dashboardStatusRows}
                   pendingLabVisits={pendingLabVisits}
                   doctorLabWorklistRows={doctorLabWorklistRows}
+                  agenda={agenda}
                   onOpenLabTracking={openLabTrackingFlow}
                   getLabProgressTheme={getLabProgressTheme}
                 />
@@ -677,6 +586,8 @@ export default function DoctorLayout(props) {
                   retakeVitals={retakeVitals}
                   setRetakeVitals={setRetakeVitals}
                   isFollowUpConsultation={isFollowUpConsultation}
+                  consultationMode={consultationMode}
+                  consultationModeMeta={consultationModeMeta}
                   currentComplaintSummary={currentComplaintSummary}
                   followUpGrowthSummary={followUpGrowthSummary}
                   previousDiagnosis={previousDiagnosis}
@@ -735,6 +646,7 @@ export default function DoctorLayout(props) {
                   aiEnabled={aiEnabled}
                   hasGeneratedAiSuggestion={hasGeneratedAiSuggestion}
                   finishMissingFields={finishMissingFields}
+                  finishChecklistItems={finishChecklistItems}
                   planAccepted={planAccepted}
                   finishConsultation={finishConsultation}
                   canFinishStrict={canFinishStrict}

@@ -21,7 +21,7 @@ export function AdminLayout({
   me,
 }) {
   const meta = ADMIN_VIEW_META[activeView] || { title: "Admin", subtitle: "" };
-  const logoImage = "/assets/logo_icon.svg";
+  const logoImage = "/assets/system%27s%20logo%20v2.png";
 
   if (loading) {
     return (

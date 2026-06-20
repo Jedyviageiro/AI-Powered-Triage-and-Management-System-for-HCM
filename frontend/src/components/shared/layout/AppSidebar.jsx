@@ -13,16 +13,17 @@ export default function AppSidebar({
   footerActionLabel = "",
   onFooterAction,
 }) {
-  const logoImage = "/assets/logo_icon.svg";
+  const logoImage = "/assets/system%27s%20logo%20v2.png";
+  const navItems = sections.flatMap((section) => section.items || []);
 
   if (children) {
     return (
       <aside
         style={{
-          width: open ? 256 : 76,
+          width: open ? 216 : 76,
           overflow: "hidden",
-          background: "#0c3a24",
-          color: "#ffffff",
+          background: "#ffffff",
+          color: "#101827",
           transition: "width 0.3s cubic-bezier(0.4,0,0.2,1)",
           ...style,
         }}
@@ -38,59 +39,22 @@ export default function AppSidebar({
       style={style}
       data-tour="role-sidebar"
     >
-      <div className={`p-4 flex items-center ${open ? "gap-3" : "justify-center"}`}>
+      <div className={`sidebar-brand-row flex items-center ${open ? "gap-3" : "justify-center"}`}>
         <button
           type="button"
           onClick={onToggle}
-          className="w-9 h-9 flex-shrink-0 flex items-center justify-center hover:bg-white/20 rounded-full transition-colors text-white"
+          className="hcm-brand-mark"
+          aria-label={open ? "Recolher menu" : "Abrir menu"}
         >
-          {open ? (
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="#ffffff"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          ) : (
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="#ffffff"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <line x1="3" y1="6" x2="21" y2="6" />
-              <line x1="3" y1="12" x2="21" y2="12" />
-              <line x1="3" y1="18" x2="21" y2="18" />
-            </svg>
-          )}
+          <img src={logoImage} alt="" aria-hidden="true" />
         </button>
-        {open ? (
-          <img
-            src={logoImage}
-            alt=""
-            aria-hidden="true"
-            className="flex-shrink-0"
-            style={{ width: 36, height: 36, borderRadius: 9, objectFit: "contain", background: "transparent" }}
-          />
-        ) : null}
         <div className="logo-text min-w-0">
-          <div className="text-sm font-semibold text-white leading-tight">{title}</div>
+          <div className="text-sm font-semibold leading-tight" style={{ color: "#101827" }}>{title}</div>
         </div>
       </div>
 
-      <nav className="flex-1 py-3 pr-3 pl-0">
-        <div ref={navListRef} className="relative space-y-2">
+      <nav className="sidebar-nav flex-1">
+        <div ref={navListRef} className="sidebar-nav-groups relative">
           {navIndicator ? (
             <span
               className="nav-indicator"
@@ -101,65 +65,56 @@ export default function AppSidebar({
               }}
             />
           ) : null}
-          {sections.map((section) => (
-            <div key={section.title}>
-              {open ? (
-                <div className="px-3 pb-1 pl-6 text-[10px] uppercase tracking-[0.08em] font-semibold text-white/35">
-                  {section.title}
-                </div>
-              ) : null}
-              <div className="space-y-1">
-                {section.items.map((item) => (
-                  <div key={item.key} className="nav-item-wrap relative">
-                    <button
-                      ref={(el) => {
-                        if (!navItemRefs?.current) return;
-                        if (el) navItemRefs.current[item.key] = el;
-                        else delete navItemRefs.current[item.key];
-                      }}
-                      type="button"
-                      onClick={() => onSelect?.(item.key)}
-                      data-tour={`nav-${item.key}`}
-                      className={`sidebar-nav-btn w-full text-left px-3 py-2.5 transition-all flex items-center gap-3 relative ${
-                        activeKey === item.key ? "nav-active" : "sidebar-nav-inactive"
-                      }`}
+          <div className="sidebar-section-items">
+            {navItems.map((item) => (
+              <div key={item.key} className="nav-item-wrap relative">
+                <button
+                  ref={(el) => {
+                    if (!navItemRefs?.current) return;
+                    if (el) navItemRefs.current[item.key] = el;
+                    else delete navItemRefs.current[item.key];
+                  }}
+                  type="button"
+                  onClick={() => onSelect?.(item.key)}
+                  data-tour={`nav-${item.key}`}
+                  className={`sidebar-nav-btn w-full text-left transition-all flex items-center relative ${
+                    activeKey === item.key ? "nav-active" : "sidebar-nav-inactive"
+                  }`}
+                >
+                  {item.icon}
+                  <span className="nav-label">{item.label}</span>
+                  {item.badge && open ? (
+                    <span
+                      className="ml-auto nav-badge-open text-white"
+                      style={{ background: item.alertBadge ? "#dc2626" : "#165034" }}
                     >
-                      {item.icon}
-                      <span className="nav-label">{item.label}</span>
-                      {item.badge && open ? (
-                        <span
-                          className="ml-auto nav-badge-open text-white"
-                          style={{ background: item.alertBadge ? "#dc2626" : "#165034" }}
-                        >
-                          {item.badge}
-                        </span>
-                      ) : null}
-                      {item.badge && !open ? (
-                        <span
-                          className="nav-badge absolute top-1 right-1 text-white text-xs px-1 py-0.5 rounded-full flex items-center justify-center"
-                          style={{ background: item.alertBadge ? "#dc2626" : "#165034" }}
-                        >
-                          {item.badge}
-                        </span>
-                      ) : null}
-                    </button>
-                    <span className="nav-tooltip">{item.label}</span>
-                  </div>
-                ))}
+                      {item.badge}
+                    </span>
+                  ) : null}
+                  {item.badge && !open ? (
+                    <span
+                      className="nav-badge absolute top-1 right-1 text-white text-xs px-1 py-0.5 rounded-full flex items-center justify-center"
+                      style={{ background: item.alertBadge ? "#dc2626" : "#165034" }}
+                    >
+                      {item.badge}
+                    </span>
+                  ) : null}
+                </button>
+                <span className="nav-tooltip">{item.label}</span>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </nav>
 
       {footerActionLabel ? (
-        <div className="p-3 border-t border-white/20">
+        <div className="sidebar-footer" style={{ borderTop: "1px solid #eef2f5", padding: 14 }}>
           <div className="nav-item-wrap relative">
             <button
               type="button"
               onClick={onFooterAction}
               data-tour="role-logout"
-              className="sidebar-nav-btn w-full px-3 py-2.5 sidebar-nav-inactive transition-colors flex items-center gap-3"
+              className="sidebar-nav-btn w-full sidebar-nav-inactive transition-colors flex items-center"
             >
               <svg
                 width="20"

@@ -1,10 +1,9 @@
-const CACHE_NAME = "pediatric-triage-v3";
+const CACHE_NAME = "pediatric-triage-v5";
 const APP_SHELL = [
   "/",
   "/index.html",
   "/manifest.json",
-  "/assets/logo_icon.svg",
-  "/assets/logo_full.svg",
+  "/assets/system%27s%20logo%20v2.png",
   "/assets/pwa_icon.png",
 ];
 

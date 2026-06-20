@@ -97,7 +97,7 @@ export default function NotificationListView({
           </div>
         ) : (
           <div style={{ display: "grid" }}>
-            {notifications.map((n) => {
+            {notifications.map((n, index) => {
               const level = String(n?.level || "INFO").toUpperCase();
               const levelColor =
                 level === "CRITICAL" ? "#ef4444" : level === "WARNING" ? "#f59e0b" : "#165034";
@@ -107,7 +107,7 @@ export default function NotificationListView({
               const safeSource = toSafeNotificationText(n?.source, "");
               return (
                 <div
-                  key={n.id}
+                  key={`${n?.source || "notification"}-${n?.id ?? index}-${index}`}
                   style={{
                     borderBottom: "1px solid #f1f5f9",
                     padding: "12px 14px",

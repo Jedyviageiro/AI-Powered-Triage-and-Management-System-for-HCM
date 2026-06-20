@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { api } from "../../lib/api";
 import { clearAuth, saveAuth } from "../../lib/auth";
 
-const logoImage = "/assets/logo_icon.svg";
+const logoImage = "/assets/system%27s%20logo%20v2.png";
 const loginImage = "/assets/login-image.png";
 
 export default function Login() {
@@ -100,8 +100,8 @@ export default function Login() {
         }
 
         .logo-img {
-          width: 86px;
-          height: 86px;
+          width: 68px;
+          height: 68px;
           object-fit: contain;
         }
 
@@ -383,8 +383,8 @@ export default function Login() {
           }
 
           .logo-img {
-            width: 72px;
-            height: 72px;
+            width: 60px;
+            height: 60px;
           }
 
           .form-subheading {
@@ -528,7 +528,7 @@ export default function Login() {
                 <img src={logoImage} alt="HCM" className="logo-img" />
                 <div className="logo-name">
                   <strong>HCM</strong>
-                  <span>Sistema de Triagem e Gestao Pediatrica</span>
+                  <span>Sistema de Triagem e Gestão Pediátrica</span>
                 </div>
               </div>
 

@@ -375,6 +375,8 @@ export default function DoctorPage({ forcedView = "dashboard" }) {
     followUpShiftWindow,
     isClinicalReturnVisit,
     isFollowUpConsultation,
+    consultationMode,
+    consultationModeMeta,
     previousDiagnosis,
     previousPrescription,
     currentComplaintSummary,
@@ -383,6 +385,8 @@ export default function DoctorPage({ forcedView = "dashboard" }) {
     followUpRuleMeta,
     followUpTimeWithinShift,
     finishMissingFields,
+    finishChecklistItems,
+    finishBlockingMessage,
     canFinishStrict,
     consultationSteps,
     updatePlanField,
@@ -456,6 +460,7 @@ export default function DoctorPage({ forcedView = "dashboard" }) {
     detailsPanelRef,
     currentLabEtaPreview,
     finishMissingFields,
+    finishBlockingMessage,
     planDraft,
     useAIQuestionnaire,
     complaintQuestions,
@@ -575,11 +580,13 @@ export default function DoctorPage({ forcedView = "dashboard" }) {
 
   return (
     <div
-      className={`doctor-page flex h-screen bg-gray-50 ${
+      className={`doctor-page flex h-screen ${
         Number(preferences?.font_scale_percent || 100) !== 100 ? "doctor-font-scaled" : ""
       }`}
       style={{
         "--doctor-font-scale": Number(preferences?.font_scale_percent || 100) === 105 ? 1.05 : 1,
+        "--doctor-page-bg": "#f7f8fa",
+        background: "var(--doctor-page-bg)",
       }}
     >
       <style>{doctorPageStyles}</style>
@@ -701,6 +708,8 @@ export default function DoctorPage({ forcedView = "dashboard" }) {
         retakeVitals={retakeVitals}
         setRetakeVitals={setRetakeVitals}
         isFollowUpConsultation={isFollowUpConsultation}
+        consultationMode={consultationMode}
+        consultationModeMeta={consultationModeMeta}
         currentComplaintSummary={currentComplaintSummary}
         followUpGrowthSummary={followUpGrowthSummary}
         previousDiagnosis={previousDiagnosis}
@@ -758,6 +767,7 @@ export default function DoctorPage({ forcedView = "dashboard" }) {
         aiEnabled={aiEnabled}
         hasGeneratedAiSuggestion={hasGeneratedAiSuggestion}
         finishMissingFields={finishMissingFields}
+        finishChecklistItems={finishChecklistItems}
         planAccepted={planAccepted}
         finishConsultation={finishConsultation}
         canFinishStrict={canFinishStrict}

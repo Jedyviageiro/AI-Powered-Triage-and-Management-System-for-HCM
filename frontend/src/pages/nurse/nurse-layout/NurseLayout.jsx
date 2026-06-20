@@ -29,15 +29,7 @@ export function NurseLayout(props) {
     activeView,
     navIndicator,
     openView,
-    loadingShift,
     notificationsPreviewRef,
-    shiftMenuBusy,
-    shiftMenuOpen,
-    setShiftMenuOpen,
-    shiftButtonMeta,
-    shiftStartDisabled,
-    startShift,
-    startingShift,
     notificationsUnread,
     notificationsPreviewOpen,
     setNotificationsPreviewOpen,
@@ -435,7 +427,7 @@ export function NurseLayout(props) {
         .sidebar-open .nav-tooltip { display: none; }
 
         .hcm-brand-mark { width: 52px; height: 52px; border-radius: 9px; overflow: hidden; flex: 0 0 auto; position: relative; background: #ffffff; }
-        .hcm-brand-mark img { position: absolute; width: 138px; height: auto; left: 50%; top: 50%; transform: translate(-50%, -50%); }
+        .hcm-brand-mark img { position: absolute; width: 78%; height: 78%; left: 50%; top: 50%; transform: translate(-50%, -50%); object-fit: contain; }
         .hcm-dashboard-header { position: sticky; top: 0; z-index: 100; background: var(--nurse-page-bg); border-bottom: 0; box-shadow: none; min-height: 104px; display: flex; align-items: center; }
         .hcm-dashboard-header__inner { max-width: 1240px; margin: 0 auto; width: 100%; padding: 28px 36px 14px; display: grid; grid-template-columns: minmax(300px, 1fr) 324px auto; align-items: center; gap: 30px; min-width: 0; }
         .hcm-dashboard-header__copy { min-width: 260px; }
@@ -443,12 +435,7 @@ export function NurseLayout(props) {
         .hcm-dashboard-header__date { margin: 10px 0 0; color: #758096; font-size: 14px !important; line-height: 1.2; text-transform: none; }
         .hcm-dashboard-header__search { height: 43px; display: flex; align-items: center; gap: 12px; width: 324px; min-width: 0; max-width: 100%; background: #ffffff; border: 1px solid #dbe2ea; border-radius: 8px; padding: 0 13px; box-shadow: none; outline: none; }
         .hcm-dashboard-header__search input { font-size: 13px !important; color: #374151; }
-        .hcm-dashboard-header__search-kbd { min-width: 35px; height: 21px; border-radius: 6px; background: #f7f8fa; color: #8a94a6; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; }
         .hcm-dashboard-header__actions { display: flex; align-items: center; justify-content: flex-end; gap: 0; white-space: nowrap; }
-        .hcm-dashboard-header__shift-wrap { display: flex; align-items: center; margin-right: 22px; padding-right: 28px; border-right: 1px solid #edf0f4; }
-        .hcm-dashboard-header__shift { height: 48px; min-width: 125px; padding: 0; border: 0 !important; background: transparent !important; color: #101827 !important; display: inline-flex; align-items: center; gap: 12px; justify-content: flex-start; cursor: pointer; }
-        .hcm-dashboard-header__shift small { display: block; color: #69758a; font-size: 12px; font-weight: 500; line-height: 1.05; }
-        .hcm-dashboard-header__shift strong { display: block; color: #101827; font-size: 13px; font-weight: 800; line-height: 1.05; margin-top: 3px; }
         .hcm-dashboard-header__notification-wrap { position: relative; padding: 0 23px; border-right: 1px solid #edf0f4; display: flex; align-items: center; justify-content: center; }
         .hcm-dashboard-header__notification { width: 42px; height: 42px; padding: 0 !important; border: 0 !important; border-radius: 8px !important; background: #ffffff; color: #101827; position: relative; display: inline-grid !important; place-items: center !important; cursor: pointer; }
         .hcm-dashboard-header__notification svg { display: block; }
@@ -456,7 +443,6 @@ export function NurseLayout(props) {
         .hcm-dashboard-header__profile { margin-left: 24px; display: inline-flex; align-items: center; gap: 13px; border: 0 !important; background: transparent !important; padding: 0 !important; color: #101827; cursor: pointer; }
         .hcm-dashboard-header__avatar { width: 42px; height: 42px; border-radius: 50% !important; overflow: hidden; flex: 0 0 auto; background: linear-gradient(135deg, #0c3a24, #165034); display: grid; place-items: center; color: #fff; font-size: 13px; font-weight: 800; }
         .hcm-dashboard-header__avatar img { border-radius: 50%; display: block; }
-        .triage-page .hcm-dashboard-header__shift-wrap { border-right: 0 !important; padding-right: 0 !important; }
         .triage-page .hcm-dashboard-header__notification-wrap { width: 74px !important; min-width: 74px !important; padding: 0 !important; border-left: 0 !important; border-right: 0 !important; position: relative !important; display: flex !important; align-items: center !important; justify-content: center !important; }
         .triage-page .hcm-dashboard-header__notification-wrap::before,
         .triage-page .hcm-dashboard-header__notification-wrap::after { content: ""; position: absolute; top: 4px; bottom: 4px; width: 1px; background: #edf0f4; pointer-events: none; }
@@ -856,7 +842,7 @@ export function NurseLayout(props) {
             }}
             aria-label={sidebarOpen ? "Recolher menu" : "Abrir menu"}
           >
-            <img src="/assets/hcm logo.png" alt="" aria-hidden="true" />
+            <img src="/assets/system%27s%20logo%20v2.png" alt="" aria-hidden="true" />
           </button>
           <div className="logo-text min-w-0">
             <div className="font-extrabold leading-none" style={{ color: "#101827", fontSize: 23 }}>
@@ -1000,7 +986,7 @@ export function NurseLayout(props) {
                     fontWeight: 800,
                   }}
                 >
-                  {activeView === "dayStats" ? "Estatísticas do Dia" : `Bom dia, ${nurseFirstName} 👋`}
+                  {activeView === "dayStats" ? "Estatísticas do Dia" : `Bom dia, ${nurseFirstName}`}
                 </div>
                 <p
                   className="hcm-dashboard-header__date"
@@ -1065,7 +1051,6 @@ export function NurseLayout(props) {
                   appearance: "none",
                 }}
               />
-              <span className="hcm-dashboard-header__search-kbd">⌘ K</span>
             </div>
             <div
               className="hcm-dashboard-header__actions"
@@ -1077,153 +1062,6 @@ export function NurseLayout(props) {
                 whiteSpace: "nowrap",
               }}
             >
-              {String(me?.role || "").toUpperCase() === "NURSE" && (
-                <div className="hcm-dashboard-header__shift-wrap">
-                  <div data-tour="shift-status" style={{ position: "relative" }}>
-                    <button
-                      type="button"
-                      className="hcm-dashboard-header__shift"
-                      onMouseDown={(event) => event.stopPropagation()}
-                      onClick={() => setShiftMenuOpen((prev) => !prev)}
-                      disabled={loadingShift || shiftMenuBusy}
-                      style={{
-                        height: "48px",
-                        padding: 0,
-                        borderRadius: "8px",
-                        border: "0",
-                        background: "transparent",
-                        color: "#101827",
-                        fontSize: "0",
-                        fontWeight: "700",
-                        cursor: loadingShift || shiftMenuBusy ? "not-allowed" : "pointer",
-                        opacity: loadingShift || shiftMenuBusy ? 0.7 : 1,
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "12px",
-                        justifyContent: "space-between",
-                        minWidth: "125px",
-                      }}
-                      title="Abrir menu do turno"
-                    >
-                      <span
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "8px",
-                          minWidth: 0,
-                          fontSize: "12px",
-                        }}
-                      >
-                        <span
-                          style={{
-                            width: "15px",
-                            height: "15px",
-                            lineHeight: 0,
-                            flexShrink: 0,
-                            display: "inline-flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                          }}
-                          aria-hidden="true"
-                        >
-                          <svg
-                            width="19"
-                            height="19"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="#ff9700"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <circle cx="12" cy="12" r="4" />
-                            <path d="M12 2v2" />
-                            <path d="M12 20v2" />
-                            <path d="m4.93 4.93 1.41 1.41" />
-                            <path d="m17.66 17.66 1.41 1.41" />
-                            <path d="M2 12h2" />
-                            <path d="M20 12h2" />
-                            <path d="m6.34 17.66-1.41 1.41" />
-                            <path d="m19.07 4.93-1.41 1.41" />
-                          </svg>
-                        </span>
-                        <span
-                          style={{
-                            width: "8px",
-                            height: "8px",
-                            borderRadius: "999px",
-                            background: shiftButtonMeta.dot,
-                            flexShrink: 0,
-                            display: "none",
-                          }}
-                        />
-                        <span
-                          style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            alignItems: "flex-start",
-                            lineHeight: 1.1,
-                            minWidth: 0,
-                          }}
-                        >
-                          <small>Turno</small>
-                          <strong>Manhã</strong>
-                        </span>
-                      </span>
-                      <svg
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        style={{ flexShrink: 0 }}
-                      >
-                        <path d="M6 9l6 6 6-6" />
-                      </svg>
-                    </button>
-                    {shiftMenuOpen && (
-                      <div
-                        onMouseDown={(event) => event.stopPropagation()}
-                        style={{
-                          position: "absolute",
-                          top: "calc(100% + 8px)",
-                          left: 0,
-                          width: "100%",
-                          background: "#ffffff",
-                          border: "1px solid #dcebe2",
-                          borderRadius: "12px",
-                          boxShadow: "none",
-                          padding: "6px",
-                          zIndex: 220,
-                        }}
-                      >
-                        <button
-                          type="button"
-                          onMouseDown={(event) => {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            if (!shiftStartDisabled) void startShift();
-                          }}
-                          onClick={(event) => event.preventDefault()}
-                          disabled={shiftStartDisabled}
-                          className="btn-secondary"
-                          style={{
-                            width: "100%",
-                            justifyContent: "flex-start",
-                            padding: "8px 10px",
-                            minHeight: "36px",
-                            fontSize: "12px",
-                            background: "transparent",
-                          }}
-                        >
-                          {startingShift ? "A iniciar..." : "Iniciar Turno"}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
               <div
                 ref={notificationsPreviewRef}
                 data-tour="notifications"

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { toFriendlyErrorMessage } from "../../../lib/friendlyErrors";
 import { makeEmptyPlanDraft } from "../doctor-helpers/doctorHelpers";
 
 export function useDoctorPageShellState(initialActiveView = "dashboard") {
@@ -130,7 +131,9 @@ export function useDoctorPageShellState(initialActiveView = "dashboard") {
 
   const showPopup = useCallback(
     (type, title, message) => {
-      safeSet(() => setPopup({ open: true, type, title, message }));
+      safeSet(() =>
+        setPopup({ open: true, type, title, message: toFriendlyErrorMessage(message) })
+      );
     },
     [safeSet]
   );

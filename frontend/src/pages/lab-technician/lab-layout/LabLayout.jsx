@@ -49,7 +49,7 @@ export function LabLayout(props) {
     handleSave,
     ResultModal,
   } = props;
-  const logoImage = "/assets/logo_icon.svg";
+  const logoImage = "/assets/system%27s%20logo%20v2.png";
 
   return (
     <div

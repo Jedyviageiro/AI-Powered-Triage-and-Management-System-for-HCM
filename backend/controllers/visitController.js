@@ -838,6 +838,7 @@ const notifyPatientLabReady = async (req, res) => {
       return res.status(error.statusCode).json({
         error: error.message || "Erro ao enviar notificacao do resultado laboratorial",
         channels: Array.isArray(error.results) ? error.results : undefined,
+        details: Array.isArray(error.results) ? error.results : undefined,
       });
     }
     return sendServerError(

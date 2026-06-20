@@ -156,7 +156,7 @@ export function NurseQueueView({
                       </tr>
                     ) : null,
                     <tr
-                      key={v.id}
+                      key={`${section.key}-${v.id}-${idx}`}
                       onClick={() => openPatientEditModal(v)}
                       style={{
                         borderBottom: "1px solid #f9f9f9",

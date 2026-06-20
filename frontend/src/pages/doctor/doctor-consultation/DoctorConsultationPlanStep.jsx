@@ -1,6 +1,7 @@
 export default function DoctorConsultationPlanStep(props) {
   const {
     isFollowUpConsultation,
+    consultationMode,
     previousPrescription,
     followUpPrescriptionDecision,
     setFollowUpPrescriptionDecision,
@@ -51,6 +52,8 @@ export default function DoctorConsultationPlanStep(props) {
   } = props;
 
   const SelectComponent = ModernSelect;
+  const isLabFocusedVisit =
+    consultationMode === "LAB_RESULT_REVIEW" || consultationMode === "LAB_SAMPLE_COLLECTION";
   const defaultReturnDate = (() => {
     const date = new Date();
     date.setDate(date.getDate() + 1);
@@ -60,6 +63,14 @@ export default function DoctorConsultationPlanStep(props) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       <div className="cf-card">
+        <div style={{ marginBottom: 14 }}>
+          <div className="cf-label" style={{ marginBottom: 4 }}>
+            Tratamento
+          </div>
+          <p style={{ margin: 0, color: "#64748b", fontSize: 12, lineHeight: 1.45 }}>
+            Registe apenas a orientacao que a familia precisa seguir depois desta decisao.
+          </p>
+        </div>
         {isFollowUpConsultation && (
           <div style={{ display: "grid", gap: 12, marginBottom: 14 }}>
             <div>
@@ -137,10 +148,12 @@ export default function DoctorConsultationPlanStep(props) {
         >
           <div>
             <div className="cf-label" style={{ marginBottom: 4 }}>
-              Pedido Laboratorial
+              Exame laboratorial
             </div>
             <p style={{ margin: 0, fontSize: 12, color: "#6b7280", lineHeight: 1.5 }}>
-              Registe o exame dentro do fluxo da consulta, com prioridade e observações clínicas.
+              {isLabFocusedVisit
+                ? "Confirme o exame ligado a este retorno e deixe a decisao clara para a equipa."
+                : "Use esta area apenas quando precisar pedir ou acompanhar um exame."}
             </p>
           </div>
           <button
@@ -566,12 +579,20 @@ export default function DoctorConsultationPlanStep(props) {
               color: "#6b7280",
             }}
           >
-            Nenhum exame laboratorial solicitado nesta consulta.
+            Nenhum exame solicitado. Se precisar de apoio laboratorial, clique em Solicitar Exame.
           </div>
         )}
       </div>
 
       <div className="cf-card">
+        <div style={{ marginBottom: 14 }}>
+          <div className="cf-label" style={{ marginBottom: 4 }}>
+            Proximo passo
+          </div>
+          <p style={{ margin: 0, color: "#64748b", fontSize: 12, lineHeight: 1.45 }}>
+            Escolha para onde o paciente segue depois desta consulta.
+          </p>
+        </div>
         <div className="cf-grid-2">
           <div>
             <label className="cf-label">

@@ -304,7 +304,7 @@ export function DoctorPacientesView({
               gap: 8,
               background: "#fff",
               border: `1px solid ${BORDER}`,
-              borderRadius: 999,
+              borderRadius: 8,
               padding: "6px 14px",
             }}
           >
@@ -538,8 +538,9 @@ export function DoctorPacientesView({
                         style={{
                           display: "inline-flex",
                           alignItems: "center",
-                          borderRadius: 999,
-                          padding: "6px 16px",
+                          minHeight: 40,
+                          borderRadius: 8,
+                          padding: "0 16px",
                           fontSize: 12,
                           fontWeight: 700,
                           cursor: canAttend(row) ? "pointer" : "default",

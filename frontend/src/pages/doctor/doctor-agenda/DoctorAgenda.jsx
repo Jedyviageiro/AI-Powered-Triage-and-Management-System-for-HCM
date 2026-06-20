@@ -353,7 +353,7 @@ export default function DoctorAgenda({
                 alignItems: "center",
                 gap: 6,
                 padding: 4,
-                borderRadius: 999,
+                borderRadius: 8,
                 background: "rgba(255,255,255,0.88)",
                 border: BORDER,
               }}

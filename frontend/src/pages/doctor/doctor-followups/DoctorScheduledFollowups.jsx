@@ -268,7 +268,7 @@ export function DoctorScheduledFollowupsView({
               style={{
                 display: "inline-flex",
                 alignItems: "center",
-                borderRadius: 999,
+                borderRadius: 8,
                 border: "1px solid #DBE7DF",
                 background: "#fff",
                 padding: "4px 12px",

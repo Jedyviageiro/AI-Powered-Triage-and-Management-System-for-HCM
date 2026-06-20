@@ -1,498 +1,382 @@
+import {
+  AlertTriangle,
+  CalendarDays,
+  ClipboardList,
+  Clock3,
+  FileText,
+  Search,
+  UserPlus,
+  Users,
+} from "lucide-react";
 import DoctorPage from "../DoctorPage";
+
+const hcmGreen = "var(--hcm-primary-green)";
+const hcmGreenSoft = "var(--hcm-primary-green-soft)";
+
+function StatBellIcon({ size = 22 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M13.73 21a2 2 0 0 1-3.46 0"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+const getPatientName = (visit) => visit?.full_name || visit?.patient_name || "Paciente";
+
+const getComplaint = (visit) =>
+  visit?.chief_complaint ||
+  visit?.complaint ||
+  visit?.reason ||
+  visit?.visit_reason ||
+  visit?.triage_chief_complaint ||
+  "Aguardando avaliacao";
+
+const getAgeLabel = (visit) => {
+  const age = visit?.age_years ?? visit?.patient_age_years ?? visit?.age;
+  if (age == null || age === "") return "";
+  return `${age} anos`;
+};
+
+const getQueueMinutes = (visit, fallbackIndex = 0) => {
+  void fallbackIndex;
+  const direct = Number(visit?.wait_minutes ?? visit?.waiting_minutes ?? visit?.queue_minutes);
+  if (Number.isFinite(direct) && direct >= 0) return Math.round(direct);
+  const rawDate = visit?.queued_at || visit?.arrival_time || visit?.created_at || visit?.date;
+  const ts = rawDate ? new Date(rawDate).getTime() : NaN;
+  if (Number.isFinite(ts)) return Math.max(0, Math.round((Date.now() - ts) / 60000));
+  return null;
+};
+
+const formatTime = (value) => {
+  if (!value) return "--:--";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "--:--";
+  return date.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" });
+};
+
+const getVisitTime = (visit) =>
+  visit?.scheduled_at ||
+  visit?.appointment_time ||
+  visit?.return_visit_date ||
+  visit?.queued_at ||
+  visit?.arrival_time ||
+  visit?.created_at ||
+  visit?.date;
+
+const normalizeAgendaRows = (agenda) => {
+  const assigned = Array.isArray(agenda?.assigned_today) ? agenda.assigned_today : [];
+  const returns = Array.isArray(agenda?.returns_today) ? agenda.returns_today : [];
+  return [...assigned, ...returns]
+    .filter((row) => row && String(row?.status || "").toUpperCase() !== "CANCELLED")
+    .sort((a, b) => {
+      const aTs = new Date(getVisitTime(a)).getTime();
+      const bTs = new Date(getVisitTime(b)).getTime();
+      return (Number.isFinite(aTs) ? aTs : Number.MAX_SAFE_INTEGER) - (Number.isFinite(bTs) ? bTs : Number.MAX_SAFE_INTEGER);
+    });
+};
+
+const getStatusChip = (visit, formatStatus) => {
+  const status = String(visit?.status || "").toUpperCase();
+  if (status.includes("CONSULT")) {
+    return { label: "Em consulta", color: hcmGreen, bg: hcmGreenSoft };
+  }
+  if (status.includes("WAIT") || status.includes("QUEUE")) {
+    return { label: "Em espera", color: "#f97316", bg: "#fff7ed" };
+  }
+  if (status.includes("TRIAGE")) {
+    return { label: "Aguardando medico", color: "#ef4444", bg: "#fef2f2" };
+  }
+  return { label: formatStatus?.(visit?.status) || "Aguardando", color: "#64748b", bg: "#f1f5f9" };
+};
+
+const statCards = ({
+  activeAlertCount,
+  agendaTodayCount,
+  myAssignedQueue,
+  doctorLabWorklistRows,
+  filteredQueue,
+}) => {
+  return [
+    {
+      label: "Urgentes",
+      detail: "precisam de atencao",
+      value: activeAlertCount,
+      icon: StatBellIcon,
+      color: "#ef4444",
+      bg: "#fff1f2",
+    },
+    {
+      label: "Consultas hoje",
+      detail: "aguardando",
+      value: agendaTodayCount,
+      icon: Clock3,
+      color: "#f97316",
+      bg: "#fff7ed",
+    },
+    {
+      label: "Pacientes hoje",
+      detail: "atendidos",
+      value: myAssignedQueue.length || filteredQueue.length,
+      icon: Users,
+      color: hcmGreen,
+      bg: hcmGreenSoft,
+    },
+    {
+      label: "Resultados",
+      detail: "para revisar",
+      value: doctorLabWorklistRows.length,
+      icon: ClipboardList,
+      color: "#3b82f6",
+      bg: "#eff6ff",
+    },
+  ];
+};
 
 export function DoctorDashboardView({
   me,
   activeAlertCount,
   filteredQueue,
-  priorityTheme,
-  waitingTopPriority,
-  waitingCount,
-  inConsultTopPriority,
-  inConsultCount,
   agendaTodayCount,
   dashboardNextPatients,
   dashboardPriorityMeta,
   formatStatus,
   onOpenView,
   onOpenConsultation,
-  dashboardHourSeries,
-  dashboardPriorityRows,
   dashboardAlertPreview,
   myAssignedQueue,
-  dashboardStatusRows,
-  pendingLabVisits,
   doctorLabWorklistRows,
-  onOpenLabTracking,
-  getLabProgressTheme,
+  agenda,
 }) {
+  const queueRows = (dashboardNextPatients.length ? dashboardNextPatients : filteredQueue).slice(0, 5);
+  const agendaRows = normalizeAgendaRows(agenda).slice(0, 5);
+  const recentRows = [
+    ...queueRows.slice(0, 2).map((visit) => ({
+      id: `queue-${visit.id}`,
+      time: formatTime(visit?.queued_at || visit?.arrival_time || visit?.created_at || visit?.date),
+      label: `${getPatientName(visit)} entrou na fila`,
+      area: "Fila de espera",
+      icon: UserPlus,
+      color: "#ef4444",
+    })),
+    ...doctorLabWorklistRows.slice(0, 2).map((visit) => ({
+      id: `lab-${visit.id}`,
+      time: formatTime(visit?.updated_at || visit?.lab_ready_at || visit?.created_at || visit?.date),
+      label: `${visit?.lab_exam_type || "Exame"} ${visit?.is_ready ? "pronto" : "em acompanhamento"}`,
+      area: "Exames",
+      icon: ClipboardList,
+      color: "#3b82f6",
+    })),
+    ...dashboardAlertPreview.slice(0, 2).map((alert) => ({
+      id: `alert-${alert.id}`,
+      time: formatTime(alert?.created_at || alert?.date || alert?.updated_at),
+      label: alert?.title || "Alerta ativo",
+      area: "Alertas",
+      icon: AlertTriangle,
+      color: "#ef4444",
+    })),
+  ].slice(0, 4);
+  void me;
+
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 style={{ fontSize: "28px", lineHeight: 1, color: "#111827", margin: 0 }}>
-            Dashboard
-          </h1>
-          <p className="text-sm text-gray-400 mt-1">
-            {new Date().toLocaleDateString("pt-PT", {
-              weekday: "long",
-              day: "2-digit",
-              month: "long",
-              year: "numeric",
-            })}
-          </p>
-        </div>
-        <div className="text-xs font-medium bg-white border border-gray-200 rounded-xl px-4 py-2.5">
-          {new Date().toLocaleDateString("pt-PT")}
-        </div>
-      </div>
-
-      <div
-        className="rounded-2xl p-6 mb-5 relative overflow-hidden"
-        style={{ background: "linear-gradient(135deg, #0c3a24 0%, #165f3b 55%, #1a7048 100%)" }}
-      >
-        <div
-          className="absolute inset-0 opacity-[0.04]"
-          style={{
-            backgroundImage:
-              "radial-gradient(circle at 20% 50%, white 1px, transparent 1px), radial-gradient(circle at 80% 20%, white 1px, transparent 1px)",
-            backgroundSize: "32px 32px",
-          }}
-        />
-        <div className="relative flex items-center justify-between gap-4 flex-wrap">
-          <div>
-            <div className="text-white/60 text-xs font-semibold uppercase tracking-widest mb-1">
-              Turno Operacional
-            </div>
-            <div className="text-white text-2xl leading-tight font-semibold">
-              {me?.full_name || "Medico"}
-            </div>
-            <div className="text-white/60 text-sm mt-1">
-              {me?.specialization || "Clinica Geral"}
-            </div>
-          </div>
-          <div className="flex items-center gap-2 bg-white/10 border border-white/20 rounded-full px-4 py-2">
-            <span
-              className={`w-2 h-2 rounded-full ${activeAlertCount > 0 ? "bg-red-300" : "bg-emerald-400"}`}
-            />
-            <span className="text-white text-xs font-semibold">
-              {activeAlertCount > 0
-                ? `${activeAlertCount} alerta(s) ativo(s)`
-                : "Online · Em turno"}
-            </span>
-          </div>
-        </div>
-
-        <div className="relative grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
-          <div className="bg-white/10 border border-white/15 rounded-xl p-4">
-            <div className="text-white/60 text-[10px] font-semibold uppercase tracking-wider mb-2">
-              Fila Total
-            </div>
-            <div className="text-[32px] text-white leading-none font-semibold">
-              {filteredQueue.length}
-            </div>
-            <div className="text-white/50 text-xs mt-2">pacientes ativos</div>
-          </div>
-          <div className="bg-white/10 border border-white/15 rounded-xl p-4">
-            <div className="text-white/60 text-[10px] font-semibold uppercase tracking-wider mb-2">
-              Aguardam Medico
-            </div>
-            <div
-              className="text-[32px] leading-none font-semibold"
-              style={{ color: priorityTheme(waitingTopPriority).accent }}
-            >
-              {waitingCount}
-            </div>
-            <div className="text-white/50 text-xs mt-2">na sala de espera</div>
-          </div>
-          <div className="bg-white/10 border border-white/15 rounded-xl p-4">
-            <div className="text-white/60 text-[10px] font-semibold uppercase tracking-wider mb-2">
-              Em Consulta
-            </div>
-            <div
-              className="text-[32px] leading-none font-semibold"
-              style={{ color: priorityTheme(inConsultTopPriority).accent }}
-            >
-              {inConsultCount}
-            </div>
-            <div className="text-white/50 text-xs mt-2">agora mesmo</div>
-          </div>
-          <div className="bg-white/10 border border-white/15 rounded-xl p-4">
-            <div className="text-white/60 text-[10px] font-semibold uppercase tracking-wider mb-2">
-              Agenda Hoje
-            </div>
-            <div className="text-[32px] text-white leading-none font-semibold">
-              {agendaTodayCount}
-            </div>
-            <div className="text-white/50 text-xs mt-2">consultas marcadas</div>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-5 mb-5">
-        <div className="xl:col-span-2 flex flex-col gap-5">
-          <div className="bg-white border border-gray-200 rounded-2xl p-5">
-            <div className="flex items-center justify-between mb-4">
+    <div className="doctor-dashboard-redesign">
+      <div className="doctor-dash-stats">
+        {statCards({
+          activeAlertCount,
+          agendaTodayCount,
+          myAssignedQueue,
+          doctorLabWorklistRows,
+          filteredQueue,
+        }).map((card) => {
+          const Icon = card.icon;
+          return (
+            <div key={card.label} className="doctor-dash-stat-card">
+              <span className="doctor-dash-stat-icon" style={{ background: card.bg, color: card.color }}>
+                <Icon size={20} />
+              </span>
               <div>
-                <div className="text-sm font-semibold text-gray-900">Proximos Pacientes</div>
-                <div className="text-xs text-gray-400 mt-0.5">Ordenado por prioridade</div>
+                <strong>{card.value}</strong>
+                <span>{card.label}</span>
+                <small>{card.detail}</small>
               </div>
-              <button
-                type="button"
-                onClick={() => onOpenView("waitingQueue")}
-                className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full hover:bg-emerald-100 transition-colors"
-              >
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="doctor-dash-grid">
+        <div className="doctor-dash-left">
+          <section className="doctor-dash-panel doctor-dash-main-panel">
+            <div className="doctor-dash-panel-head">
+              <div>
+                <h2>Fila de Pacientes</h2>
+                <p>Ordenada por prioridade</p>
+              </div>
+              <button type="button" onClick={() => onOpenView("waitingQueue")} className="doctor-dash-link">
                 Ver fila completa
               </button>
             </div>
-            <div className="space-y-2">
-              {dashboardNextPatients.length === 0 && (
-                <div className="text-xs text-gray-400">Sem pacientes na fila.</div>
-              )}
-              {dashboardNextPatients.map((visit) => {
-                const key = String(visit?.priority || "").toUpperCase();
-                const meta = dashboardPriorityMeta[key] || {
-                  label: key || "-",
-                  color: "#374151",
-                  bg: "#f3f4f6",
+            <div className="doctor-dash-table">
+              <div className="doctor-dash-table-row doctor-dash-table-head">
+                <span>Prioridade</span>
+                <span>Paciente</span>
+                <span>Sintoma principal</span>
+                <span>Tempo na fila</span>
+                <span>Status</span>
+              </div>
+              {queueRows.map((visit, index) => {
+                const priorityKey = String(visit?.priority || "").toUpperCase();
+                const priorityMeta = dashboardPriorityMeta[priorityKey] || {
+                  label: "Normal",
+                  color: hcmGreen,
+                  bg: hcmGreenSoft,
                 };
+                const status = getStatusChip(visit, formatStatus);
+                const wait = getQueueMinutes(visit, index);
                 return (
                   <button
-                    key={visit.id}
                     type="button"
+                    key={`queue-${visit.id}-${index}`}
+                    className="doctor-dash-table-row doctor-dash-patient-row"
                     onClick={() => onOpenConsultation(visit)}
-                    className="w-full flex items-center gap-3 p-3 rounded-xl border border-gray-100 bg-gray-50 hover:bg-emerald-50 hover:border-emerald-100 transition-colors text-left"
                   >
-                    <div
-                      className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white"
-                      style={{ background: meta.color }}
-                    >
-                      {(visit?.full_name || "P").slice(0, 1).toUpperCase()}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-semibold text-gray-900 truncate">
-                        {visit?.full_name || "Paciente"}
-                      </div>
-                      <div className="text-xs text-gray-400 truncate">
-                        {formatStatus(visit?.status)} · #{visit?.id}
-                      </div>
-                    </div>
-                    <span
-                      className="text-[10px] font-semibold px-2 py-1 rounded-full"
-                      style={{
-                        color: meta.color,
-                        background: meta.bg,
-                        border: `1px solid ${meta.color}33`,
-                      }}
-                    >
-                      {meta.label}
+                    <span className="doctor-dash-priority" style={{ background: priorityMeta.color }}>
+                      {index + 1}
+                    </span>
+                    <span>
+                      <strong>{getPatientName(visit)}</strong>
+                      <small>{getAgeLabel(visit) || `Visita #${visit.id}`}</small>
+                    </span>
+                    <span>{getComplaint(visit)}</span>
+                    <span style={{ color: wait == null ? "#7d8597" : wait <= 15 ? "#ef4444" : wait <= 30 ? "#f97316" : hcmGreen }}>
+                      {wait == null ? "-" : `${wait} min`}
+                    </span>
+                    <span className="doctor-dash-status" style={{ background: status.bg, color: status.color }}>
+                      {status.label}
                     </span>
                   </button>
                 );
               })}
+              {queueRows.length === 0 ? <div className="doctor-dash-empty">Sem pacientes na fila.</div> : null}
             </div>
-          </div>
+          </section>
 
-          <div className="bg-white border border-gray-200 rounded-2xl p-5">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <div className="text-sm font-semibold text-gray-900">Atendimentos por Hora</div>
-                <div className="text-xs text-gray-400 mt-0.5">Hoje · 06h - 13h</div>
+          <div className="doctor-dash-bottom-grid">
+            <section className="doctor-dash-panel">
+              <div className="doctor-dash-panel-head">
+                <h2>Atividades recentes</h2>
               </div>
-              <div className="flex items-center gap-3 text-xs text-gray-400">
-                <span className="flex items-center gap-1.5">
-                  <span
-                    className="w-2.5 h-2.5 rounded-sm inline-block"
-                    style={{ background: "#165f3b" }}
-                  />
-                  Consultas
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <span
-                    className="w-2.5 h-2.5 rounded-sm inline-block"
-                    style={{ background: "#86efac" }}
-                  />
-                  Triagens
-                </span>
-              </div>
-            </div>
-            <div className="flex items-end gap-2" style={{ height: "130px" }}>
-              {dashboardHourSeries.labels.map((label, index) => (
-                <div key={label} className="flex-1 flex flex-col items-center gap-1">
-                  <div className="flex items-end gap-1 w-full" style={{ height: "104px" }}>
-                    <div
-                      className="flex-1 rounded-t-md"
-                      style={{
-                        height: `${(dashboardHourSeries.triages[index] / dashboardHourSeries.max) * 100}%`,
-                        minHeight: dashboardHourSeries.triages[index] > 0 ? "4px" : "2px",
-                        background: "#86efac",
-                      }}
-                    />
-                    <div
-                      className="flex-1 rounded-t-md"
-                      style={{
-                        height: `${(dashboardHourSeries.consults[index] / dashboardHourSeries.max) * 100}%`,
-                        minHeight: dashboardHourSeries.consults[index] > 0 ? "4px" : "2px",
-                        background: "#165f3b",
-                      }}
-                    />
-                  </div>
-                  <span className="text-[10px] text-gray-400">{label}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-5">
-          <div className="bg-white border border-gray-200 rounded-2xl p-5">
-            <div className="text-sm font-semibold text-gray-900 mb-1">Distribuicao de Fila</div>
-            <div className="text-xs text-gray-400 mb-4">Por prioridade clinica</div>
-            <div className="flex justify-center mb-4">
-              <div
-                style={{
-                  width: "140px",
-                  height: "140px",
-                  borderRadius: "999px",
-                  background: `conic-gradient(${dashboardPriorityRows[0]?.color || "#dc2626"} 0 ${dashboardPriorityRows[0]?.pct || 0}%, ${dashboardPriorityRows[1]?.color || "#ea580c"} ${dashboardPriorityRows[0]?.pct || 0}% ${(dashboardPriorityRows[0]?.pct || 0) + (dashboardPriorityRows[1]?.pct || 0)}%, ${dashboardPriorityRows[2]?.color || "#22a06b"} ${(dashboardPriorityRows[0]?.pct || 0) + (dashboardPriorityRows[1]?.pct || 0)}% 100%)`,
-                  position: "relative",
-                }}
-              >
-                <div
-                  style={{
-                    position: "absolute",
-                    inset: "18px",
-                    borderRadius: "999px",
-                    background: "#fff",
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <div className="text-[32px] text-gray-900 leading-none font-semibold">
-                    {filteredQueue.length}
-                  </div>
-                  <div className="text-[10px] text-gray-400 mt-0.5">pacientes</div>
-                </div>
-              </div>
-            </div>
-            <div className="space-y-2">
-              {dashboardPriorityRows.map((row) => (
-                <div key={row.key} className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: row.color }} />
-                    <span className="text-gray-600">{row.label}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-gray-900">{row.count}</span>
-                    <span className="text-gray-400">{row.pct}%</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="bg-white border border-gray-200 rounded-2xl p-5">
-            <div className="flex items-center justify-between mb-4">
-              <div className="text-sm font-semibold text-gray-900">Alertas Ativos</div>
-              <span className="text-[10px] font-bold bg-red-50 text-red-600 border border-red-200 px-2 py-0.5 rounded-full">
-                {activeAlertCount} criticos
-              </span>
-            </div>
-            <div className="space-y-2.5">
-              {dashboardAlertPreview.length === 0 && (
-                <div className="text-xs text-gray-400">Sem alertas ativos.</div>
-              )}
-              {dashboardAlertPreview.map((alert) => (
-                <div
-                  key={alert.id}
-                  className={`flex items-start gap-3 p-3 rounded-xl border ${alert.tone === "red" ? "bg-red-50 border-red-100" : alert.tone === "orange" ? "bg-orange-50 border-orange-100" : "bg-amber-50 border-amber-100"}`}
-                >
-                  <div
-                    className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${alert.tone === "red" ? "bg-red-600" : alert.tone === "orange" ? "bg-orange-600" : "bg-amber-600"}`}
-                  />
-                  <div className="min-w-0">
-                    <div
-                      className={`text-xs font-semibold truncate ${alert.tone === "red" ? "text-red-800" : alert.tone === "orange" ? "text-orange-800" : "text-amber-800"}`}
-                    >
-                      {alert.title}
+              <div className="doctor-dash-activity">
+                {recentRows.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <div key={item.id}>
+                      <Icon size={14} style={{ color: item.color }} />
+                      <time>{item.time}</time>
+                      <span>{item.label}</span>
+                      <small>{item.area}</small>
                     </div>
-                    <div
-                      className={`text-[11px] mt-0.5 truncate ${alert.tone === "red" ? "text-red-600" : alert.tone === "orange" ? "text-orange-600" : "text-amber-600"}`}
-                    >
-                      {alert.detail}
-                    </div>
-                  </div>
-                </div>
-              ))}
+                  );
+                })}
+                {recentRows.length === 0 ? <p className="doctor-dash-empty">Sem atividades recentes.</p> : null}
+              </div>
+            </section>
+
+            <section className="doctor-dash-panel">
+              <div className="doctor-dash-panel-head">
+                <h2>Alertas</h2>
+                <button type="button" onClick={() => onOpenView("activeAlerts")} className="doctor-dash-link">
+                  Ver todos
+                </button>
+              </div>
+              <div className="doctor-dash-alerts">
+                {dashboardAlertPreview.slice(0, 2).map((alert, index) => (
+                  <button type="button" key={`alert-${alert.id}-${index}`} onClick={() => onOpenView("activeAlerts")}>
+                    <AlertTriangle size={15} />
+                    <strong>{alert.title}</strong>
+                    <span>{alert.detail}</span>
+                  </button>
+                ))}
+                {dashboardAlertPreview.length === 0 ? <p className="doctor-dash-empty">Sem alertas ativos.</p> : null}
+              </div>
+            </section>
+          </div>
+        </div>
+
+        <aside className="doctor-dash-side">
+          <section className="doctor-dash-panel">
+            <div className="doctor-dash-panel-head">
+              <h2>Acoes rapidas</h2>
             </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
-        <div className="bg-white border border-gray-200 rounded-2xl p-5">
-          <div className="text-sm font-semibold text-gray-900 mb-4">Acoes Rapidas</div>
-          <div className="space-y-2">
-            <button
-              type="button"
-              onClick={() => onOpenView("myPatients")}
-              className="w-full text-left rounded-full border border-emerald-200 bg-emerald-50 text-emerald-800 px-4 py-3 text-xs font-semibold hover:bg-emerald-100 transition-colors flex items-center justify-between"
-            >
-              Meus pacientes atuais
-              <span className="bg-emerald-700 text-white rounded-full px-2 py-0.5 text-[10px]">
-                {myAssignedQueue.length}
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={() => onOpenView("agendaToday")}
-              className="w-full text-left rounded-full border border-blue-200 bg-blue-50 text-blue-800 px-4 py-3 text-xs font-semibold hover:bg-blue-100 transition-colors flex items-center justify-between"
-            >
-              Agenda de hoje
-              <span className="bg-blue-700 text-white rounded-full px-2 py-0.5 text-[10px]">
-                {agendaTodayCount}
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={() => onOpenView("labOrdered")}
-              className="w-full text-left rounded-full border border-amber-200 bg-amber-50 text-amber-800 px-4 py-3 text-xs font-semibold hover:bg-amber-100 transition-colors flex items-center justify-between"
-            >
-              Exames solicitados
-              <span className="bg-amber-600 text-white rounded-full px-2 py-0.5 text-[10px]">
-                {doctorLabWorklistRows.length}
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={() => onOpenView("activeAlerts")}
-              className="w-full text-left rounded-full border border-red-200 bg-red-50 text-red-800 px-4 py-3 text-xs font-semibold hover:bg-red-100 transition-colors flex items-center justify-between"
-            >
-              Alertas ativos
-              <span className="bg-red-600 text-white rounded-full px-2 py-0.5 text-[10px]">
-                {activeAlertCount}
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={() => onOpenView("clinicalHistory")}
-              className="w-full text-left rounded-full border border-gray-200 bg-gray-50 text-gray-700 px-4 py-3 text-xs font-semibold hover:bg-gray-100 transition-colors"
-            >
-              Historico clinico {"->"}
-            </button>
-          </div>
-        </div>
-
-        <div className="bg-white border border-gray-200 rounded-2xl p-5">
-          <div className="text-sm font-semibold text-gray-900 mb-4">Estado Operacional</div>
-          <div className="space-y-3">
-            {dashboardStatusRows.map((row) => (
-              <div key={row.key}>
-                <div className="flex justify-between text-xs mb-1.5">
-                  <span className="text-gray-500 font-medium">{row.label}</span>
-                  <span className="font-semibold" style={{ color: row.color }}>
-                    {row.count}
-                  </span>
-                </div>
-                <div
-                  className="h-2 rounded-full overflow-hidden"
-                  style={{ background: `${row.color}22` }}
-                >
-                  <div
-                    className="h-full rounded-full"
-                    style={{ width: `${row.pct}%`, background: row.color }}
-                  />
-                </div>
-              </div>
-            ))}
-            <div>
-              <div className="flex justify-between text-xs mb-1.5">
-                <span className="text-gray-500 font-medium">Exames pendentes</span>
-                <span className="font-semibold text-blue-700">{pendingLabVisits.length}</span>
-              </div>
-              <div className="h-2 rounded-full bg-blue-100 overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-blue-500"
-                  style={{
-                    width: `${Math.min(100, Math.round((pendingLabVisits.length / Math.max(1, filteredQueue.length)) * 100))}%`,
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white border border-gray-200 rounded-2xl p-5">
-          <div className="text-sm font-semibold text-gray-900 mb-4">Exames Solicitados</div>
-          <div className="space-y-2.5">
-            {doctorLabWorklistRows.slice(0, 3).map((visit) => (
-              <button
-                key={visit.id}
-                type="button"
-                onClick={() => onOpenLabTracking(visit)}
-                className="w-full text-left flex items-center gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100 hover:bg-gray-100 transition-colors"
-              >
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-amber-100 text-amber-700 text-xs font-bold">
-                  L
-                </div>
-                <div className="flex-1 min-w-0">
-                  {(() => {
-                    const progressTheme = getLabProgressTheme(
-                      visit.progress_percent,
-                      visit.is_ready
-                    );
-                    return (
-                      <>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <div className="text-xs font-semibold text-gray-800 truncate">
-                            {visit?.full_name || "Paciente"} | {visit?.lab_exam_type || "Exame"}
-                          </div>
-                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full border border-slate-200 bg-white text-slate-700 flex-shrink-0">
-                            {visit.workflow_label}
-                          </span>
-                        </div>
-                        <div className="text-[10px] text-gray-400 mt-0.5">
-                          {visit.state_label} | {visit.eta_label}
-                          {visit.is_ready ? ` | ${visit.patient_notified_label}` : ""}
-                        </div>
-                        <div
-                          className="mt-1 text-[10px] font-medium"
-                          style={{ color: progressTheme.text }}
-                        >
-                          {visit.progress_percent || 0}% concluido
-                        </div>
-                        <div
-                          className="mt-2 h-1.5 rounded-full overflow-hidden"
-                          style={{ background: progressTheme.track }}
-                        >
-                          <div
-                            className="h-full rounded-full"
-                            style={{
-                              width: `${visit.progress_percent || 0}%`,
-                              background: progressTheme.fill,
-                            }}
-                          />
-                        </div>
-                      </>
-                    );
-                  })()}
-                </div>
-                <span
-                  className={`text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${visit.is_ready ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}
-                >
-                  {visit.is_ready ? "Pronto" : "Pendente"}
-                </span>
+            <div className="doctor-dash-actions">
+              <button type="button" onClick={() => onOpenView("waitingQueue")}>
+                <UserPlus size={15} />
+                Novo Atendimento
               </button>
-            ))}
-            {doctorLabWorklistRows.length === 0 && (
-              <div className="text-xs text-gray-400">
-                Sem exames laboratoriais em acompanhamento.
-              </div>
-            )}
-          </div>
-        </div>
+              <button type="button" onClick={() => onOpenView("agendaToday")}>
+                <CalendarDays size={15} />
+                Ver Agenda
+              </button>
+              <button type="button" onClick={() => onOpenView("clinicalHistory")}>
+                <Search size={15} />
+                Buscar Paciente
+              </button>
+              <button type="button" onClick={() => onOpenView("labOrdered")}>
+                <FileText size={15} />
+                Relatorios
+              </button>
+            </div>
+          </section>
+
+          <section className="doctor-dash-panel">
+            <div className="doctor-dash-panel-head">
+              <h2>Agenda de hoje</h2>
+              <button type="button" onClick={() => onOpenView("agendaToday")} className="doctor-dash-link">
+                Ver agenda
+              </button>
+            </div>
+            <div className="doctor-dash-list">
+              {agendaRows.map((visit, index) => {
+                const status = getStatusChip(visit, formatStatus);
+                return (
+                <button key={`agenda-${visit.id}-${index}`} type="button" onClick={() => onOpenConsultation(visit)}>
+                  <time>{formatTime(getVisitTime(visit))}</time>
+                  <strong>{getPatientName(visit).split(" ").slice(0, 2).join(" ")}</strong>
+                  <span style={{ color: status.color, background: status.bg }}>{status.label}</span>
+                </button>
+                );
+              })}
+              {agendaRows.length === 0 ? <p className="doctor-dash-empty">Sem compromissos hoje.</p> : null}
+            </div>
+          </section>
+
+          <section className="doctor-dash-panel">
+            <div className="doctor-dash-panel-head">
+              <h2>Colegas online</h2>
+            </div>
+            <div className="doctor-dash-colleagues">
+              <p className="doctor-dash-empty">Sem dados de colegas online disponíveis.</p>
+            </div>
+          </section>
+        </aside>
       </div>
+
+      <footer className="doctor-dash-footer">
+        <span>Sistema de Gestao Hospitalar</span>
+        <span>Versao 2.1.0</span>
+      </footer>
     </div>
   );
 }

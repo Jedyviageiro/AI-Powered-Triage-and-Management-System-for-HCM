@@ -18,6 +18,11 @@ const splitName = (value) => {
 const getNovuClient = () => {
   const secretKey = process.env.NOVU_API_KEY || process.env.NOVU_SECRET_KEY;
   if (!secretKey) {
+    console.error("[novu] config_missing", {
+      hasNovuApiKey: Boolean(process.env.NOVU_API_KEY),
+      hasNovuSecretKey: Boolean(process.env.NOVU_SECRET_KEY),
+      hasWorkflowId: Boolean(process.env.NOVU_LAB_RESULT_WORKFLOW_ID || DEFAULT_WORKFLOW_ID),
+    });
     const error = new Error("Novu secret key is missing.");
     error.code = "NOVU_NOT_CONFIGURED";
     throw error;
@@ -88,25 +93,44 @@ const triggerLabResultReadyWorkflow = async ({
     guardianPhone,
     patientName,
   });
+  const payload = {
+    visitId,
+    patientId,
+    patientName: normalizeWhitespace(patientName),
+    guardianName: normalizeWhitespace(guardianName),
+    guardianPhone: String(guardianPhone || "").trim() || null,
+    doctorName: normalizeWhitespace(doctorName) || null,
+    labExamType: normalizeWhitespace(labExamType) || "exame",
+    labResultReadyAt: labResultReadyAt || null,
+    message: normalizeWhitespace(message),
+  };
 
   let result;
   try {
+    console.info("[novu] trigger_attempt", {
+      workflowId,
+      subscriberId: to.subscriberId,
+      visitId: visitId || null,
+      patientId: patientId || null,
+      hasPhone: Boolean(to.phone),
+      payloadKeys: Object.keys(payload),
+    });
     result = await novu.trigger({
       workflowId,
       to,
-      payload: {
-        visitId,
-        patientId,
-        patientName: normalizeWhitespace(patientName),
-        guardianName: normalizeWhitespace(guardianName),
-        guardianPhone: String(guardianPhone || "").trim() || null,
-        doctorName: normalizeWhitespace(doctorName) || null,
-        labExamType: normalizeWhitespace(labExamType) || "exame",
-        labResultReadyAt: labResultReadyAt || null,
-        message: normalizeWhitespace(message),
-      },
+      payload,
     });
   } catch (error) {
+    console.error("[novu] trigger_failed", {
+      workflowId,
+      subscriberId: to.subscriberId,
+      visitId: visitId || null,
+      patientId: patientId || null,
+      status: error?.status || error?.statusCode || null,
+      body: error?.body || null,
+      data: error?.data$ || null,
+      message: error?.message || null,
+    });
     error.message = describeNovuError(error) || "Novu trigger failed.";
     throw error;
   }
