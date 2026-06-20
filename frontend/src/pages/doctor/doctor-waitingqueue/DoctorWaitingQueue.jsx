@@ -93,17 +93,17 @@ const getVisitTypeMeta = (visit) => {
     return {
       label:
         labKind === "SAMPLE_COLLECTION" || motive === "LAB_SAMPLE_COLLECTION"
-          ? "Colheita"
-          : "Resultado",
+          ? "Lab: colheita"
+          : "Lab: resultado",
       bg: "#EFF6FF",
       color: "#1D4ED8",
       border: "#BFDBFE",
     };
   }
   if (type === "FOLLOW_UP" || visit?.parent_visit_id || visit?.return_visit_date) {
-    return { label: "Retorno", bg: "#ECFDF5", color: "#047857", border: "#A7F3D0" };
+    return { label: "Seguimento", bg: "#ECFDF5", color: "#047857", border: "#A7F3D0" };
   }
-  return { label: "Nova", bg: "#F8FAFC", color: "#475569", border: "#E2E8F0" };
+  return { label: "Nova consulta", bg: "#F8FAFC", color: "#475569", border: "#E2E8F0" };
 };
 
 function Avatar({ name, size = 38 }) {

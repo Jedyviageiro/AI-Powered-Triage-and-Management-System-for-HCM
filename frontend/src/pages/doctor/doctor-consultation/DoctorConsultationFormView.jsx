@@ -103,6 +103,33 @@ export default function DoctorConsultationFormView(props) {
     savingPlan,
   } = props;
 
+  const visitReason = selectedVisit?.id ? getVisitReasonLabel(selectedVisit) : "";
+  const previousVisitId =
+    selectedVisit?.parent_visit_id ||
+    selectedVisit?.parent_visit_id_resolved ||
+    selectedVisit?.source_visit_id ||
+    previousConsultation?.id ||
+    previousConsultation?.visit_id ||
+    "";
+  const consultationFlowItems = [
+    {
+      label: "Fluxo",
+      value: consultationModeMeta?.flowLabel || consultationModeMeta?.title || "Consulta",
+    },
+    {
+      label: "Origem",
+      value: consultationModeMeta?.sourceLabel || "Fila clinica",
+    },
+    {
+      label: "Acao agora",
+      value: consultationModeMeta?.primaryAction || "Avaliar paciente",
+    },
+    {
+      label: "Decisao final",
+      value: consultationModeMeta?.nextDecision || "Definir destino",
+    },
+  ];
+
   return (
     <div style={{ fontFamily: "'IBM Plex Sans', system-ui, sans-serif" }}>
       <div className="cf-wrap" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -227,7 +254,103 @@ export default function DoctorConsultationFormView(props) {
                   {consultationModeMeta.summary}
                 </p>
               )}
+              {(visitReason || previousVisitId) && (
+                <div
+                  style={{
+                    marginTop: 10,
+                    display: "flex",
+                    gap: 8,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  {visitReason && (
+                    <span
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        maxWidth: "100%",
+                        minHeight: 26,
+                        padding: "5px 10px",
+                        borderRadius: 999,
+                        background: "rgba(255,255,255,0.12)",
+                        border: "1px solid rgba(255,255,255,0.18)",
+                        color: "rgba(255,255,255,0.86)",
+                        fontSize: 11,
+                        fontWeight: 600,
+                        lineHeight: 1.25,
+                      }}
+                    >
+                      Motivo: {visitReason}
+                    </span>
+                  )}
+                  {previousVisitId && consultationMode !== "NORMAL" && (
+                    <span
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        minHeight: 26,
+                        padding: "5px 10px",
+                        borderRadius: 999,
+                        background: "rgba(255,255,255,0.12)",
+                        border: "1px solid rgba(255,255,255,0.18)",
+                        color: "rgba(255,255,255,0.82)",
+                        fontSize: 11,
+                        fontWeight: 600,
+                        lineHeight: 1.25,
+                      }}
+                    >
+                      Ligado a visita #{previousVisitId}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
+          </div>
+          <div
+            style={{
+              marginTop: 16,
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+              gap: 10,
+            }}
+          >
+            {consultationFlowItems.map((item) => (
+              <div
+                key={item.label}
+                style={{
+                  minHeight: 70,
+                  borderRadius: 14,
+                  border: "1px solid rgba(255,255,255,0.16)",
+                  background: "rgba(255,255,255,0.1)",
+                  padding: "11px 12px",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.04em",
+                    color: "rgba(255,255,255,0.55)",
+                    lineHeight: 1.2,
+                  }}
+                >
+                  {item.label}
+                </div>
+                <div
+                  style={{
+                    marginTop: 5,
+                    color: "#fff",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    lineHeight: 1.3,
+                    overflowWrap: "anywhere",
+                  }}
+                >
+                  {item.value}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
