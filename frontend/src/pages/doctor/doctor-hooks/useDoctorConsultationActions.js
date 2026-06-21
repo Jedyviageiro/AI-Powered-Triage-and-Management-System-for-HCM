@@ -778,9 +778,6 @@ export function useDoctorConsultationActions(args) {
             setErr(error?.message || "Nao foi possivel enviar o pedido ao laboratorio.");
           });
       }
-      if (selectedLabProtocol?.sameDayCollection && !selectedLabCollectionRule) {
-        setSampleCollectionModalOpen(true);
-      }
       setErr("");
     } catch (e) {
       setErr(e.message);
@@ -790,14 +787,11 @@ export function useDoctorConsultationActions(args) {
     labRequestSupport,
     loadQueue,
     planDraft,
-    selectedLabCollectionRule,
-    selectedLabProtocol,
     selectedVisit,
     setErr,
     setLabOrderConfirmed,
     setLabOrderDraft,
     setPlanDraft,
-    setSampleCollectionModalOpen,
   ]);
 
   const autoScheduleSampleCollectionReturn = useCallback(() => {

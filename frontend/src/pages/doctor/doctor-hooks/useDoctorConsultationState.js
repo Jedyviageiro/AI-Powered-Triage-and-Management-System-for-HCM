@@ -147,6 +147,10 @@ export function useDoctorConsultationState({
   );
 
   useEffect(() => {
+    if (autoOpenSampleCollectionModal) {
+      safeSet(() => setAutoOpenSampleCollectionModal(false));
+    }
+    return;
     if (
       activeView !== "consultationForm" ||
       consultFormStep !== 4 ||

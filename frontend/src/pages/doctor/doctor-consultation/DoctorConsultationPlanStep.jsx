@@ -279,7 +279,7 @@ export default function DoctorConsultationPlanStep(props) {
                     {selectedLabProtocol.quantity || "Conforme protocolo"}
                   </div>
                 </div>
-                <div
+                <div hidden
                   style={{
                     border: "1px solid #e5e7eb",
                     borderRadius: 14,
@@ -323,7 +323,7 @@ export default function DoctorConsultationPlanStep(props) {
 
             <div className="cf-grid-2">
               <div>
-                <label className="cf-label">Motivo clínico</label>
+                <label className="cf-label">Motivo clínico (opcional)</label>
                 <textarea
                   className="cf-textarea"
                   style={{ minHeight: 104 }}
@@ -352,6 +352,7 @@ export default function DoctorConsultationPlanStep(props) {
               </div>
             </div>
 
+            {false && (
             <div
               style={{
                 border: "1px solid #dcebe2",
@@ -434,8 +435,9 @@ export default function DoctorConsultationPlanStep(props) {
                 </div>
               )}
             </div>
+            )}
 
-            {(currentLabEtaPreview || selectedLabCollectionRule) && (
+            {false && (currentLabEtaPreview || selectedLabCollectionRule) && (
               <div
                 style={{
                   display: "grid",
@@ -493,10 +495,11 @@ export default function DoctorConsultationPlanStep(props) {
                       : "Colheita no fluxo atual"}
                   </div>
                 </div>
+                )}
               </div>
             )}
 
-            {selectedLabCollectionRule && (
+            {false && selectedLabCollectionRule && (
               <div
                 style={{
                   border: "1px solid #fde68a",
@@ -642,6 +645,7 @@ export default function DoctorConsultationPlanStep(props) {
               onChange={(e) => updatePlanField("disposition_reason", e.target.value)}
             />
           </div>
+          {false && (
           <div>
             <label className="cf-label">Estado hospitalar</label>
             <div
@@ -659,6 +663,7 @@ export default function DoctorConsultationPlanStep(props) {
               leito fica a cargo da enfermagem ou da equipa administrativa.
             </div>
           </div>
+          )}
         </div>
 
         {isFollowUpConsultation && (
@@ -736,7 +741,7 @@ export default function DoctorConsultationPlanStep(props) {
                     }}
                   >
                     <option value="">Selecionar critério</option>
-                    {FOLLOW_UP_RULE_OPTIONS.map((o) => (
+                    {FOLLOW_UP_RULE_OPTIONS.filter((o) => o.value !== "CHRONIC_RECURRING").map((o) => (
                       <option key={o.value} value={o.value}>
                         {o.label}
                       </option>

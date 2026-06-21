@@ -13,7 +13,6 @@ import DoctorAISuggestionModal from "../doctor-consultation/DoctorAISuggestionMo
 import DoctorConsultationFormView from "../doctor-consultation/DoctorConsultationFormView";
 import DoctorModernSelect from "../doctor-consultation/DoctorModernSelect";
 import PatientLabResultModal from "../doctor-exames/PatientLabResultModal";
-import PatientSampleCollectionModal from "../doctor-exames/PatientSampleCollectionModal";
 import { DoctorNotificationsView } from "../doctor-configuracao/DoctorNotifications";
 import { DoctorPreferencesView } from "../doctor-configuracao/DoctorPreferences";
 import { DoctorPacientesView } from "../doctor-pacientes/DoctorPacientes";
@@ -193,7 +192,6 @@ export default function DoctorLayout(props) {
     getLabProgressTheme,
     labResultModal,
     setLabResultModal,
-    sampleCollectionModalOpen,
     shouldShowSampleCollectionStage,
     sampleCollectionDraft,
     setSampleCollectionDraft,
@@ -642,19 +640,6 @@ export default function DoctorLayout(props) {
         onClose={() =>
           setLabResultModal({ open: false, row: null, loading: false, explanation: "", error: "" })
         }
-      />
-
-      <PatientSampleCollectionModal
-        open={sampleCollectionModalOpen}
-        shouldShow={shouldShowSampleCollectionStage}
-        findLabExamLabel={findLabExamLabel}
-        planDraft={planDraft}
-        onClose={() => setSampleCollectionModalOpen(false)}
-        selectedLabProtocol={selectedLabProtocol}
-        sampleCollectionDraft={sampleCollectionDraft}
-        setSampleCollectionDraft={setSampleCollectionDraft}
-        openModernSelect={openModernSelect}
-        setOpenModernSelect={setOpenModernSelect}
       />
 
       <DoctorAISuggestionModal

@@ -76,7 +76,7 @@ export const validateAndBuildDoctorLabOrder = ({
     throw new Error("Especifique o exame solicitado.");
   }
 
-  if (!String(labOrderDraft.clinicalReason || "").trim() && !primarySupport) {
+  if (false && !String(labOrderDraft.clinicalReason || "").trim() && !primarySupport) {
     throw new Error("Descreva o motivo clínico do exame.");
   }
 

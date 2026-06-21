@@ -81,10 +81,8 @@ export const calculateAgeYears = (birthDate) => {
 
 export const DISPOSITION_OPTIONS = [
   { value: "", label: "Selecionar destino" },
-  { value: "BED_REST", label: "Repouso (bed rest)" },
   { value: "HOME", label: "Alta para casa" },
   { value: "RETURN_VISIT", label: "Retorno agendado" },
-  { value: "REFER_SPECIALIST", label: "Referir / encaminhar para avaliação hospitalar" },
 ];
 
 export const FOLLOW_UP_DIAGNOSIS_EVOLUTION_OPTIONS = [
@@ -127,13 +125,6 @@ export const FOLLOW_UP_RULE_OPTIONS = [
 export const LAB_EXAM_OPTIONS = [
   { value: "", label: "Selecionar exame" },
   { value: "MALARIA_RDT", label: "Teste Rápido de Malária (RDT)" },
-  { value: "GLICEMIA_CAPILAR", label: "Glicemia (capilar)" },
-  { value: "HIV_RAPIDO", label: "Teste Rápido de HIV" },
-  { value: "LAB_CENTRAL", label: "Hemograma / ionograma / urina" },
-  { value: "RAIO_X", label: "Raio-X" },
-  { value: "PARASITOLOGIA_FEZES", label: "Parasitologia de fezes" },
-  { value: "CULTURA_HEMOCULTURA", label: "Cultura / hemocultura" },
-  { value: "OUTRO", label: "Outro exame (especificar)" },
 ];
 
 export const LAB_ORDER_PRIORITY_OPTIONS = [
@@ -150,28 +141,6 @@ export const LAB_REQUEST_RULES = [
     patterns: [/febre/, /calafrio/, /malaria/, /paludismo/],
     reasonTemplate:
       "Solicitar teste de malária para confirmar doença suspeita em contexto de febre.",
-  },
-  {
-    examType: "LAB_CENTRAL",
-    triggerLabel: "Suspeita de infeção",
-    example: "Suspeita de infeção -> exame de sangue",
-    patterns: [/infec[cç][aã]o/, /sépsis/, /sepse/, /leucocit/, /bacter/i],
-    reasonTemplate:
-      "Solicitar exame de sangue para confirmar infeção suspeita e obter dados adicionais para o diagnóstico.",
-  },
-  {
-    examType: "LAB_CENTRAL",
-    triggerLabel: "Suspeita de anemia",
-    example: "Suspeita de anemia -> hemoglobina/hemograma",
-    patterns: [/anemi/, /palidez/, /hemoglob/i],
-    reasonTemplate: "Solicitar hemoglobina/hemograma para confirmar anemia suspeita.",
-  },
-  {
-    examType: "LAB_CENTRAL",
-    triggerLabel: "Suspeita de infeção urinária",
-    example: "Suspeita de infeção urinária -> urina",
-    patterns: [/urin[aá]r/, /dis[uú]ria/, /ardor urin[aá]rio/, /cistite/],
-    reasonTemplate: "Solicitar exame de urina para investigar infeção urinária suspeita.",
   },
 ];
 
