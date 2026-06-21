@@ -82,7 +82,7 @@ function PhotoCard({ src, alt, height, radius = 24 }) {
 
 export default function LandingPage() {
   return (
-    <div style={{ fontFamily: "'Inter', 'Segoe UI', sans-serif", background: "#f2f8f3", color: "#0f172a" }}>
+    <div style={{ fontFamily: "var(--font-ui)", background: "#f2f8f3", color: "#0f172a" }}>
       <header
         style={{
           position: "fixed",

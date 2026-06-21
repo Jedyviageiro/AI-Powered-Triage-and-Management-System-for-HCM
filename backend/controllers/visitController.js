@@ -173,6 +173,7 @@ const createVisit = async (req, res) => {
           visit_type: normalizedVisitType,
           parent_visit_id: parsePositiveInt(parent_visit_id),
           lab_return_kind: normalizedLabReturnKind || null,
+          skip_triage: !!skip_triage,
         });
       }
     }

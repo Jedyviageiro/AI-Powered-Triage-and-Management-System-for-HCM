@@ -533,6 +533,7 @@ export default function NursePage({ forcedView = "home" }) {
     saveTriage,
     searchPatientByMode,
     createVisitForCurrentPatient,
+    sendPatientToLabResultQueue,
   } = useNurseTriageActions({
     visit,
     patient,
@@ -690,6 +691,7 @@ export default function NursePage({ forcedView = "home" }) {
     visit,
     forceTriageForLabFollowup,
     createVisit: createVisitForCurrentPatient,
+    sendPatientToLabResultQueue,
     creatingVisit,
     pClinicalCode,
     setPClinicalCode,

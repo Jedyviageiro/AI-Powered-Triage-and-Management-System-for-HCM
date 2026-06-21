@@ -238,7 +238,14 @@ export function useDoctorConsultationState({
     const answeredCount = complaintQuestions.filter((q) =>
       String(questionnaireAnswers[q] || "").trim()
     ).length;
-    if (useAIQuestionnaire && answeredCount === 0 && !String(questionnaireExtraNote || "").trim()) {
+    const isLabReviewFlow =
+      consultationMode === "LAB_RESULT_REVIEW" || consultationMode === "LAB_SAMPLE_COLLECTION";
+    if (
+      useAIQuestionnaire &&
+      !isLabReviewFlow &&
+      answeredCount === 0 &&
+      !String(questionnaireExtraNote || "").trim()
+    ) {
       missing.push("questionário clínico");
     }
     if (!String(planDraft.likely_diagnosis || "").trim()) missing.push("diagnóstico provável");
@@ -296,6 +303,7 @@ export function useDoctorConsultationState({
   }, [
     canFinish,
     complaintQuestions,
+    consultationMode,
     followUpDiagnosisEvolution,
     followUpPrescriptionDecision,
     isClinicalReturnVisit,
@@ -367,54 +375,77 @@ export function useDoctorConsultationState({
     const describeMissingField = (field) => {
       const normalized = String(field || "").toLowerCase();
       if (normalized.includes("question")) {
-        return { label: "Completar as perguntas clinicas ou escrever uma nota breve.", step: 2 };
+        return {
+          label: "Completar as perguntas clinicas ou escrever uma nota breve.",
+          step: 2,
+          stepKey: "questionnaire",
+        };
       }
       if (normalized.includes("diagn")) {
         return normalized.includes("evolu")
-          ? { label: "Indicar se o diagnostico melhorou, piorou ou mudou.", step: 3 }
-          : { label: "Adicionar o diagnostico do paciente.", step: 3 };
+          ? {
+              label: "Indicar se o diagnostico melhorou, piorou ou mudou.",
+              step: 3,
+              stepKey: "diagnosis",
+            }
+          : { label: "Adicionar o diagnostico do paciente.", step: 3, stepKey: "diagnosis" };
       }
       if (normalized.includes("justificativa") || normalized.includes("racioc")) {
-        return { label: "Explicar rapidamente o raciocinio clinico.", step: 3 };
+        return {
+          label: "Explicar rapidamente o raciocinio clinico.",
+          step: 3,
+          stepKey: "diagnosis",
+        };
       }
       if (normalized.includes("prescri")) {
         return normalized.includes("decis")
           ? {
               label: "Escolher se a prescricao anterior continua ou deve ser ajustada.",
               step: 4,
+              stepKey: "plan",
             }
-          : { label: "Adicionar a prescricao ou orientacao terapeutica.", step: 4 };
+          : { label: "Adicionar a prescricao ou orientacao terapeutica.", step: 4, stepKey: "plan" };
       }
       if (normalized.includes("destino")) {
-        return { label: "Escolher o proximo passo do paciente.", step: 4 };
+        return { label: "Escolher o proximo passo do paciente.", step: 4, stepKey: "plan" };
       }
       if (normalized.includes("especialista") || normalized.includes("refer")) {
-        return { label: "Informar para onde o paciente sera encaminhado.", step: 4 };
+        return {
+          label: "Informar para onde o paciente sera encaminhado.",
+          step: 4,
+          stepKey: "plan",
+        };
       }
-      if (normalized.includes("data")) return { label: "Escolher a data de retorno.", step: 4 };
+      if (normalized.includes("data"))
+        return { label: "Escolher a data de retorno.", step: 4, stepKey: "plan" };
       if (normalized.includes("criter") || normalized.includes("crit")) {
-        return { label: "Escolher o motivo clinico do retorno.", step: 4 };
+        return { label: "Escolher o motivo clinico do retorno.", step: 4, stepKey: "plan" };
       }
       if (normalized.includes("hora") && normalized.includes("turno")) {
-        return { label: "Ajustar a hora para dentro do turno disponivel.", step: 4 };
+        return {
+          label: "Ajustar a hora para dentro do turno disponivel.",
+          step: 4,
+          stepKey: "plan",
+        };
       }
-      if (normalized.includes("hora")) return { label: "Escolher a hora do retorno.", step: 4 };
+      if (normalized.includes("hora"))
+        return { label: "Escolher a hora do retorno.", step: 4, stepKey: "plan" };
       if (normalized.includes("tipo") && normalized.includes("exame")) {
-        return { label: "Escolher o tipo de exame laboratorial.", step: 4 };
+        return { label: "Escolher o tipo de exame laboratorial.", step: 4, stepKey: "plan" };
       }
       if (normalized.includes("detalhe")) {
-        return { label: "Descrever qual exame deve ser feito.", step: 4 };
+        return { label: "Descrever qual exame deve ser feito.", step: 4, stepKey: "plan" };
       }
       if (normalized.includes("confirmar")) {
-        return { label: "Confirmar o pedido de exame antes de finalizar.", step: 4 };
+        return { label: "Confirmar o pedido de exame antes de finalizar.", step: 4, stepKey: "plan" };
       }
       if (normalized.includes("prioridade")) {
-        return { label: "Escolher a prioridade do exame.", step: 4 };
+        return { label: "Escolher a prioridade do exame.", step: 4, stepKey: "plan" };
       }
       if (normalized.includes("colheita")) {
-        return { label: "Registar a hora prevista para a colheita.", step: 4 };
+        return { label: "Registar a hora prevista para a colheita.", step: 4, stepKey: "plan" };
       }
-      return { label: `Completar: ${field}.`, step: 4 };
+      return { label: `Completar: ${field}.`, step: 4, stepKey: "plan" };
     };
 
     return finishMissingFields.map((field) => ({
@@ -435,16 +466,30 @@ export function useDoctorConsultationState({
   }, [finishChecklistItems]);
 
   const canFinishStrict = canFinish && finishMissingFields.length === 0;
-  const consultationSteps = useMemo(
-    () => [
-      { id: 1, label: "Resumo" },
-      { id: 2, label: "Questionário" },
-      { id: 3, label: "Diagnóstico" },
-      { id: 4, label: "Plano" },
-      { id: 5, label: "Fecho" },
-    ],
-    []
-  );
+  const consultationSteps = useMemo(() => {
+    if (consultationMode === "LAB_RESULT_REVIEW") {
+      return [
+        { id: 1, key: "overview", label: "Resultado" },
+        { id: 2, key: "diagnosis", label: "Decisão clínica" },
+        { id: 3, key: "plan", label: "Próximos passos" },
+        { id: 4, key: "finish", label: "Fecho" },
+      ];
+    }
+    if (consultationMode === "LAB_SAMPLE_COLLECTION") {
+      return [
+        { id: 1, key: "overview", label: "Pedido" },
+        { id: 2, key: "plan", label: "Colheita" },
+        { id: 3, key: "finish", label: "Fecho" },
+      ];
+    }
+    return [
+      { id: 1, key: "overview", label: "Resumo" },
+      { id: 2, key: "questionnaire", label: "Questionário" },
+      { id: 3, key: "diagnosis", label: "Diagnóstico" },
+      { id: 4, key: "plan", label: "Plano" },
+      { id: 5, key: "finish", label: "Fecho" },
+    ];
+  }, [consultationMode]);
 
   useEffect(() => {
     if (consultFormStep > consultationSteps.length) {

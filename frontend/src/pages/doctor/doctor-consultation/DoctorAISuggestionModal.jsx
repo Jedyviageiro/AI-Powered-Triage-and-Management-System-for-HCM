@@ -1,3 +1,5 @@
+import ModalCloseButton from "../../../components/shared/ModalCloseButton";
+
 export default function DoctorAISuggestionModal({ open, loading, aiResult, onClose }) {
   if (!open) return null;
 
@@ -17,13 +19,7 @@ export default function DoctorAISuggestionModal({ open, loading, aiResult, onClo
               Assistência para revisão, sem substituir decisão médica.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-3 py-1.5 text-xs font-semibold text-white border border-white/35 bg-white/10 hover:bg-white/20 rounded-full transition-colors"
-          >
-            Fechar
-          </button>
+          <ModalCloseButton onClick={onClose} className="border-white/35 bg-white/10 text-white hover:bg-white/20 hover:text-white" />
         </div>
         <div className="p-5">
           {loading ? (

@@ -323,9 +323,15 @@ const findLatestFinishedLabFollowup = async (patient_id) => {
 const createVisitForLabFollowup = async (
   patient_id,
   sourceVisit = null,
-  { visit_motive = null, visit_motive_other = null, return_visit_reason = null } = {}
+  {
+    visit_motive = null,
+    visit_motive_other = null,
+    return_visit_reason = null,
+    skip_triage = false,
+  } = {}
 ) => {
   await ensureVisitMotiveColumns();
+  await ensureLabStructuredResultColumns();
   const normalizedMotive =
     visit_motive ||
     (String(sourceVisit?.lab_result_status || "").toUpperCase() === "READY" ||
@@ -346,12 +352,46 @@ const createVisitForLabFollowup = async (
        visit_motive_other,
        visit_type,
        parent_visit_id,
-       lab_return_kind
+       lab_return_kind,
+       lab_requested,
+       lab_exam_type,
+       lab_sample_type,
+       lab_tests,
+       lab_sample_collected_at,
+       lab_result_text,
+       lab_result_json,
+       lab_result_status,
+       lab_result_ready_at
      )
-     VALUES ($1, 'WAITING', NOW(), NULL, NULL, NULL, $2, $3, $4, 'LAB_RETURN', $5, $6)
+     VALUES (
+       $1,
+       $2,
+       NOW(),
+       NULL,
+       $3,
+       $4,
+       $5,
+       $6,
+       $7,
+       'LAB_RETURN',
+       $8,
+       $9,
+       TRUE,
+       $10,
+       $11,
+       $12,
+       $13,
+       $14,
+       $15,
+       $16,
+       $17
+     )
      RETURNING *`,
     [
       patient_id,
+      skip_triage ? "WAITING_DOCTOR" : "WAITING",
+      skip_triage ? "NON_URGENT" : null,
+      skip_triage ? 120 : null,
       return_visit_reason ||
         (sourceVisit?.id
           ? `Retorno laboratorial (origem visita #${sourceVisit.id})`
@@ -360,6 +400,14 @@ const createVisitForLabFollowup = async (
       visit_motive_other,
       sourceVisit?.id || null,
       labReturnKind,
+      sourceVisit?.lab_exam_type || null,
+      sourceVisit?.lab_sample_type || null,
+      sourceVisit?.lab_tests || null,
+      sourceVisit?.lab_sample_collected_at || null,
+      sourceVisit?.lab_result_text || null,
+      sourceVisit?.lab_result_json || null,
+      sourceVisit?.lab_result_status || null,
+      sourceVisit?.lab_result_ready_at || null,
     ]
   );
   return result.rows[0];
@@ -510,6 +558,11 @@ const listActiveVisits = async () => {
        parent.prescription_text AS parent_prescription_text,
        p.full_name,
        p.clinical_code,
+       p.sex,
+       p.birth_date,
+       p.guardian_name,
+       p.guardian_phone,
+       p.address,
        COALESCE(
          t.chief_complaint,
          NULLIF(TRIM(v.return_visit_reason), ''),
@@ -628,6 +681,11 @@ const listActiveVisitsByDoctor = async (doctorId) => {
        parent.prescription_text AS parent_prescription_text,
        p.full_name,
        p.clinical_code,
+       p.sex,
+       p.birth_date,
+       p.guardian_name,
+       p.guardian_phone,
+       p.address,
        COALESCE(
          t.chief_complaint,
          NULLIF(TRIM(v.return_visit_reason), ''),
@@ -905,14 +963,20 @@ const listLabPendingRequests = async () => {
        v.prescription_text,
        t.chief_complaint AS triage_chief_complaint,
        t.clinical_notes AS triage_clinical_notes,
+       t.weight AS triage_weight,
        p.full_name,
        p.clinical_code,
+       p.sex,
+       p.birth_date,
+       p.guardian_name,
+       p.guardian_phone,
+       p.address,
        d.full_name AS doctor_full_name
      FROM visits v
      JOIN patients p ON p.id = v.patient_id
      LEFT JOIN users d ON d.id = v.doctor_id
      LEFT JOIN LATERAL (
-       SELECT t1.chief_complaint, t1.clinical_notes
+       SELECT t1.chief_complaint, t1.clinical_notes, t1.weight
        FROM triage t1
        WHERE t1.visit_id = v.id
        ORDER BY t1.created_at DESC
@@ -961,14 +1025,20 @@ const listLabReadyResults = async (limit = 200) => {
        v.prescription_text,
        t.chief_complaint AS triage_chief_complaint,
        t.clinical_notes AS triage_clinical_notes,
+       t.weight AS triage_weight,
        p.full_name,
        p.clinical_code,
+       p.sex,
+       p.birth_date,
+       p.guardian_name,
+       p.guardian_phone,
+       p.address,
        d.full_name AS doctor_full_name
      FROM visits v
      JOIN patients p ON p.id = v.patient_id
      LEFT JOIN users d ON d.id = v.doctor_id
      LEFT JOIN LATERAL (
-       SELECT t1.chief_complaint, t1.clinical_notes
+       SELECT t1.chief_complaint, t1.clinical_notes, t1.weight
        FROM triage t1
        WHERE t1.visit_id = v.id
        ORDER BY t1.created_at DESC

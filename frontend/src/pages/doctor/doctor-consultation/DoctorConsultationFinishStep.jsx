@@ -5,6 +5,7 @@ export default function DoctorConsultationFinishStep({
   hasGeneratedAiSuggestion,
   finishMissingFields,
   finishChecklistItems = [],
+  consultationSteps = [],
   setConsultFormStep,
   planAccepted,
   finishConsultation,
@@ -14,6 +15,11 @@ export default function DoctorConsultationFinishStep({
   const checklistItems = finishChecklistItems.length
     ? finishChecklistItems
     : finishMissingFields.map((field) => ({ field, label: `Completar: ${field}.`, step: 4 }));
+  const resolveStepId = (item) =>
+    consultationSteps.find((step) => step.key === item.stepKey)?.id ||
+    consultationSteps.find((step) => step.id === item.step)?.id ||
+    item.step ||
+    4;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -65,7 +71,7 @@ export default function DoctorConsultationFinishStep({
                   type="button"
                   className="cf-btn-sec"
                   style={{ minHeight: 32, padding: "8px 12px", width: "auto" }}
-                  onClick={() => setConsultFormStep?.(item.step || 4)}
+                  onClick={() => setConsultFormStep?.(resolveStepId(item))}
                 >
                   Corrigir
                 </button>

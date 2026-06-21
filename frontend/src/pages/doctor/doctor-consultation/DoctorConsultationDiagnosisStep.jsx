@@ -1,5 +1,6 @@
 export default function DoctorConsultationDiagnosisStep({
   isFollowUpConsultation,
+  consultationMode,
   currentComplaintSummary,
   followUpGrowthSummary,
   followUpComparisonRows,
@@ -14,6 +15,7 @@ export default function DoctorConsultationDiagnosisStep({
   updatePlanField,
 }) {
   const SelectComponent = ModernSelect;
+  const isLabResultReview = consultationMode === "LAB_RESULT_REVIEW";
 
   return (
     <div className="cf-card" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -146,7 +148,11 @@ export default function DoctorConsultationDiagnosisStep({
       )}
       <div>
         <label className="cf-label">
-          {isFollowUpConsultation ? "Diagnóstico atual" : "Diagnóstico provável"}
+          {isLabResultReview
+            ? "Decisão clínica após resultado"
+            : isFollowUpConsultation
+              ? "Diagnóstico atual"
+              : "Diagnóstico provável"}
         </label>
         <input
           className="cf-input"
@@ -156,7 +162,11 @@ export default function DoctorConsultationDiagnosisStep({
       </div>
       <div>
         <label className="cf-label">
-          {isFollowUpConsultation ? "Evolução clínica" : "Justificativa clínica"}
+          {isLabResultReview
+            ? "Interpretação do resultado e orientação"
+            : isFollowUpConsultation
+              ? "Evolução clínica"
+              : "Justificativa clínica"}
         </label>
         <textarea
           className="cf-textarea"

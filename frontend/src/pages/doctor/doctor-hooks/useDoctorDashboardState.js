@@ -176,9 +176,12 @@ export function useDoctorDashboardState({
 
   const doctorLabFollowupQueueRows = useMemo(
     () =>
-      (Array.isArray(queue) ? queue : []).filter(
-        (visit) => Number(visit?.doctor_id) === Number(meId) && isLabWorkflowVisit(visit)
-      ),
+      (Array.isArray(queue) ? queue : []).filter((visit) => {
+        if (!isLabWorkflowVisit(visit)) return false;
+        const motive = String(visit?.visit_motive || "").toUpperCase();
+        const unassignedLabResult = motive === "LAB_RESULTS" && !visit?.doctor_id;
+        return unassignedLabResult || Number(visit?.doctor_id) === Number(meId);
+      }),
     [isLabWorkflowVisit, meId, queue]
   );
 

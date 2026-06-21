@@ -7,18 +7,40 @@
   --hcm-primary-green: #008a4a;
   --hcm-primary-green-hover: #007f42;
   --hcm-primary-green-soft: #e8f7ef;
+  --font-ui: "IBM Plex Sans", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  --font-clinical: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.875rem;
+  --text-title: 1.0625rem;
+  --text-page-title: 1.75rem;
+}
+
+@keyframes infoModalFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes infoModalPopIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 /* estilos globais simples */
 body {
   @apply bg-slate-50 text-slate-900;
-  font-family:
-    "IBM Plex Sans",
-    system-ui,
-    -apple-system,
-    Segoe UI,
-    Roboto,
-    sans-serif;
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
 }
 
 .app-splash {
@@ -44,39 +66,21 @@ body {
 }
 
 h1 {
-  font-family:
-    "IBM Plex Sans",
-    system-ui,
-    -apple-system,
-    Segoe UI,
-    Roboto,
-    sans-serif !important;
-  font-size: 28px !important;
+  font-family: var(--font-ui) !important;
+  font-size: var(--text-page-title) !important;
   font-weight: 700 !important;
 }
 
 h2,
 h3 {
-  font-family:
-    "IBM Plex Sans",
-    system-ui,
-    -apple-system,
-    Segoe UI,
-    Roboto,
-    sans-serif !important;
-  font-size: 17px !important;
+  font-family: var(--font-ui) !important;
+  font-size: var(--text-title) !important;
   font-weight: 700 !important;
 }
 
 button {
-  font-family:
-    "IBM Plex Sans",
-    system-ui,
-    -apple-system,
-    Segoe UI,
-    Roboto,
-    sans-serif !important;
-  font-size: 13px;
+  font-family: var(--font-ui) !important;
+  font-size: var(--text-sm);
   font-weight: 600;
   box-shadow: none !important;
 }
@@ -100,20 +104,17 @@ button[style*="background:#0c3a24"]:hover {
 input,
 textarea,
 select {
-  font-family:
-    "IBM Plex Sans",
-    system-ui,
-    -apple-system,
-    Segoe UI,
-    Roboto,
-    sans-serif;
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
 }
 
 code,
 pre,
 kbd,
-samp {
-  font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+samp,
+.clinical-mono,
+.clinical-value {
+  font-family: var(--font-clinical);
 }
 
 select,

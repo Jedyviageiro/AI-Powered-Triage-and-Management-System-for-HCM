@@ -99,7 +99,7 @@ function VitalCard({ label, unit, value, onChange, icon, getBadge }) {
             color: "#111827",
             outline: "none",
             boxShadow: "none",
-            fontFamily: "'DM Mono', monospace",
+            fontFamily: "var(--font-clinical)",
             padding: "0",
           }}
           value={value}
@@ -278,6 +278,7 @@ export function NurseNewTriageView({
   visit,
   forceTriageForLabFollowup,
   createVisit,
+  sendPatientToLabResultQueue,
   creatingVisit,
   pClinicalCode,
   pFullName,
@@ -443,6 +444,20 @@ export function NurseNewTriageView({
     <div className={`triage-start-actions ${className}`.trim()}>
       <button type="button" className="btn-secondary" onClick={cancelTriageStart}>
         Cancelar
+      </button>
+      <button
+        type="button"
+        className="btn-secondary"
+        disabled={!canProceedToTriage || creatingVisit || creatingPatient || !patientLabFollowup?.isResult}
+        onClick={sendPatientToLabResultQueue}
+        title={
+          patientLabFollowup?.isResult
+            ? "Enviar direto para revisao medica de resultado"
+            : "Disponivel quando houver resultado laboratorial pronto"
+        }
+        style={{ borderColor: "#bfdbfe", color: "#1d4ed8", background: "#eff6ff" }}
+      >
+        Resultado de exame
       </button>
       <button
         type="button"
@@ -630,11 +645,6 @@ export function NurseNewTriageView({
                         <div style={{ fontSize: "12px", color: "#78350f", marginTop: "4px" }}>
                           {patientLabFollowup.note || (patientLabFollowup.isResult ? "Resultados prontos." : patientLabFollowup.readyLabel ? `Exame disponível em ${patientLabFollowup.readyLabel}.` : "Exame pendente / retorno para colheita.")}
                         </div>
-                      </div>
-                    )}
-                    {!visit && (
-                      <div style={{ marginBottom: "14px", border: "1px solid #dcebe2", background: "#f8fbf9", borderRadius: "12px", padding: "12px 14px", fontSize: "12px", color: "#4b5563", lineHeight: 1.5 }}>
-                        Todo retorno, inclusive para resultado ou colheita laboratorial, passa por triagem. Atualize sinais vitais e sintomas para confirmar se houve melhoria, agravamento ou necessidade de nova intervenção.
                       </div>
                     )}
                     {renderStartActions("triage-start-actions-patient")}
@@ -860,7 +870,7 @@ export function NurseNewTriageView({
                 <div style={{ display: "flex", alignItems: "center", border: "1px solid #e5e7eb", borderRadius: "12px", overflow: "hidden", background: "#f9fafb", minHeight: "40px" }}>
                   <button type="button" onClick={() => setWeight(String(parseFloat((parseFloat(weight || 0) - 0.5).toFixed(1))))} style={{ width: "32px", height: "34px", background: "transparent", border: "none", cursor: "pointer", fontSize: "18px", fontWeight: 300, color: "#374151", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
                   <input
-                    style={{ width: "78px", border: "none", background: "transparent", textAlign: "center", fontSize: "16px", fontWeight: 600, color: "#111827", outline: "none", boxShadow: "none", fontFamily: "monospace", padding: 0 }}
+                    style={{ width: "78px", border: "none", background: "transparent", textAlign: "center", fontSize: "16px", fontWeight: 600, color: "#111827", outline: "none", boxShadow: "none", fontFamily: "var(--font-clinical)", padding: 0 }}
                     value={weight}
                     onChange={(e) => setWeight(e.target.value)}
                     placeholder="14.5"

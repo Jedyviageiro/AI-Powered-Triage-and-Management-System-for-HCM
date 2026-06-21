@@ -618,8 +618,9 @@ export function useDoctorConsultationActions(args) {
       safeSet(() => setActiveView("consultationForm"));
       await openVisit(row.id, row);
       const shouldAutoOpenCollection = String(row?.workflow_label || "").toUpperCase() === "COLETA";
+      const isResultReview = String(row?.workflow_label || "").toUpperCase() === "RESULTADO";
       safeSet(() => {
-        setConsultFormStep(4);
+        setConsultFormStep(isResultReview ? 1 : 4);
         setHighlightLabOrderCard(true);
         setAutoOpenSampleCollectionModal(shouldAutoOpenCollection);
       });

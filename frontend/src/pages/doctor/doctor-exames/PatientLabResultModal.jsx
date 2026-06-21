@@ -1,3 +1,5 @@
+import ModalCloseButton from "../../../components/shared/ModalCloseButton";
+
 export default function PatientLabResultModal({ modal, onClose }) {
   if (!modal?.open) return null;
 
@@ -14,13 +16,7 @@ export default function PatientLabResultModal({ modal, onClose }) {
               {modal.row?.full_name || "Paciente"} · Visita #{modal.row?.id || "-"}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 rounded"
-          >
-            Fechar
-          </button>
+          <ModalCloseButton onClick={onClose} />
         </div>
         <div className="p-5 space-y-4">
           <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">

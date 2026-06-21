@@ -38,9 +38,13 @@ export const buildDoctorLabWorklistRows = ({
   return [...byId.values()]
     .map((row, index) => {
       const workflowStatus = String(row?.lab_result_status || "").toUpperCase();
+      const visitMotive = String(row?.visit_motive || "").toUpperCase();
+      const arrivedForResult =
+        visitMotive === "LAB_RESULTS" &&
+        ["WAITING_DOCTOR", "IN_CONSULTATION"].includes(String(row?.status || "").toUpperCase());
       const sampleCollectedAt = toSafeDate(row?.lab_sample_collected_at);
       const isCollectionWorkflow =
-        String(row?.visit_motive || "").toUpperCase() === "LAB_SAMPLE_COLLECTION" ||
+        visitMotive === "LAB_SAMPLE_COLLECTION" ||
         workflowStatus === "COLLECTION_PENDING" ||
         (!sampleCollectedAt && !row.is_ready);
       const scheduledCollectionAt =
@@ -120,10 +124,11 @@ export const buildDoctorLabWorklistRows = ({
 
       return {
         ...row,
+        arrived_for_result: arrivedForResult,
         workflow_label:
-          String(row?.visit_motive || "").toUpperCase() === "LAB_SAMPLE_COLLECTION"
+          visitMotive === "LAB_SAMPLE_COLLECTION"
             ? "Coleta"
-            : String(row?.visit_motive || "").toUpperCase() === "LAB_RESULTS"
+            : visitMotive === "LAB_RESULTS"
               ? "Resultado"
               : String(row?.lab_result_status || "").toUpperCase() === "COLLECTION_PENDING"
                 ? "Coleta"

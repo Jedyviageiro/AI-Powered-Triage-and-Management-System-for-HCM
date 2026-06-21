@@ -1,3 +1,4 @@
+import ModalCloseButton from "../../../components/shared/ModalCloseButton";
 import DoctorModernSelect from "../doctor-consultation/DoctorModernSelect";
 
 export default function PatientSampleCollectionModal({
@@ -29,13 +30,7 @@ export default function PatientSampleCollectionModal({
               Protocolo para {findLabExamLabel(planDraft.lab_exam_type)}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-2 py-1 text-xs rounded border border-gray-300 bg-white hover:bg-gray-50"
-          >
-            Fechar
-          </button>
+          <ModalCloseButton onClick={onClose} />
         </div>
         <div className="p-5 max-h-[68vh] overflow-y-auto space-y-3">
           <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-2">

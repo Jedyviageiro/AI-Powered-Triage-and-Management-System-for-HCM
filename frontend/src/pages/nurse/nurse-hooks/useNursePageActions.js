@@ -753,12 +753,13 @@ export function useNursePageActions({
   );
 
   const createVisit = useCallback(
-    async ({ patient, forceNewConsultation = false } = {}) => {
+    async ({ patient, forceNewConsultation = false, visitPayload = {} } = {}) => {
       if (!patient?.id) return;
       setErr("");
       setCreatingVisit(true);
       try {
         const derivedVisitMotive = (() => {
+          if (visitPayload?.visit_motive) return visitPayload.visit_motive;
           if (patientLabFollowup?.isResult || patientLabFollowup?.isSample) {
             if (patientLabFollowup?.isSample) return "LAB_SAMPLE_COLLECTION";
             return "LAB_RESULTS";
@@ -768,6 +769,7 @@ export function useNursePageActions({
         const v = await api.createVisit(patient.id, {
           force_new_consultation: !!forceNewConsultation,
           visit_motive: derivedVisitMotive,
+          ...(visitPayload || {}),
         });
         setVisit(v);
         await loadQueue();

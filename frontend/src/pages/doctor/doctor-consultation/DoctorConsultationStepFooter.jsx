@@ -3,6 +3,13 @@ export default function DoctorConsultationStepFooter({
   consultationSteps,
   setConsultFormStep,
 }) {
+  const activeIndex = Math.max(
+    0,
+    consultationSteps.findIndex((step) => step.id === consultFormStep)
+  );
+  const isFirst = activeIndex <= 0;
+  const isLast = activeIndex >= consultationSteps.length - 1;
+
   return (
     <div
       style={{
@@ -15,19 +22,26 @@ export default function DoctorConsultationStepFooter({
     >
       <button
         type="button"
-        disabled={consultFormStep === 1}
-        onClick={() => setConsultFormStep((s) => Math.max(1, s - 1))}
+        disabled={isFirst}
+        onClick={() =>
+          setConsultFormStep(consultationSteps[Math.max(0, activeIndex - 1)]?.id || 1)
+        }
         className="cf-btn-sec"
       >
         Anterior
       </button>
       <span style={{ fontSize: 12, color: "#9ca3af", fontWeight: 600 }}>
-        {consultFormStep} / {consultationSteps.length}
+        {activeIndex + 1} / {consultationSteps.length}
       </span>
       <button
         type="button"
-        disabled={consultFormStep === consultationSteps.length}
-        onClick={() => setConsultFormStep((s) => Math.min(consultationSteps.length, s + 1))}
+        disabled={isLast}
+        onClick={() =>
+          setConsultFormStep(
+            consultationSteps[Math.min(consultationSteps.length - 1, activeIndex + 1)]?.id ||
+              consultationSteps.length
+          )
+        }
         className="cf-btn-primary"
       >
         Próximo

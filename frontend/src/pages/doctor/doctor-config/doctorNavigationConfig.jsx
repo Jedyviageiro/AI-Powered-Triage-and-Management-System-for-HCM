@@ -197,8 +197,8 @@ export function buildDoctorNavSections({
               strokeLinejoin="round"
               style={{ flexShrink: 0 }}
             >
-              <path d="M10 2v7l-5 9a2 2 0 001.7 3h10.6a2 2 0 001.7-3l-5-9V2" />
-              <line x1="8" y1="2" x2="16" y2="2" />
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+              <path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15Z" />
             </svg>
           ),
         },

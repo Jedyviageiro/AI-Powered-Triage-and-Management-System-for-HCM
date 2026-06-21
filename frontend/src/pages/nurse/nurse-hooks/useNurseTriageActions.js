@@ -373,6 +373,30 @@ export function useNurseTriageActions({
     [createVisit, patient]
   );
 
+  const sendPatientToLabResultQueue = useCallback(async () => {
+    if (!patient?.id) return;
+    setErr("");
+    const created = await createVisit({
+      patient,
+      visitPayload: {
+        visit_motive: "LAB_RESULTS",
+        visit_type: "LAB_RETURN",
+        lab_return_kind: "RESULT_REVIEW",
+        skip_triage: true,
+        return_visit_reason: "Paciente veio levantar resultado de exame",
+      },
+    });
+    if (!created?.id) return;
+    showPopup(
+      "success",
+      "Encaminhado para resultado",
+      "Paciente enviado para a fila medica de revisao de resultado laboratorial."
+    );
+    resetAll();
+    await loadQueue();
+    setActiveView("queue");
+  }, [createVisit, loadQueue, patient, resetAll, setActiveView, setErr, showPopup]);
+
   return {
     requestAISuggestion,
     assignDoctor,
@@ -380,5 +404,6 @@ export function useNurseTriageActions({
     saveTriage,
     searchPatientByMode,
     createVisitForCurrentPatient,
+    sendPatientToLabResultQueue,
   };
 }

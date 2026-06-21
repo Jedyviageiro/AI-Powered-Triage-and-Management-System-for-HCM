@@ -129,6 +129,12 @@ export default function DoctorConsultationFormView(props) {
       value: consultationModeMeta?.nextDecision || "Definir destino",
     },
   ];
+  const activeStepIndex = Math.max(
+    0,
+    consultationSteps.findIndex((step) => step.id === consultFormStep)
+  );
+  const activeStep = consultationSteps[activeStepIndex] || consultationSteps[0] || null;
+  const activeStepKey = activeStep?.key || "overview";
 
   return (
     <div style={{ fontFamily: "'IBM Plex Sans', system-ui, sans-serif" }}>
@@ -357,8 +363,8 @@ export default function DoctorConsultationFormView(props) {
         <div className="cf-card" style={{ padding: "14px 20px" }}>
           <div className="flex items-center gap-1 overflow-x-auto">
             {consultationSteps.map((s, idx) => {
-              const done = consultFormStep > s.id;
-              const active = consultFormStep === s.id;
+              const done = idx < activeStepIndex;
+              const active = idx === activeStepIndex;
               const isLast = idx === consultationSteps.length - 1;
               return (
                 <div key={s.id} className="flex items-center flex-shrink-0">
@@ -418,7 +424,7 @@ export default function DoctorConsultationFormView(props) {
           </div>
         ) : (
           <div ref={detailsPanelRef} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            {consultFormStep === 1 && (
+            {activeStepKey === "overview" && (
               <DoctorConsultationOverviewStep
                 patientDetails={patientDetails}
                 selectedVisit={selectedVisit}
@@ -432,7 +438,7 @@ export default function DoctorConsultationFormView(props) {
               />
             )}
 
-            {consultFormStep === 2 && (
+            {activeStepKey === "questionnaire" && (
               <DoctorConsultationQuestionnaireStep
                 questionnaireLoading={questionnaireLoading}
                 triage={triage}
@@ -450,9 +456,10 @@ export default function DoctorConsultationFormView(props) {
               />
             )}
 
-            {consultFormStep === 3 && (
+            {activeStepKey === "diagnosis" && (
               <DoctorConsultationDiagnosisStep
                 isFollowUpConsultation={isFollowUpConsultation}
+                consultationMode={consultationMode}
                 currentComplaintSummary={currentComplaintSummary}
                 followUpGrowthSummary={followUpGrowthSummary}
                 followUpComparisonRows={followUpComparisonRows}
@@ -468,7 +475,7 @@ export default function DoctorConsultationFormView(props) {
               />
             )}
 
-            {consultFormStep === 4 && (
+            {activeStepKey === "plan" && (
               <DoctorConsultationPlanStep
                 isFollowUpConsultation={isFollowUpConsultation}
                 consultationMode={consultationMode}
@@ -522,7 +529,7 @@ export default function DoctorConsultationFormView(props) {
               />
             )}
 
-            {consultFormStep === consultationSteps.length && (
+            {activeStepKey === "finish" && (
               <DoctorConsultationFinishStep
                 askDoctorAI={askDoctorAI}
                 aiLoading={aiLoading}
@@ -530,6 +537,7 @@ export default function DoctorConsultationFormView(props) {
                 hasGeneratedAiSuggestion={hasGeneratedAiSuggestion}
                 finishMissingFields={finishMissingFields}
                 finishChecklistItems={finishChecklistItems}
+                consultationSteps={consultationSteps}
                 setConsultFormStep={setConsultFormStep}
                 planAccepted={planAccepted}
                 finishConsultation={finishConsultation}
