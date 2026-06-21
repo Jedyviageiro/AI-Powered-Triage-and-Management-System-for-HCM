@@ -352,7 +352,7 @@ export const inferFollowUpRuleKey = ({ planDraft, selectedVisit }) => {
       followUpText
     )
   ) {
-    return "CHRONIC_RECURRING";
+    return "INCOMPLETE_RECOVERY";
   }
   if (/persist|mant[eé]m|incomplet|sem resolu|sem melhora|reavalia/.test(followUpText)) {
     return "INCOMPLETE_RECOVERY";

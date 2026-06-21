@@ -495,7 +495,6 @@ export default function DoctorConsultationPlanStep(props) {
                       : "Colheita no fluxo atual"}
                   </div>
                 </div>
-                )}
               </div>
             )}
 
