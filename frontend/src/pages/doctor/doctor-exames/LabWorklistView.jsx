@@ -280,8 +280,8 @@ function PdfIcon() {
 
 function ReadyResultsPage({ rows, loading, onRefresh, onOpenResult }) {
   return (
-    <section className="mx-auto max-w-[1010px] px-4 py-9 text-[14px] text-[#2b3140] sm:px-5">
-      <div className="overflow-hidden rounded-2xl border border-[#e7e9ed] bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04),0_1px_6px_rgba(16,24,40,0.03)]">
+    <section className="text-[14px] text-[#2b3140]">
+      <div className="overflow-hidden rounded-[14px] border border-[#e7e9ed] bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04),0_1px_6px_rgba(16,24,40,0.03)]">
         <header className="flex flex-wrap items-center justify-between gap-4 border-b border-[#eef0f3] px-7 py-6">
           <div>
             <h2 className="text-[16px] font-bold text-[#161a23]">Pacientes - Resultados de Exames</h2>
@@ -302,7 +302,7 @@ function ReadyResultsPage({ rows, loading, onRefresh, onOpenResult }) {
         </header>
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px] border-collapse">
+          <table className="w-full min-w-[920px] border-collapse">
             <thead>
               <tr className="border-b border-[#eef0f3] bg-[#fafbfc]">
                 <th className="px-7 py-3.5 text-left text-[11.5px] font-bold tracking-[0.02em] text-[#39405a]">Paciente</th>

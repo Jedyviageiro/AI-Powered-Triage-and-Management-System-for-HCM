@@ -1,70 +1,32 @@
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import DoctorPage from "../DoctorPage";
 
-const GREEN = "#165034";
-const BORDER = "#E7ECE8";
-const SURFACE = "#FBFCFB";
-const HEADER_BG = "#F7F8F7";
-const CARD_RADIUS = 24;
-
-const AVATAR_PALETTES = [
-  { bg: "#D1FAE5", color: "#065F46" },
-  { bg: "#DBEAFE", color: "#1E40AF" },
-  { bg: "#EDE9FE", color: "#5B21B6" },
-  { bg: "#FCE7F3", color: "#9D174D" },
-  { bg: "#FEF3C7", color: "#92400E" },
-  { bg: "#CFFAFE", color: "#155E75" },
-];
-
-const PRIORITY_CONFIG = {
-  URGENT: { label: "Urgente", bg: "#FEF2F2", color: "#B91C1C", dot: "#EF4444" },
-  HIGH: { label: "Urgente", bg: "#FEF2F2", color: "#B91C1C", dot: "#EF4444" },
-  LESS_URGENT: { label: "Pouco urgente", bg: "#FFF7ED", color: "#C2610C", dot: "#F97316" },
-  MEDIUM: { label: "Pouco urgente", bg: "#FFF7ED", color: "#C2610C", dot: "#F97316" },
-  NON_URGENT: { label: "Não urgente", bg: "#ECFDF5", color: "#065F46", dot: "#10B981" },
-  NOT_URGENT: { label: "Não urgente", bg: "#ECFDF5", color: "#065F46", dot: "#10B981" },
-  LOW: { label: "Não urgente", bg: "#ECFDF5", color: "#065F46", dot: "#10B981" },
+const priorityInfo = (value) => {
+  const key = String(value || "").toUpperCase();
+  if (["URGENT", "HIGH"].includes(key)) {
+    return { label: "Urgente", bg: "#fdeceb", color: "#c0362c", dot: "#c0362c" };
+  }
+  if (["LESS_URGENT", "MEDIUM"].includes(key)) {
+    return { label: "Pouco urgente", bg: "#fdf3e3", color: "#b45309", dot: "#b45309" };
+  }
+  return { label: "Nao urgente", bg: "#eaf6f0", color: "#0f6e54", dot: "#0f6e54" };
 };
 
-const STATUS_CONFIG = {
-  WAITING_DOCTOR: { label: "Aguardando médico", bg: "#FFF7ED", color: "#C2610C", dot: "#F97316" },
-  IN_CONSULTATION: { label: "Em consulta", bg: "#EFF6FF", color: "#1D4ED8", dot: "#3B82F6" },
-  WAITING: { label: "Aguardando triagem", bg: "#F9FAFB", color: "#6B7280", dot: "#9CA3AF" },
-  IN_TRIAGE: { label: "Em triagem", bg: "#F5F3FF", color: "#6D28D9", dot: "#8B5CF6" },
-  FINISHED: { label: "Finalizado", bg: "#F9FAFB", color: "#6B7280", dot: "#9CA3AF" },
+const statusInfo = (value) => {
+  const key = String(value || "").toUpperCase();
+  if (key === "IN_CONSULTATION") return { label: "Em consulta", color: "#1d54c0" };
+  if (key === "WAITING_DOCTOR") return { label: "Aguardando medico", color: "#b45309" };
+  return { label: value || "Aguardando", color: "#6c7689" };
 };
 
-const getAvatarPalette = (name) => {
-  let hash = 0;
-  for (let i = 0; i < (name || "").length; i += 1) hash += name.charCodeAt(i);
-  return AVATAR_PALETTES[hash % AVATAR_PALETTES.length];
-};
-
-const getInitials = (name) => {
-  const parts = String(name || "")
+const getInitials = (name) =>
+  String(name || "Paciente")
     .trim()
     .split(/\s+/)
-    .filter(Boolean);
-  if (!parts.length) return "P";
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
-};
-
-const getPriority = (value) =>
-  PRIORITY_CONFIG[String(value || "").toUpperCase()] || {
-    label: value || "-",
-    bg: "#F3F4F6",
-    color: "#374151",
-    dot: "#9CA3AF",
-  };
-
-const getStatus = (value) =>
-  STATUS_CONFIG[String(value || "").toUpperCase()] || {
-    label: value || "-",
-    bg: "#F3F4F6",
-    color: "#374151",
-    dot: "#9CA3AF",
-  };
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
 
 const formatTime = (iso) => {
   if (!iso) return "-";
@@ -85,123 +47,87 @@ const formatVital = (value, unit = "") => {
   return `${Number(value)}${unit}`;
 };
 
-const getVisitTypeMeta = (visit) => {
+const visitTypeLabel = (visit) => {
   const type = String(visit?.visit_type || "").toUpperCase();
   const motive = String(visit?.visit_motive || "").toUpperCase();
   const labKind = String(visit?.lab_return_kind || "").toUpperCase();
   if (type === "LAB_RETURN" || motive === "LAB_RESULTS" || motive === "LAB_SAMPLE_COLLECTION") {
-    return {
-      label:
-        labKind === "SAMPLE_COLLECTION" || motive === "LAB_SAMPLE_COLLECTION"
-          ? "Lab: colheita"
-          : "Lab: resultado",
-      bg: "#EFF6FF",
-      color: "#1D4ED8",
-      border: "#BFDBFE",
-    };
+    return labKind === "SAMPLE_COLLECTION" || motive === "LAB_SAMPLE_COLLECTION"
+      ? "Lab: colheita"
+      : "Lab: resultado";
   }
-  if (type === "FOLLOW_UP" || visit?.parent_visit_id || visit?.return_visit_date) {
-    return { label: "Seguimento", bg: "#ECFDF5", color: "#047857", border: "#A7F3D0" };
-  }
-  return { label: "Nova consulta", bg: "#F8FAFC", color: "#475569", border: "#E2E8F0" };
+  if (type === "FOLLOW_UP" || visit?.parent_visit_id || visit?.return_visit_date) return "Retorno: seguimento";
+  return "Nova consulta";
 };
 
-function Avatar({ name, size = 38 }) {
-  const palette = getAvatarPalette(name);
+const isLabVisit = (visit) => {
+  const type = String(visit?.visit_type || "").toUpperCase();
+  const motive = String(visit?.visit_motive || "").toUpperCase();
+  return type === "LAB_RETURN" || motive === "LAB_RESULTS" || motive === "LAB_SAMPLE_COLLECTION";
+};
+
+const isFollowupVisit = (visit) => {
+  const type = String(visit?.visit_type || "").toUpperCase();
+  return !isLabVisit(visit) && (type === "FOLLOW_UP" || visit?.parent_visit_id || visit?.return_visit_date);
+};
+
+const canAttend = (row) => {
+  const status = String(row?.status || "").toUpperCase();
+  return status === "WAITING_DOCTOR" || status === "IN_CONSULTATION";
+};
+
+function SearchIcon() {
   return (
-    <div
-      style={{
-        width: size,
-        height: size,
-        borderRadius: "50%",
-        background: palette.bg,
-        color: palette.color,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontSize: size * 0.3,
-        fontWeight: 700,
-        fontFamily: "'IBM Plex Sans', system-ui, sans-serif",
-        flexShrink: 0,
-        letterSpacing: "0.02em",
-      }}
-    >
-      {getInitials(name)}
-    </div>
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="11" cy="11" r="7" />
+      <path d="m21 21-4.3-4.3" />
+    </svg>
   );
 }
 
-function StatusBadge({ value }) {
-  const cfg = getStatus(value);
+function RefreshIcon() {
   return (
-    <span
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 5,
-        background: cfg.bg,
-        color: cfg.color,
-        borderRadius: 999,
-        padding: "3px 10px",
-        fontSize: 11,
-        fontWeight: 600,
-        fontFamily: "'IBM Plex Sans', system-ui, sans-serif",
-        whiteSpace: "nowrap",
-      }}
-    >
-      <span
-        style={{ width: 6, height: 6, borderRadius: "50%", background: cfg.dot, flexShrink: 0 }}
-      />
-      {cfg.label}
-    </span>
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+      <path d="M21 3v6h-6" />
+    </svg>
   );
 }
 
-function PriorityBadge({ value }) {
-  const cfg = getPriority(value);
+function GroupIcon({ type }) {
   return (
-    <span
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 5,
-        background: cfg.bg,
-        color: cfg.color,
-        borderRadius: 999,
-        padding: "3px 10px",
-        fontSize: 11,
-        fontWeight: 600,
-        fontFamily: "'IBM Plex Sans', system-ui, sans-serif",
-        whiteSpace: "nowrap",
-      }}
-    >
-      <span
-        style={{ width: 6, height: 6, borderRadius: "50%", background: cfg.dot, flexShrink: 0 }}
-      />
-      {cfg.label}
-    </span>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      {type === "lab" ? (
+        <>
+          <path d="M9 2v6.5L4.5 17a2 2 0 0 0 1.8 3h11.4a2 2 0 0 0 1.8-3L15 8.5V2" />
+          <path d="M9 2h6" />
+          <path d="M7.5 14h9" />
+        </>
+      ) : type === "followup" ? (
+        <>
+          <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+          <path d="M21 3v5h-5" />
+          <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+          <path d="M3 21v-5h5" />
+        </>
+      ) : (
+        <>
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+          <circle cx="9" cy="7" r="4" />
+          <path d="M22 11h-6" />
+          <path d="M19 8v6" />
+        </>
+      )}
+    </svg>
   );
 }
 
-function VisitTypeBadge({ visit }) {
-  const cfg = getVisitTypeMeta(visit);
+function ArrowIcon() {
   return (
-    <span
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        border: `1px solid ${cfg.border}`,
-        background: cfg.bg,
-        color: cfg.color,
-        borderRadius: 999,
-        padding: "3px 10px",
-        fontSize: 11,
-        fontWeight: 700,
-        whiteSpace: "nowrap",
-      }}
-    >
-      {cfg.label}
-    </span>
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 12h14" />
+      <path d="m13 6 6 6-6 6" />
+    </svg>
   );
 }
 
@@ -215,33 +141,31 @@ export function DoctorWaitingQueueView({
 }) {
   const [selectedId, setSelectedId] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const title = "Fila de Espera";
-  const subtitle = "Fila de espera do departamento";
   const todayLabel = new Date().toLocaleDateString("pt-PT", { day: "2-digit", month: "long" });
 
   const rows = useMemo(() => {
-    const base = Array.isArray(queue) ? [...queue] : [];
     const query = searchQuery.trim().toLowerCase();
+    const base = Array.isArray(queue) ? [...queue] : [];
     const filtered = query
       ? base.filter(
           (visit) =>
-            (visit?.full_name || "").toLowerCase().includes(query) ||
-            (visit?.clinical_code || "").toLowerCase().includes(query)
+            String(visit?.full_name || "").toLowerCase().includes(query) ||
+            String(visit?.clinical_code || "").toLowerCase().includes(query) ||
+            visitTypeLabel(visit).toLowerCase().includes(query)
         )
       : base;
 
     return filtered.sort((a, b) => {
-      const priorityIndex = (visit) => {
-        const priority = String(visit?.priority || "").toUpperCase();
-        if (["URGENT", "HIGH"].includes(priority)) return 0;
-        if (["LESS_URGENT", "MEDIUM"].includes(priority)) return 1;
-        if (["NON_URGENT", "NOT_URGENT", "LOW"].includes(priority)) return 2;
+      const rank = (visit) => {
+        const p = String(visit?.priority || "").toUpperCase();
+        if (["URGENT", "HIGH"].includes(p)) return 0;
+        if (["LESS_URGENT", "MEDIUM"].includes(p)) return 1;
+        if (["NON_URGENT", "NOT_URGENT", "LOW"].includes(p)) return 2;
         return 3;
       };
-
-      const diff = priorityIndex(a) - priorityIndex(b);
+      const diff = rank(a) - rank(b);
       if (diff !== 0) return diff;
-      return new Date(a?.arrival_time || 0) - new Date(b?.arrival_time || 0);
+      return new Date(a?.arrival_time || 0).getTime() - new Date(b?.arrival_time || 0).getTime();
     });
   }, [queue, searchQuery]);
 
@@ -252,591 +176,252 @@ export function DoctorWaitingQueueView({
 
   const waitingCount = rows.filter((visit) => visit.status === "WAITING_DOCTOR").length;
   const inConsultCount = rows.filter((visit) => visit.status === "IN_CONSULTATION").length;
-  const urgentCount = rows.filter((visit) =>
-    ["URGENT", "HIGH"].includes(String(visit?.priority || "").toUpperCase())
-  ).length;
 
-  const canAttend = (row) => {
-    const status = String(row?.status || "").toUpperCase();
-    return status === "WAITING_DOCTOR" || status === "IN_CONSULTATION";
-  };
+  const groups = useMemo(
+    () =>
+      [
+        {
+          key: "lab",
+          name: "Resultados de Exames",
+          desc: "Pacientes aguardando entrega de resultados de laboratorio",
+          rows: rows.filter(isLabVisit),
+          bg: "#eaf1fd",
+          color: "#1e40af",
+          border: "#cddff8",
+        },
+        {
+          key: "followup",
+          name: "Consultas de Retorno",
+          desc: "Pacientes em seguimento ou retorno de tratamento",
+          rows: rows.filter(isFollowupVisit),
+          bg: "#f4eefb",
+          color: "#6b21a8",
+          border: "#e3d2f3",
+        },
+        {
+          key: "normal",
+          name: "Novas Consultas",
+          desc: "Pacientes a espera da primeira consulta",
+          rows: rows.filter((visit) => !isLabVisit(visit) && !isFollowupVisit(visit)),
+          bg: "#eaf6f0",
+          color: "#0c5a44",
+          border: "#cfe9dc",
+        },
+      ].filter((group) => group.rows.length > 0),
+    [rows]
+  );
 
   return (
-    <div
-      style={{
-        fontFamily: "'IBM Plex Sans', system-ui, sans-serif",
-        background: SURFACE,
-        borderRadius: CARD_RADIUS + 4,
-        border: `1px solid ${BORDER}`,
-        padding: "24px",
-        overflow: "hidden",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "flex-start",
-          justifyContent: "space-between",
-          gap: 12,
-          marginBottom: 20,
-          flexWrap: "wrap",
-        }}
-      >
+    <div className="overflow-hidden rounded-[14px] border border-[#e7e9ed] bg-white text-[14px] text-[#2b3140] shadow-[0_1px_2px_rgba(16,24,40,0.04),0_1px_6px_rgba(16,24,40,0.03)]">
+      <header className="flex flex-wrap items-start justify-between gap-5 px-7 py-6">
         <div>
-          <h2
-            style={{
-              margin: 0,
-              fontSize: 18,
-              fontWeight: 700,
-              color: "#111827",
-              letterSpacing: "-0.02em",
-            }}
-          >
-            {title}
-          </h2>
-          <p style={{ marginTop: 4, fontSize: 12, color: "#6B7280" }}>
-            {subtitle} · {todayLabel}
-          </p>
+          <h2 className="m-0 text-[19px] font-extrabold tracking-[-0.01em] text-[#161a23]">Fila de Espera</h2>
+          <p className="mt-1 text-[12.5px] text-[#9aa3b2]">Fila de espera do departamento - {todayLabel}</p>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-          {[
-            {
-              label: `${waitingCount} aguardando`,
-              bg: "#FFF7ED",
-              color: "#C2610C",
-              border: "#FED7AA",
-            },
-            {
-              label: `${inConsultCount} em consulta`,
-              bg: "#EFF6FF",
-              color: "#1D4ED8",
-              border: "#BFDBFE",
-            },
-            ...(urgentCount > 0
-              ? [
-                  {
-                    label: `${urgentCount} urgente${urgentCount > 1 ? "s" : ""}`,
-                    bg: "#FEF2F2",
-                    color: "#B91C1C",
-                    border: "#FECACA",
-                  },
-                ]
-              : []),
-          ].map((pill) => (
-            <span
-              key={pill.label}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                borderRadius: 999,
-                border: `1px solid ${pill.border}`,
-                background: pill.bg,
-                padding: "4px 12px",
-                fontSize: 12,
-                fontWeight: 700,
-                color: pill.color,
-              }}
-            >
-              {pill.label}
-            </span>
-          ))}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              background: "#fff",
-              border: `1px solid ${BORDER}`,
-              borderRadius: 999,
-              padding: "6px 14px",
-            }}
-          >
-            <svg
-              width="13"
-              height="13"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="#9CA3AF"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <circle cx="11" cy="11" r="8" />
-              <path d="m21 21-4.35-4.35" />
-            </svg>
+
+        <div className="flex flex-wrap items-center gap-2.5">
+          <span className="inline-flex items-center gap-2 rounded-[9px] border border-[#f3ddb2] bg-[#fdf3e3] px-3.5 py-2 text-[12.5px] font-bold text-[#b45309]">
+            <span className="h-[7px] w-[7px] rounded-full bg-[#b45309]" />
+            {waitingCount} aguardando
+          </span>
+          <span className="inline-flex items-center gap-2 rounded-[9px] border border-[#cddff8] bg-[#eaf1fd] px-3.5 py-2 text-[12.5px] font-bold text-[#1d54c0]">
+            <span className="h-[7px] w-[7px] rounded-full bg-[#1d54c0]" />
+            {inConsultCount} em consulta
+          </span>
+
+          <label className="flex w-[220px] items-center gap-2 rounded-[9px] border border-[#dde1e7] bg-white px-3.5 py-2.5 text-[#9aa3b2]">
+            <SearchIcon />
             <input
-              placeholder="Pesquisar..."
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
-              style={{
-                border: "none",
-                outline: "none",
-                background: "transparent",
-                fontSize: 12,
-                color: "#374151",
-                width: 130,
-              }}
+              className="w-full border-none bg-transparent text-[13px] text-[#2b3140] outline-none placeholder:text-[#9aa3b2]"
+              placeholder="Pesquisar..."
             />
-          </div>
+          </label>
+
           <button
             type="button"
             onClick={onRefresh}
             disabled={loading}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-              minHeight: 40,
-              borderRadius: 8,
-              border: "1px solid #165034",
-              background: "#165034",
-              padding: "0 16px",
-              fontSize: 13,
-              fontWeight: 700,
-              color: "#ffffff",
-              cursor: loading ? "not-allowed" : "pointer",
-              opacity: loading ? 0.6 : 1,
-              boxShadow: "none",
-            }}
+            className="inline-flex items-center gap-2 rounded-[9px] border-0 bg-[#0f6e54] px-[18px] py-2.5 text-[13px] font-bold text-white transition hover:bg-[#0c5a44] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <polyline points="23 4 23 10 17 10" />
-              <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-            </svg>
+            <RefreshIcon />
             {loading ? "Atualizando..." : "Atualizar"}
           </button>
         </div>
-      </div>
+      </header>
 
       {rows.length === 0 ? (
-        <div
-          style={{
-            borderRadius: CARD_RADIUS,
-            border: "1.5px dashed #DBE3DE",
-            background: "#fff",
-            padding: "48px 24px",
-            textAlign: "center",
-            fontSize: 13,
-            color: "#9CA3AF",
-          }}
-        >
+        <div className="border-t border-[#eef0f3] px-7 py-14 text-center text-[13px] text-[#9aa3b2]">
           {loading ? "A carregar pacientes..." : "Sem pacientes na fila no momento."}
         </div>
       ) : (
-        <div
-          style={{
-            borderRadius: CARD_RADIUS,
-            border: "1px solid #E3E8E4",
-            background: "#fff",
-            overflowX: "auto",
-          }}
-        >
-          <table
-            style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, minWidth: 680 }}
-          >
+        <div className="overflow-x-auto border-t border-[#eef0f3]">
+          <table className="w-full min-w-[920px] border-collapse">
             <thead>
-              <tr style={{ background: HEADER_BG }}>
-                {["Chegada", "Espera", "Paciente", "Fluxo", "Prioridade", "Código", "Ação"].map(
-                  (header, index, all) => (
-                    <th
-                      key={header}
-                      style={{
-                        padding: "12px 16px",
-                        textAlign: "left",
-                        fontSize: 11,
-                        fontWeight: 700,
-                        textTransform: "uppercase",
-                        letterSpacing: "0.08em",
-                        color: "#6B7280",
-                        borderTopLeftRadius: index === 0 ? 20 : 0,
-                        borderTopRightRadius: index === all.length - 1 ? 20 : 0,
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {header}
-                    </th>
-                  )
-                )}
+              <tr className="border-b border-[#eef0f3] bg-[#fafbfc]">
+                {["Chegada", "Paciente", "Espera", "Prioridade", "Codigo", "Acao"].map((header, index) => (
+                  <th
+                    key={header}
+                    className={`px-3.5 py-[13px] text-left text-[11px] font-bold uppercase tracking-[0.04em] text-[#39405a] ${index === 0 ? "pl-7" : ""} ${index === 5 ? "pr-7 text-right" : ""}`}
+                  >
+                    {header}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
-              {rows.map((row, index) => {
-                const selected = Number(row?.id) === Number(selectedId);
-                const isActive = Number(row?.id) === Number(selectedVisitId);
-                const isLast = index === rows.length - 1;
-                const tdBase = {
-                  padding: "14px 16px",
-                  borderBottom: isLast ? "none" : "1px solid #EDF1ED",
-                  fontSize: 13,
-                  color: "#374151",
-                  verticalAlign: "middle",
-                };
-
-                return (
-                  <tr
-                    key={row.id}
-                    onClick={() => setSelectedId(row.id)}
-                    style={{
-                      background: isActive
-                        ? "#F0F7F3"
-                        : selected
-                          ? "#F3F7F4"
-                          : index % 2 === 0
-                            ? "#fff"
-                            : "#FBFCFB",
-                      cursor: "pointer",
-                      transition: "background 0.1s",
-                    }}
-                  >
-                    <td
-                      style={{
-                        ...tdBase,
-                        borderLeft:
-                          selected || isActive ? `3px solid ${GREEN}` : "3px solid transparent",
-                        fontWeight: 500,
-                        color: "#1F2937",
-                      }}
-                    >
-                      {formatTime(row.arrival_time)}
-                    </td>
-                    <td style={tdBase}>
-                      <span
-                        style={{
-                          fontFamily: "'IBM Plex Mono', ui-monospace, monospace",
-                          fontSize: 12,
-                          fontWeight: 600,
-                          color:
-                            row.wait_minutes >= 60
-                              ? "#B91C1C"
-                              : row.wait_minutes >= 30
-                                ? "#C2610C"
-                                : "#374151",
-                          background:
-                            row.wait_minutes >= 60
-                              ? "#FEF2F2"
-                              : row.wait_minutes >= 30
-                                ? "#FFF7ED"
-                                : "#F3F4F6",
-                          borderRadius: 999,
-                          padding: "3px 10px",
-                        }}
-                      >
-                        {formatWait(row.wait_minutes)}
-                      </span>
-                    </td>
-                    <td style={tdBase}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                        <Avatar name={row.full_name} size={38} />
-                        <div>
-                          <div
-                            style={{
-                              fontWeight: 600,
-                              fontSize: 13,
-                              color: "#111827",
-                              marginBottom: 4,
-                            }}
+              {groups.map((group) => (
+                <Fragment key={group.key}>
+                  <tr className="border-b border-[#eef0f3]">
+                    <td colSpan={6} className="p-0">
+                      <div className="flex items-center justify-between gap-3 px-7 py-[11px]" style={{ background: group.bg }}>
+                        <div className="flex items-center gap-2.5">
+                          <span
+                            className="flex h-[26px] w-[26px] flex-none items-center justify-center rounded-[7px] border bg-white"
+                            style={{ borderColor: group.border, color: group.color }}
                           >
-                            {row.full_name || "-"}
-                          </div>
-                          <StatusBadge value={row.status} />
+                            <GroupIcon type={group.key} />
+                          </span>
+                          <span className="text-[12.5px] font-bold" style={{ color: group.color }}>
+                            {group.name}
+                          </span>
+                          <span className="ml-2 text-[11.5px] text-[#9aa3b2]">{group.desc}</span>
                         </div>
+                        <span
+                          className="whitespace-nowrap rounded-full border bg-white px-2.5 py-1 text-[11px] font-bold"
+                          style={{ borderColor: group.border, color: group.color }}
+                        >
+                          {group.rows.length} paciente{group.rows.length !== 1 ? "s" : ""}
+                        </span>
                       </div>
                     </td>
-                    <td style={tdBase}>
-                      <VisitTypeBadge visit={row} />
-                    </td>
-                    <td style={tdBase}>
-                      <PriorityBadge value={row.priority} />
-                    </td>
-                    <td style={tdBase}>
-                      <span
-                        style={{
-                          fontFamily: "'IBM Plex Mono', ui-monospace, monospace",
-                          background: "#F3F4F6",
-                          borderRadius: 999,
-                          padding: "3px 10px",
-                          fontSize: 12,
-                          color: "#4B5563",
-                        }}
-                      >
-                        {row.clinical_code || "-"}
-                      </span>
-                    </td>
-                    <td style={tdBase}>
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          setSelectedId(row.id);
-                          if (canAttend(row)) onAttendVisit?.(row.id, row);
-                        }}
-                        disabled={!canAttend(row)}
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          minHeight: 40,
-                          borderRadius: 8,
-                          padding: "0 16px",
-                          fontSize: 12,
-                          fontWeight: 700,
-                          cursor: canAttend(row) ? "pointer" : "default",
-                          background: canAttend(row) ? GREEN : "#F3F4F6",
-                          color: canAttend(row) ? "#fff" : "#9CA3AF",
-                          border: "none",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {row.status === "IN_CONSULTATION"
-                          ? "Continuar"
-                          : canAttend(row)
-                            ? "Atender"
-                            : "Aguardando"}
-                      </button>
-                    </td>
                   </tr>
-                );
-              })}
+
+                  {group.rows.map((row) => {
+                    const selected = Number(row?.id) === Number(selectedId);
+                    const isActive = Number(row?.id) === Number(selectedVisitId);
+                    const priority = priorityInfo(row.priority);
+                    const wait = Number(row.wait_minutes);
+                    const waitTheme =
+                      wait >= 60
+                        ? "border border-[#f6d0cd] bg-[#fdeceb] text-[#c0362c]"
+                        : wait >= 30
+                          ? "border border-[#f3ddb2] bg-[#fdf3e3] text-[#b45309]"
+                          : "bg-[#f1f2f4] text-[#5b6472]";
+                    const avatarBg =
+                      group.key === "lab" ? "#eaf1fd" : group.key === "followup" ? "#f4eefb" : "#eaf6f0";
+
+                    return (
+                      <tr
+                        key={row.id}
+                        onClick={() => setSelectedId(row.id)}
+                        className="border-b border-[#eef0f3] hover:bg-[#fafbfb]"
+                        style={{ background: selected || isActive ? "#fafbfb" : "#fff", cursor: "pointer" }}
+                      >
+                        <td className="whitespace-nowrap px-3.5 py-[13px] pl-7 text-[13px] font-bold text-[#161a23]">
+                          {formatTime(row.arrival_time)}
+                        </td>
+                        <td className="px-3.5 py-[13px]">
+                          <div className="flex items-center gap-[11px]">
+                            <div
+                              className="flex h-9 w-9 flex-none items-center justify-center rounded-full text-[12.5px] font-bold"
+                              style={{ background: avatarBg, color: group.color }}
+                            >
+                              {getInitials(row.full_name)}
+                            </div>
+                            <div>
+                              <div className="text-[13px] font-bold text-[#161a23]">{row.full_name || "-"}</div>
+                              <div className="mt-0.5 text-[11.5px] text-[#9aa3b2]">{visitTypeLabel(row)}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="whitespace-nowrap px-3.5 py-[13px]">
+                          <span className={`inline-flex items-center rounded-[7px] px-[11px] py-[5px] text-xs font-bold ${waitTheme}`}>
+                            {formatWait(row.wait_minutes)}
+                          </span>
+                        </td>
+                        <td className="whitespace-nowrap px-3.5 py-[13px]">
+                          <span className="inline-flex items-center gap-1.5 rounded-[7px] px-[11px] py-[5px] text-xs font-bold" style={{ background: priority.bg, color: priority.color }}>
+                            <span className="h-1.5 w-1.5 flex-none rounded-full" style={{ background: priority.dot }} />
+                            {priority.label}
+                          </span>
+                        </td>
+                        <td className="whitespace-nowrap px-3.5 py-[13px] text-[12.5px] font-semibold text-[#9aa3b2]">
+                          {row.clinical_code || "-"}
+                        </td>
+                        <td className="px-3.5 py-[13px] pr-7 text-right">
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setSelectedId(row.id);
+                              if (canAttend(row)) onAttendVisit?.(row.id, row);
+                            }}
+                            disabled={!canAttend(row)}
+                            className="inline-flex items-center gap-2 rounded-[7px] border-0 px-4 py-2 text-[12.5px] font-bold text-white transition disabled:cursor-not-allowed disabled:bg-[#f1f2f4] disabled:text-[#9aa3b2]"
+                            style={{ background: canAttend(row) ? "#0f6e54" : undefined }}
+                          >
+                            {row.status === "IN_CONSULTATION" ? "Continuar" : canAttend(row) ? "Atender" : "Aguardando"}
+                            <ArrowIcon />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </Fragment>
+              ))}
             </tbody>
           </table>
         </div>
       )}
 
       {selectedRow && (
-        <div
-          style={{
-            marginTop: 16,
-            borderRadius: CARD_RADIUS,
-            border: `1px solid ${BORDER}`,
-            background: "#fff",
-            overflow: "hidden",
-            animation: "slideDown 0.2s ease",
-          }}
-        >
-          <style>{`@keyframes slideDown { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:translateY(0); } }`}</style>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 16,
-              borderBottom: `1px solid ${BORDER}`,
-              padding: "18px 22px",
-              background: HEADER_BG,
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-              <Avatar name={selectedRow.full_name} size={46} />
+        <div className="m-4 overflow-hidden rounded-2xl border border-[#e7e9ed] bg-white">
+          <div className="flex items-center justify-between gap-4 border-b border-[#e7e9ed] bg-[#fafbfc] px-5 py-4">
+            <div className="flex items-center gap-3.5">
+              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#eaf6f0] text-sm font-bold text-[#0f6e54]">
+                {getInitials(selectedRow.full_name)}
+              </div>
               <div>
-                <div
-                  style={{
-                    fontSize: 18,
-                    fontWeight: 700,
-                    color: "#111827",
-                    letterSpacing: "-0.01em",
-                  }}
-                >
-                  {selectedRow.full_name || "-"}
-                </div>
-                <div style={{ fontSize: 12, color: "#6B7280", marginTop: 2 }}>
-                  {selectedRow.clinical_code || "Sem código"} · Visita #{selectedRow.id}
+                <div className="text-[18px] font-bold text-[#111827]">{selectedRow.full_name || "-"}</div>
+                <div className="mt-0.5 text-xs text-[#6b7280]">
+                  {selectedRow.clinical_code || "Sem codigo"} - Visita #{selectedRow.id}
                 </div>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={() => setSelectedId(null)}
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: "50%",
-                border: `1px solid ${BORDER}`,
-                background: "#fff",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-                color: "#6B7280",
-              }}
-            >
-              <svg
-                width="13"
-                height="13"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
+            <button type="button" onClick={() => setSelectedId(null)} className="h-9 w-9 rounded-full border border-[#e7e9ed] bg-white text-[#6b7280]">
+              x
             </button>
           </div>
 
-          <div style={{ padding: "18px 22px", display: "flex", flexDirection: "column", gap: 14 }}>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <VisitTypeBadge visit={selectedRow} />
-              <StatusBadge value={selectedRow.status} />
-              <PriorityBadge value={selectedRow.priority} />
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
-              {[
-                { label: "Chegada", value: formatTime(selectedRow.arrival_time) },
-                { label: "Tempo de espera", value: formatWait(selectedRow.wait_minutes) },
-                { label: "Código clínico", value: selectedRow.clinical_code || "-", mono: true },
-              ].map(({ label, value, mono }) => (
-                <div
-                  key={label}
-                  style={{
-                    borderRadius: 18,
-                    border: `1px solid ${BORDER}`,
-                    background: "#fff",
-                    padding: "12px 16px",
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: 10,
-                      fontWeight: 700,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.1em",
-                      color: "#9CA3AF",
-                      marginBottom: 6,
-                    }}
-                  >
-                    {label}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 13,
-                      fontWeight: 600,
-                      color: "#1F2937",
-                      fontFamily: mono ? "'IBM Plex Mono', ui-monospace, monospace" : "inherit",
-                    }}
-                  >
-                    {value}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10 }}>
-              {[
-                { label: "Temp.", value: formatVital(selectedRow.temperature, " °C") },
-                { label: "SpO2", value: formatVital(selectedRow.oxygen_saturation, "%") },
-                { label: "FC", value: formatVital(selectedRow.heart_rate, " bpm") },
-                { label: "FR", value: formatVital(selectedRow.respiratory_rate, " rpm") },
-                { label: "Peso", value: formatVital(selectedRow.weight, " kg") },
-              ].map(({ label, value }) => (
-                <div
-                  key={label}
-                  style={{
-                    borderRadius: 18,
-                    border: `1px solid ${BORDER}`,
-                    background: "#fff",
-                    padding: "12px 16px",
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: 10,
-                      fontWeight: 700,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.1em",
-                      color: "#9CA3AF",
-                      marginBottom: 6,
-                    }}
-                  >
-                    {label}
-                  </div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "#1F2937" }}>{value}</div>
-                </div>
-              ))}
-            </div>
-
-            {(selectedRow.chief_complaint || selectedRow.triage_chief_complaint) && (
-              <div
-                style={{
-                  borderRadius: 18,
-                  border: `1px solid ${BORDER}`,
-                  background: "#F8FAF9",
-                  padding: "14px 16px",
-                  borderLeft: `3px solid ${GREEN}`,
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: 10,
-                    fontWeight: 700,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.1em",
-                    color: "#9CA3AF",
-                    marginBottom: 8,
-                  }}
-                >
-                  Queixa principal
-                </div>
-                <div style={{ fontSize: 13, lineHeight: "1.6", color: "#374151" }}>
-                  {selectedRow.chief_complaint || selectedRow.triage_chief_complaint}
-                </div>
+          <div className="grid gap-3 p-5 md:grid-cols-3">
+            {[
+              { label: "Chegada", value: formatTime(selectedRow.arrival_time) },
+              { label: "Tempo de espera", value: formatWait(selectedRow.wait_minutes) },
+              { label: "Codigo clinico", value: selectedRow.clinical_code || "-" },
+              { label: "Temp.", value: formatVital(selectedRow.temperature, " C") },
+              { label: "SpO2", value: formatVital(selectedRow.oxygen_saturation, "%") },
+              { label: "Peso", value: formatVital(selectedRow.weight, " kg") },
+            ].map((item) => (
+              <div key={item.label} className="rounded-xl border border-[#e7e9ed] bg-white p-3">
+                <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.1em] text-[#9ca3af]">{item.label}</div>
+                <div className="text-[13px] font-semibold text-[#1f2937]">{item.value}</div>
               </div>
-            )}
+            ))}
           </div>
 
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "flex-end",
-              gap: 10,
-              borderTop: `1px solid ${BORDER}`,
-              background: "#fff",
-              padding: "14px 22px",
-            }}
-          >
-            <button
-              type="button"
-              onClick={() => setSelectedId(null)}
-              style={{
-                borderRadius: 999,
-                border: `1px solid ${BORDER}`,
-                background: "#fff",
-                padding: "8px 18px",
-                fontSize: 12,
-                fontWeight: 600,
-                color: "#6B7280",
-                cursor: "pointer",
-                fontFamily: "'IBM Plex Sans', system-ui, sans-serif",
-              }}
-            >
+          {(selectedRow.chief_complaint || selectedRow.triage_chief_complaint) && (
+            <div className="mx-5 mb-5 rounded-xl border border-[#e7e9ed] border-l-[#0f6e54] bg-[#f8faf9] p-4 text-[13px] leading-6 text-[#374151]">
+              {selectedRow.chief_complaint || selectedRow.triage_chief_complaint}
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2 border-t border-[#e7e9ed] px-5 py-4">
+            <button type="button" onClick={() => setSelectedId(null)} className="rounded-full border border-[#e7e9ed] bg-white px-5 py-2 text-xs font-semibold text-[#6b7280]">
               Fechar
             </button>
-            <button
-              type="button"
-              onClick={() => onOpenVisit?.(selectedRow.id, selectedRow)}
-              style={{
-                borderRadius: 999,
-                border: "none",
-                padding: "8px 20px",
-                fontSize: 12,
-                fontWeight: 700,
-                cursor: "pointer",
-                background: GREEN,
-                color: "#fff",
-                fontFamily: "'IBM Plex Sans', system-ui, sans-serif",
-              }}
-            >
+            <button type="button" onClick={() => onOpenVisit?.(selectedRow.id, selectedRow)} className="rounded-full bg-[#0f6e54] px-5 py-2 text-xs font-bold text-white">
               Abrir Consulta
             </button>
           </div>
