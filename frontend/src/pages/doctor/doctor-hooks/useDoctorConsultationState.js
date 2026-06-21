@@ -116,9 +116,18 @@ export function useDoctorConsultationState({
     );
   }, [selectedVisit]);
 
-  const previousConsultation = useMemo(
-    () =>
-      (Array.isArray(patientHistory) ? patientHistory : [])
+  const previousConsultation = useMemo(() => {
+    const historyRows = Array.isArray(patientHistory) ? patientHistory : [];
+    const parentVisitId = Number(selectedVisit?.parent_visit_id || selectedVisit?.parent_visit_id_resolved || 0);
+    if (parentVisitId) {
+      const parentVisit = historyRows.find(
+        (entry) => Number(entry?.id || entry?.visit_id) === parentVisitId
+      );
+      if (parentVisit) return parentVisit;
+    }
+
+    return (
+      historyRows
         .filter((entry) => Number(entry?.id || entry?.visit_id) !== Number(selectedVisit?.id))
         .filter((entry) => String(entry?.status || "").toUpperCase() === "FINISHED")
         .sort(
@@ -129,9 +138,14 @@ export function useDoctorConsultationState({
             - new Date(
               a?.consultation_ended_at || a?.finished_at || a?.updated_at || a?.arrival_time || 0
             )
-        )[0] || null,
-    [patientHistory, selectedVisit?.id]
-  );
+        )[0] || null
+    );
+  }, [
+    patientHistory,
+    selectedVisit?.id,
+    selectedVisit?.parent_visit_id,
+    selectedVisit?.parent_visit_id_resolved,
+  ]);
 
   const previousClinicalSnapshot = useMemo(
     () => getVisitClinicalSnapshot(previousConsultation),

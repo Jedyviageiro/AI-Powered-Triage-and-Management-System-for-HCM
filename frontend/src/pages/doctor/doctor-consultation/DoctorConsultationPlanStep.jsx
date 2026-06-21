@@ -595,7 +595,7 @@ export default function DoctorConsultationPlanStep(props) {
             Escolha para onde o paciente segue depois desta consulta.
           </p>
         </div>
-        <div className="cf-grid-2">
+        <div>
           <div>
             <label className="cf-label">
               {isFollowUpConsultation ? "Decisão final da consulta" : "Destino do paciente"}
@@ -635,14 +635,6 @@ export default function DoctorConsultationPlanStep(props) {
                 </option>
               ))}
             </SelectComponent>
-          </div>
-          <div>
-            <label className="cf-label">Motivo do destino</label>
-            <input
-              className="cf-input"
-              value={planDraft.disposition_reason}
-              onChange={(e) => updatePlanField("disposition_reason", e.target.value)}
-            />
           </div>
           {false && (
           <div>

@@ -1,5 +1,4 @@
-import { useMemo, useState } from "react";
-import { createPortal } from "react-dom";
+import { useEffect, useMemo, useState } from "react";
 import DoctorPage from "../DoctorPage";
 
 const toDate = (value) => {
@@ -11,20 +10,13 @@ const toDate = (value) => {
 const formatDate = (value) => {
   const parsed = toDate(value);
   if (!parsed) return "-";
-  return parsed.toLocaleDateString("pt-PT", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
+  return parsed.toLocaleDateString("pt-PT", { day: "2-digit", month: "2-digit", year: "numeric" });
 };
 
 const formatTime = (value) => {
   const parsed = toDate(value);
   if (!parsed) return "-";
-  return parsed.toLocaleTimeString("pt-PT", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return parsed.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" });
 };
 
 const extractScheduledTime = (row) => {
@@ -36,746 +28,168 @@ const extractScheduledTime = (row) => {
 
 const extractClinicalReturnReason = (value) => {
   const raw = String(value || "").trim();
-  if (!raw) return "-";
+  if (!raw) return "Retorno agendado";
   return (
     raw
       .replace(/retornos previstos:\s*\d+\s*\|\s*datas:\s*[^|]+/i, "")
       .replace(/^\s*\|\s*/, "")
-      .trim() || "-"
+      .trim() || "Retorno agendado"
   );
 };
 
-const STATUS_CONFIG = {
-  WAITING_DOCTOR: { label: "Aguardando", bg: "#FFF7ED", color: "#C2610C", dot: "#F97316" },
-  IN_CONSULTATION: { label: "Em consulta", bg: "#EFF6FF", color: "#1D4ED8", dot: "#3B82F6" },
-  FINISHED: { label: "Consulta fechada", bg: "#F9FAFB", color: "#6B7280", dot: "#9CA3AF" },
-  CANCELLED: { label: "Cancelada", bg: "#FEF2F2", color: "#B91C1C", dot: "#EF4444" },
-};
-
-const getStatusConfig = (value) => {
-  const key = String(value || "").toUpperCase();
-  return (
-    STATUS_CONFIG[key] || { label: key || "-", bg: "#F3F4F6", color: "#374151", dot: "#9CA3AF" }
-  );
-};
-
-const AVATAR_PALETTES = [
-  { bg: "#D1FAE5", color: "#065F46" },
-  { bg: "#DBEAFE", color: "#1E40AF" },
-  { bg: "#EDE9FE", color: "#5B21B6" },
-  { bg: "#FCE7F3", color: "#9D174D" },
-  { bg: "#FEF3C7", color: "#92400E" },
-  { bg: "#CFFAFE", color: "#155E75" },
-];
-
-const getAvatarPalette = (name) => {
-  let hash = 0;
-  for (let i = 0; i < (name || "").length; i += 1) hash += name.charCodeAt(i);
-  return AVATAR_PALETTES[hash % AVATAR_PALETTES.length];
-};
-
-const getInitials = (name) => {
-  const parts = String(name || "")
+const getInitials = (name) =>
+  String(name || "Paciente")
     .trim()
     .split(/\s+/)
-    .filter(Boolean);
-  if (!parts.length) return "P";
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return `${parts[0][0] || ""}${parts[parts.length - 1][0] || ""}`.toUpperCase();
-};
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase() || "P";
 
-const CARD_RADIUS = 24;
-const GREEN = "#165034";
-const BORDER = "#E7ECE8";
-const SURFACE = "#FBFCFB";
-const HEADER_BG = "#F7F8F7";
-
-function Avatar({ name, size = 40 }) {
-  const palette = getAvatarPalette(name);
-  const initials = getInitials(name);
+function RefreshIcon() {
   return (
-    <div
-      style={{
-        width: size,
-        height: size,
-        borderRadius: "50%",
-        background: palette.bg,
-        color: palette.color,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontSize: size * 0.3,
-        fontWeight: 700,
-        fontFamily: "'IBM Plex Sans', system-ui, sans-serif",
-        flexShrink: 0,
-        letterSpacing: "0.02em",
-      }}
-    >
-      {initials}
-    </div>
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+      <path d="M21 3v6h-6" />
+    </svg>
   );
 }
 
-function StatusBadge({ status }) {
-  const cfg = getStatusConfig(status);
+function ArrowIcon() {
   return (
-    <span
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 5,
-        background: cfg.bg,
-        color: cfg.color,
-        borderRadius: 999,
-        padding: "3px 10px",
-        fontSize: 11,
-        fontWeight: 600,
-        fontFamily: "'IBM Plex Sans', system-ui, sans-serif",
-        whiteSpace: "nowrap",
-      }}
-    >
-      <span
-        style={{
-          width: 6,
-          height: 6,
-          borderRadius: "50%",
-          background: cfg.dot,
-          display: "inline-block",
-          flexShrink: 0,
-        }}
-      />
-      {cfg.label}
-    </span>
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 12h14" />
+      <path d="m13 6 6 6-6 6" />
+    </svg>
   );
 }
-
-const RefreshIcon = () => (
-  <svg
-    width="13"
-    height="13"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <polyline points="23 4 23 10 17 10" />
-    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-  </svg>
-);
-
-const SpinIcon = () => (
-  <svg
-    width="13"
-    height="13"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.2"
-    strokeLinecap="round"
-    style={{ animation: "spin 0.8s linear infinite" }}
-  >
-    <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-    <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-  </svg>
-);
 
 export function DoctorScheduledFollowupsView({
   returnsToday = [],
   loading = false,
   onRefresh,
   onOpenVisit,
+  pageSize = 8,
 }) {
-  const [selectedId, setSelectedId] = useState(null);
-
+  const [page, setPage] = useState(1);
   const todayLabel = new Date().toLocaleDateString("pt-PT", { day: "2-digit", month: "long" });
+
+  const rows = useMemo(
+    () =>
+      (Array.isArray(returnsToday) ? returnsToday : [])
+        .filter((row) => String(row?.status || "").toUpperCase() !== "CANCELLED")
+        .slice()
+        .sort(
+          (a, b) =>
+            new Date(`${String(a?.return_visit_date || a?.arrival_time || "").slice(0, 10)}T${extractScheduledTime(a) || "23:59"}:00`) -
+            new Date(`${String(b?.return_visit_date || b?.arrival_time || "").slice(0, 10)}T${extractScheduledTime(b) || "23:59"}:00`)
+        ),
+    [returnsToday]
+  );
 
   const isFutureDate = (value) => {
     const parsed = toDate(value);
     if (!parsed) return false;
-    const d = new Date(parsed);
-    d.setHours(0, 0, 0, 0);
-    const t = new Date();
-    t.setHours(0, 0, 0, 0);
-    return d.getTime() > t.getTime();
+    const scheduled = new Date(parsed);
+    scheduled.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return scheduled.getTime() > today.getTime();
   };
 
-  const rows = useMemo(() => {
-    return (Array.isArray(returnsToday) ? returnsToday : [])
-      .filter((row) => String(row?.status || "").toUpperCase() !== "CANCELLED")
-      .slice()
-      .sort(
-        (a, b) =>
-          new Date(
-            `${String(a?.return_visit_date || a?.arrival_time || "").slice(0, 10)}T${extractScheduledTime(a) || "23:59"}:00`
-          ) -
-          new Date(
-            `${String(b?.return_visit_date || b?.arrival_time || "").slice(0, 10)}T${extractScheduledTime(b) || "23:59"}:00`
-          )
-      );
-  }, [returnsToday]);
+  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const paginatedRows = rows.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
-  const selectedRow = useMemo(
-    () => rows.find((row) => Number(row?.id) === Number(selectedId)) || null,
-    [rows, selectedId]
-  );
-
-  const cols = ["Data", "Hora", "Paciente", "Código", "Motivo", "Ação"];
+  useEffect(() => {
+    setPage(1);
+  }, [rows.length]);
 
   return (
-    <>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');`}</style>
+    <div className="overflow-hidden rounded-[14px] border border-[#e7e9ed] bg-white text-[14px] text-[#2b3140] shadow-[0_1px_2px_rgba(16,24,40,0.04),0_1px_6px_rgba(16,24,40,0.03)]">
+      <header className="flex flex-wrap items-start justify-between gap-5 px-7 py-6">
+        <div>
+          <h2 className="m-0 text-[19px] font-extrabold tracking-[-0.01em] text-[#161a23]">Consultas Marcadas</h2>
+          <p className="mt-1 text-[12.5px] text-[#9aa3b2]">Retornos agendados - {todayLabel}</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2.5">
+          <span className="inline-flex items-center gap-2 rounded-[9px] border border-[#cfe9dc] bg-[#eaf6f0] px-3.5 py-2 text-[12.5px] font-bold text-[#0f6e54]">
+            <span className="h-[7px] w-[7px] rounded-full bg-[#0f6e54]" />
+            {rows.length} marcadas
+          </span>
+          <button
+            type="button"
+            onClick={onRefresh}
+            disabled={loading}
+            className="inline-flex items-center gap-2 rounded-[9px] border-0 bg-[#0f6e54] px-[18px] py-2.5 text-[13px] font-bold text-white transition hover:bg-[#0c5a44] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <RefreshIcon />
+            {loading ? "Atualizando..." : "Atualizar"}
+          </button>
+        </div>
+      </header>
 
-      <div
-        style={{
-          fontFamily: "'IBM Plex Sans', system-ui, sans-serif",
-          background: SURFACE,
-          borderRadius: CARD_RADIUS + 4,
-          border: `1px solid ${BORDER}`,
-          padding: "24px",
-          overflow: "hidden",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "flex-start",
-            justifyContent: "space-between",
-            gap: 12,
-            marginBottom: 20,
-          }}
-        >
-          <div>
-            <h2
-              style={{
-                margin: 0,
-                fontSize: 18,
-                fontWeight: 700,
-                color: "#111827",
-                letterSpacing: "-0.02em",
-                lineHeight: 1.2,
-              }}
-            >
-              Consultas marcadas
-            </h2>
-            <p style={{ marginTop: 4, fontSize: 12, color: "#6B7280" }}>
-              Retornos agendados · {todayLabel}
-            </p>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                borderRadius: 8,
-                border: "1px solid #DBE7DF",
-                background: "#fff",
-                padding: "4px 12px",
-                fontSize: 12,
-                fontWeight: 700,
-                color: GREEN,
-              }}
-            >
-              {rows.length} marcadas
-            </span>
-            <button
-              type="button"
-              onClick={onRefresh}
-              disabled={loading}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8,
-                minHeight: 40,
-                borderRadius: 999,
-                border: "1px solid #165034",
-                background: "#165034",
-                padding: "0 16px",
-                fontSize: 13,
-                fontWeight: 700,
-                color: "#ffffff",
-                cursor: loading ? "not-allowed" : "pointer",
-                transition: "background 0.15s",
-                opacity: loading ? 0.6 : 1,
-                boxShadow: "none",
-              }}
-            >
-              {loading ? (
-                <>
-                  <SpinIcon />
-                  Atualizando...
-                </>
-              ) : (
-                <>
-                  <RefreshIcon />
-                  Atualizar
-                </>
-              )}
-            </button>
+      {rows.length === 0 ? (
+        <div className="border-t border-[#eef0f3] px-7 py-14 text-center text-[13px] text-[#9aa3b2]">
+          {loading ? "A carregar consultas..." : "Sem consultas marcadas no momento."}
+        </div>
+      ) : (
+        <div className="overflow-x-auto border-t border-[#eef0f3]">
+          <table className="w-full min-w-[920px] border-collapse">
+            <thead>
+              <tr className="border-b border-[#eef0f3] bg-[#fafbfc]">
+                {["Data", "Hora", "Paciente", "Motivo", "Codigo", "Acao"].map((header, index) => (
+                  <th key={header} className={`px-3.5 py-[13px] text-left text-[11px] font-bold uppercase tracking-[0.04em] text-[#39405a] ${index === 0 ? "pl-7" : ""} ${index === 5 ? "pr-7 text-right" : ""}`}>
+                    {header}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {paginatedRows.map((row) => {
+                const canOpen = !isFutureDate(row?.return_visit_date);
+                return (
+                  <tr key={row.id} className="border-b border-[#eef0f3] bg-white hover:bg-[#fafbfb]">
+                    <td className="whitespace-nowrap px-3.5 py-[13px] pl-7 text-[13px] font-bold text-[#161a23]">{formatDate(row.return_visit_date || row.arrival_time)}</td>
+                    <td className="whitespace-nowrap px-3.5 py-[13px] text-[13px] font-bold text-[#161a23]">{extractScheduledTime(row) || "-"}</td>
+                    <td className="px-3.5 py-[13px]">
+                      <div className="flex items-center gap-[11px]">
+                        <div className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-[#eaf6f0] text-[12.5px] font-bold text-[#0f6e54]">{getInitials(row.full_name)}</div>
+                        <div>
+                          <div className="text-[13px] font-bold text-[#161a23]">{row.full_name || "-"}</div>
+                          <div className="mt-0.5 text-[11.5px] text-[#9aa3b2]">Retorno agendado</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="max-w-[320px] px-3.5 py-[13px] text-[12.5px] leading-5 text-[#6c7689]">{extractClinicalReturnReason(row.return_visit_reason)}</td>
+                    <td className="whitespace-nowrap px-3.5 py-[13px] text-[12.5px] font-semibold text-[#9aa3b2]">{row.clinical_code || "-"}</td>
+                    <td className="px-3.5 py-[13px] pr-7 text-right">
+                      <button
+                        type="button"
+                        onClick={() => canOpen && onOpenVisit?.(row.id, row)}
+                        disabled={!canOpen}
+                        className="inline-flex items-center gap-2 rounded-[7px] border-0 bg-[#0f6e54] px-4 py-2 text-[12.5px] font-bold text-white transition disabled:cursor-not-allowed disabled:bg-[#f1f2f4] disabled:text-[#9aa3b2]"
+                      >
+                        {canOpen ? "Abrir" : "Aguardando"}
+                        {canOpen && <ArrowIcon />}
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#eef0f3] bg-white px-7 py-4 text-[12.5px] text-[#6c7689]">
+            <span>{`${(currentPage - 1) * pageSize + 1}-${Math.min(currentPage * pageSize, rows.length)} de ${rows.length} consultas`}</span>
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={currentPage <= 1} className="rounded-lg border border-[#dde1e7] bg-white px-3 py-1.5 font-semibold text-[#3a4150] disabled:cursor-not-allowed disabled:opacity-45">Anterior</button>
+              <span className="rounded-lg bg-[#f4f6f8] px-3 py-1.5 font-semibold text-[#3a4150]">{currentPage} / {totalPages}</span>
+              <button type="button" onClick={() => setPage((value) => Math.min(totalPages, value + 1))} disabled={currentPage >= totalPages} className="rounded-lg border border-[#dde1e7] bg-white px-3 py-1.5 font-semibold text-[#3a4150] disabled:cursor-not-allowed disabled:opacity-45">Proximo</button>
+            </div>
           </div>
         </div>
-
-        {rows.length === 0 ? (
-          <div
-            style={{
-              borderRadius: CARD_RADIUS,
-              border: "1.5px dashed #DBE3DE",
-              background: "#fff",
-              padding: "48px 24px",
-              textAlign: "center",
-              fontSize: 13,
-              color: "#9CA3AF",
-            }}
-          >
-            Sem consultas marcadas no momento.
-          </div>
-        ) : (
-          <div
-            style={{
-              borderRadius: CARD_RADIUS,
-              border: "1px solid #E3E8E4",
-              background: "#fff",
-              overflowX: "auto",
-            }}
-          >
-            <table
-              style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, minWidth: 640 }}
-            >
-              <thead>
-                <tr>
-                  {cols.map((header, index) => (
-                    <th
-                      key={header}
-                      style={{
-                        background: HEADER_BG,
-                        padding: "12px 16px",
-                        textAlign: "left",
-                        fontSize: 11,
-                        fontWeight: 700,
-                        textTransform: "uppercase",
-                        letterSpacing: "0.08em",
-                        color: "#6B7280",
-                        borderTopLeftRadius: index === 0 ? 20 : 0,
-                        borderTopRightRadius: index === cols.length - 1 ? 20 : 0,
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {header}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row, index) => {
-                  const selected = Number(row?.id) === Number(selectedId);
-                  const canOpen = !isFutureDate(row?.return_visit_date);
-                  const isLast = index === rows.length - 1;
-                  const tdBase = {
-                    padding: "14px 16px",
-                    borderBottom: isLast ? "none" : "1px solid #EDF1ED",
-                    fontSize: 13,
-                    color: "#374151",
-                    verticalAlign: "middle",
-                  };
-
-                  return (
-                    <tr
-                      key={`scheduled-${row.id}`}
-                      onClick={() => setSelectedId(row.id)}
-                      style={{
-                        background: selected ? "#F3F7F4" : index % 2 === 0 ? "#fff" : "#FBFCFB",
-                        cursor: "pointer",
-                        transition: "background 0.1s",
-                      }}
-                    >
-                      <td
-                        style={{
-                          ...tdBase,
-                          borderLeft: selected ? `3px solid ${GREEN}` : "3px solid transparent",
-                          fontWeight: 500,
-                          color: "#1F2937",
-                        }}
-                      >
-                        {formatDate(row.return_visit_date)}
-                      </td>
-                      <td style={{ ...tdBase, fontWeight: 600, color: "#111827" }}>
-                        {extractScheduledTime(row)}
-                      </td>
-                      <td style={tdBase}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                          <Avatar name={row.full_name} size={38} />
-                          <div>
-                            <div
-                              style={{
-                                fontWeight: 600,
-                                fontSize: 13,
-                                color: "#111827",
-                                marginBottom: 4,
-                              }}
-                            >
-                              {row.full_name || "-"}
-                            </div>
-                            <StatusBadge status={row.status} />
-                          </div>
-                        </div>
-                      </td>
-                      <td style={tdBase}>
-                        <span
-                          style={{
-                            fontFamily: "'IBM Plex Mono', ui-monospace, monospace",
-                            background: "#F3F4F6",
-                            borderRadius: 999,
-                            padding: "3px 10px",
-                            fontSize: 12,
-                            color: "#4B5563",
-                          }}
-                        >
-                          {row.clinical_code || "-"}
-                        </span>
-                      </td>
-                      <td
-                        style={{ ...tdBase, maxWidth: 260, overflow: "hidden" }}
-                        title={extractClinicalReturnReason(row.return_visit_reason)}
-                      >
-                        <div
-                          style={{
-                            display: "-webkit-box",
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: "vertical",
-                            overflow: "hidden",
-                            lineHeight: "1.45",
-                          }}
-                        >
-                          {extractClinicalReturnReason(row.return_visit_reason)}
-                        </div>
-                      </td>
-                      <td style={tdBase}>
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            setSelectedId(row.id);
-                            if (canOpen) onOpenVisit?.(row.id, row);
-                          }}
-                          disabled={!canOpen}
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            borderRadius: 999,
-                            padding: "6px 16px",
-                            fontSize: 12,
-                            fontWeight: 700,
-                            cursor: canOpen ? "pointer" : "default",
-                            background: canOpen ? GREEN : "#F3F4F6",
-                            color: canOpen ? "#fff" : "#9CA3AF",
-                            border: "none",
-                            transition: "background 0.15s",
-                            whiteSpace: "nowrap",
-                          }}
-                          title={canOpen ? "Abrir consulta" : "So pode abrir no dia da consulta."}
-                        >
-                          {canOpen ? "Abrir" : "Aguardando"}
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      {selectedRow && typeof document !== "undefined"
-        ? createPortal(
-            <div
-              onClick={(event) => {
-                if (event.target === event.currentTarget) setSelectedId(null);
-              }}
-              style={{
-                position: "fixed",
-                inset: 0,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                padding: 16,
-                zIndex: 400,
-                background: "rgba(15,23,42,0.40)",
-                backdropFilter: "blur(5px)",
-                fontFamily: "'IBM Plex Sans', system-ui, sans-serif",
-              }}
-            >
-              <div
-                style={{
-                  width: "100%",
-                  maxWidth: 720,
-                  background: SURFACE,
-                  borderRadius: 30,
-                  border: "1px solid rgba(255,255,255,0.7)",
-                  boxShadow: "0 24px 80px rgba(15,23,42,0.18)",
-                  overflow: "hidden",
-                }}
-              >
-                <div style={{ display: "flex", justifyContent: "center", paddingTop: 12 }}>
-                  <div style={{ width: 40, height: 4, borderRadius: 999, background: "#D1D5DB" }} />
-                </div>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    justifyContent: "space-between",
-                    gap: 16,
-                    borderBottom: `1px solid ${BORDER}`,
-                    padding: "20px 24px",
-                  }}
-                >
-                  <div>
-                    <div
-                      style={{
-                        fontSize: 10,
-                        fontWeight: 700,
-                        textTransform: "uppercase",
-                        letterSpacing: "0.1em",
-                        color: "#9CA3AF",
-                        marginBottom: 10,
-                      }}
-                    >
-                      Detalhes da consulta
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                      <Avatar name={selectedRow.full_name} size={48} />
-                      <div>
-                        <div
-                          style={{
-                            fontSize: 22,
-                            fontWeight: 700,
-                            color: "#111827",
-                            letterSpacing: "-0.02em",
-                          }}
-                        >
-                          {selectedRow.full_name || "-"}
-                        </div>
-                        <div style={{ fontSize: 13, color: "#6B7280", marginTop: 2 }}>
-                          {selectedRow.clinical_code || "Sem código"} · Consulta de retorno
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedId(null)}
-                    aria-label="Fechar"
-                    style={{
-                      width: 38,
-                      height: 38,
-                      borderRadius: "50%",
-                      border: `1px solid ${BORDER}`,
-                      background: "#fff",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      cursor: "pointer",
-                      flexShrink: 0,
-                      color: "#6B7280",
-                    }}
-                  >
-                    <svg
-                      width="13"
-                      height="13"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <line x1="18" y1="6" x2="6" y2="18" />
-                      <line x1="6" y1="6" x2="18" y2="18" />
-                    </svg>
-                  </button>
-                </div>
-
-                <div
-                  style={{
-                    padding: "20px 24px",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 14,
-                  }}
-                >
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    <StatusBadge status={selectedRow.status} />
-                    <span
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 5,
-                        borderRadius: 999,
-                        padding: "3px 10px",
-                        fontSize: 11,
-                        fontWeight: 600,
-                        background: isFutureDate(selectedRow.return_visit_date)
-                          ? "#FFF7ED"
-                          : "#ECFDF5",
-                        color: isFutureDate(selectedRow.return_visit_date) ? "#C2610C" : "#065F46",
-                      }}
-                    >
-                      <span
-                        style={{
-                          width: 6,
-                          height: 6,
-                          borderRadius: "50%",
-                          display: "inline-block",
-                          background: isFutureDate(selectedRow.return_visit_date)
-                            ? "#F97316"
-                            : "#10B981",
-                        }}
-                      />
-                      {isFutureDate(selectedRow.return_visit_date) ? "Agendada" : "Disponivel"}
-                    </span>
-                  </div>
-
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                    {[
-                      { label: "Data", value: formatDate(selectedRow.return_visit_date) },
-                      { label: "Hora", value: extractScheduledTime(selectedRow) },
-                      { label: "Estado", value: getStatusConfig(selectedRow.status).label },
-                      {
-                        label: "Abertura",
-                        value: isFutureDate(selectedRow.return_visit_date)
-                          ? "Disponivel no dia agendado"
-                          : "Disponivel agora",
-                        highlight: !isFutureDate(selectedRow.return_visit_date),
-                      },
-                    ].map(({ label, value, highlight }) => (
-                      <div
-                        key={label}
-                        style={{
-                          borderRadius: 20,
-                          border: `1px solid ${BORDER}`,
-                          background: "#fff",
-                          padding: "14px 16px",
-                        }}
-                      >
-                        <div
-                          style={{
-                            fontSize: 10,
-                            fontWeight: 700,
-                            textTransform: "uppercase",
-                            letterSpacing: "0.1em",
-                            color: "#9CA3AF",
-                            marginBottom: 6,
-                          }}
-                        >
-                          {label}
-                        </div>
-                        <div
-                          style={{
-                            fontSize: 13,
-                            fontWeight: 600,
-                            color: highlight ? "#065F46" : "#1F2937",
-                          }}
-                        >
-                          {value}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div
-                    style={{
-                      borderRadius: 22,
-                      border: `1px solid ${BORDER}`,
-                      background: "#fff",
-                      padding: "16px 18px",
-                    }}
-                  >
-                    <div
-                      style={{
-                        fontSize: 10,
-                        fontWeight: 700,
-                        textTransform: "uppercase",
-                        letterSpacing: "0.1em",
-                        color: "#9CA3AF",
-                        marginBottom: 10,
-                      }}
-                    >
-                      Motivo da consulta
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 13,
-                        lineHeight: "1.65",
-                        color: "#374151",
-                        whiteSpace: "pre-wrap",
-                        wordBreak: "break-word",
-                      }}
-                    >
-                      {extractClinicalReturnReason(selectedRow.return_visit_reason)}
-                    </div>
-                  </div>
-                </div>
-
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "flex-end",
-                    gap: 10,
-                    borderTop: `1px solid ${BORDER}`,
-                    background: "#fff",
-                    padding: "14px 24px",
-                  }}
-                >
-                  <button
-                    type="button"
-                    onClick={() => setSelectedId(null)}
-                    style={{
-                      borderRadius: 999,
-                      border: `1px solid ${BORDER}`,
-                      background: "#fff",
-                      padding: "8px 18px",
-                      fontSize: 12,
-                      fontWeight: 600,
-                      color: "#6B7280",
-                      cursor: "pointer",
-                      fontFamily: "'IBM Plex Sans', system-ui, sans-serif",
-                    }}
-                  >
-                    Fechar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onOpenVisit?.(selectedRow.id, selectedRow)}
-                    disabled={isFutureDate(selectedRow.return_visit_date)}
-                    style={{
-                      borderRadius: 999,
-                      border: "none",
-                      padding: "8px 18px",
-                      fontSize: 12,
-                      fontWeight: 700,
-                      cursor: isFutureDate(selectedRow.return_visit_date) ? "default" : "pointer",
-                      background: isFutureDate(selectedRow.return_visit_date) ? "#F3F4F6" : GREEN,
-                      color: isFutureDate(selectedRow.return_visit_date) ? "#9CA3AF" : "#fff",
-                      transition: "background 0.15s",
-                      fontFamily: "'IBM Plex Sans', system-ui, sans-serif",
-                    }}
-                    title={
-                      isFutureDate(selectedRow.return_visit_date)
-                        ? "So pode abrir no dia da consulta."
-                        : "Abrir consulta"
-                    }
-                  >
-                    Abrir Consulta
-                  </button>
-                </div>
-              </div>
-            </div>,
-            document.body
-          )
-        : null}
-    </>
+      )}
+    </div>
   );
 }
 

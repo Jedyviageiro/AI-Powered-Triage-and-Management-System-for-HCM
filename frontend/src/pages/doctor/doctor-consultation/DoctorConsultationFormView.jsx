@@ -5,9 +5,73 @@ import DoctorConsultationPlanStep from "./DoctorConsultationPlanStep";
 import DoctorConsultationQuestionnaireStep from "./DoctorConsultationQuestionnaireStep";
 import DoctorConsultationStepFooter from "./DoctorConsultationStepFooter";
 
+const cardStyle = {
+  background: "#ffffff",
+  border: "1px solid #e7e9ed",
+  borderRadius: 13,
+  overflow: "hidden",
+};
+
+const factIconStyle = {
+  width: 30,
+  height: 30,
+  borderRadius: 8,
+  flexShrink: 0,
+  background: "#fff",
+  border: "1px solid #cfe9dc",
+  color: "#0c5a44",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  fontSize: 13,
+  fontWeight: 800,
+};
+
+function FactIcon({ type }) {
+  return (
+    <span style={factIconStyle}>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        {type === "flow" ? (
+          <>
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <path d="M22 11h-6" />
+            <path d="M19 8v6" />
+          </>
+        ) : type === "source" ? (
+          <>
+            <path d="M22 12h-6l-2 3h-4l-2-3H2" />
+            <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11Z" />
+          </>
+        ) : type === "action" ? (
+          <>
+            <rect x="8" y="2" width="8" height="4" rx="1" />
+            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+            <path d="M9 12h6" />
+            <path d="M9 16h6" />
+          </>
+        ) : (
+          <>
+            <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+            <path d="M4 22v-7" />
+          </>
+        )}
+      </svg>
+    </span>
+  );
+}
+
+const getInitials = (name) =>
+  String(name || "P")
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
+
 export default function DoctorConsultationFormView(props) {
   const {
-    setActiveView,
     selectedVisit,
     patientDetails,
     priorityTheme,
@@ -33,8 +97,6 @@ export default function DoctorConsultationFormView(props) {
     updateQuestionAnswer,
     questionnaireExtraNote,
     setQuestionnaireExtraNote,
-    retakeVitals,
-    setRetakeVitals,
     isFollowUpConsultation,
     consultationMode,
     consultationModeMeta,
@@ -111,319 +173,192 @@ export default function DoctorConsultationFormView(props) {
     previousConsultation?.id ||
     previousConsultation?.visit_id ||
     "";
-  const consultationFlowItems = [
-    {
-      label: "Fluxo",
-      value: consultationModeMeta?.flowLabel || consultationModeMeta?.title || "Consulta",
-    },
-    {
-      label: "Origem",
-      value: consultationModeMeta?.sourceLabel || "Fila clinica",
-    },
-    {
-      label: "Acao agora",
-      value: consultationModeMeta?.primaryAction || "Avaliar paciente",
-    },
-    {
-      label: "Decisao final",
-      value: consultationModeMeta?.nextDecision || "Definir destino",
-    },
-  ];
   const activeStepIndex = Math.max(
     0,
     consultationSteps.findIndex((step) => step.id === consultFormStep)
   );
   const activeStep = consultationSteps[activeStepIndex] || consultationSteps[0] || null;
   const activeStepKey = activeStep?.key || "overview";
+  const patientName = selectedVisit?.full_name || patientDetails?.full_name || "Selecione um paciente";
+  const flowItems = [
+    ["Fluxo", consultationModeMeta?.flowLabel || consultationModeMeta?.title || "Consulta", "flow"],
+    ["Origem", consultationModeMeta?.sourceLabel || "Fila clinica", "source"],
+    ["Acao agora", consultationModeMeta?.primaryAction || "Avaliar paciente", "action"],
+    ["Decisao final", consultationModeMeta?.nextDecision || "Definir destino", "decision"],
+  ];
 
   return (
-    <div style={{ fontFamily: "'IBM Plex Sans', system-ui, sans-serif" }}>
-      <div className="cf-wrap" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 12,
-          }}
-        >
-          <div>
-            <h2 style={{ fontSize: 24, fontWeight: 700, color: "#111827", margin: 0 }}>
-              {consultationModeMeta?.title || "Consulta medica"}
-            </h2>
-            <p style={{ fontSize: 12, color: "#9ca3af", marginTop: 2 }}>
-              {consultationModeMeta?.eyebrow || "Formulario clinico"}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setActiveView("waitingQueue")}
-            className="cf-btn-sec"
-          >
-            <svg
-              width="13"
-              height="13"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M19 12H5" />
-              <polyline points="12 19 5 12 12 5" />
-            </svg>
-            Voltar
-          </button>
-        </div>
-
-        <div
-          style={{
-            background: "linear-gradient(135deg,#0c3a24 0%,#155030 55%,#1c7a4e 100%)",
-            borderRadius: 18,
-            padding: "18px 22px",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+    <div style={{ fontFamily: "'DM Sans', 'IBM Plex Sans', system-ui, sans-serif", paddingBottom: 88 }}>
+      <div className="cf-wrap" style={{ display: "flex", flexDirection: "column", gap: 16, maxWidth: 1180 }}>
+        <section style={{ ...cardStyle, borderLeft: "4px solid #0f6e54" }}>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 14, padding: "20px 22px 18px", flexWrap: "wrap" }}>
             <div
               style={{
                 width: 48,
                 height: 48,
                 borderRadius: "50%",
-                background: "rgba(255,255,255,0.14)",
-                border: "1.5px solid rgba(255,255,255,0.2)",
+                flexShrink: 0,
+                background: "#eaf6f0",
+                color: "#0c5a44",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                fontSize: 20,
+                fontSize: 15,
                 fontWeight: 700,
-                color: "#fff",
               }}
             >
-              {(selectedVisit?.full_name || patientDetails?.full_name || "P")[0]?.toUpperCase()}
+              {getInitials(patientName)}
             </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                <span style={{ fontSize: 17, fontWeight: 700, color: "#fff" }}>
-                  {selectedVisit?.full_name || patientDetails?.full_name || "Selecione um paciente"}
-                </span>
+            <div style={{ flex: 1, minWidth: 240 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 5 }}>
+                <span style={{ fontSize: 17, fontWeight: 700, color: "#161a23" }}>{patientName}</span>
                 {selectedVisit?.id && (
                   <span
                     style={{
-                      fontSize: 10,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                      fontSize: 11.5,
                       fontWeight: 700,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.07em",
-                      padding: "3px 10px",
-                      borderRadius: 99,
-                      background: priorityTheme(selectedVisit?.priority).chipBg,
-                      border: `1px solid ${priorityTheme(selectedVisit?.priority).chipBorder}`,
-                      color: priorityTheme(selectedVisit?.priority).text,
+                      padding: "4px 10px 4px 8px",
+                      borderRadius: 20,
+                      background: "#eaf6f0",
+                      border: "1px solid #cfe9dc",
+                      color: "#0c5a44",
                     }}
                   >
+                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: "currentColor" }} />
                     {formatPriorityPt(selectedVisit?.priority)}
                   </span>
                 )}
-              </div>
-              <div
-                style={{
-                  marginTop: 4,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  flexWrap: "wrap",
-                }}
-              >
                 {selectedVisit?.id && (
-                  <span style={{ fontSize: 11, color: "rgba(255,255,255,0.5)" }}>
-                    Visita #{selectedVisit.id}
-                  </span>
-                )}
-                {selectedVisit?.id && (
-                  <span style={{ color: "rgba(255,255,255,0.25)", fontSize: 10 }}>·</span>
-                )}
-                {selectedVisit?.id && (
-                  <span style={{ fontSize: 11, color: "rgba(255,255,255,0.5)" }}>
+                  <span
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                      fontSize: 11.5,
+                      fontWeight: 700,
+                      padding: "4px 10px 4px 8px",
+                      borderRadius: 20,
+                      background: "#eaf1fd",
+                      color: "#1d54c0",
+                    }}
+                  >
+                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#1d54c0" }} />
                     {formatStatus(selectedVisit.status)}
                   </span>
                 )}
               </div>
+              {selectedVisit?.id && (
+                <div style={{ fontSize: 12.5, color: "#9aa3b2", marginBottom: 10 }}>Visita #{selectedVisit.id}</div>
+              )}
               {consultationModeMeta?.summary && (
-                <p
-                  style={{
-                    margin: "8px 0 0",
-                    color: "rgba(255,255,255,0.72)",
-                    fontSize: 12,
-                    lineHeight: 1.45,
-                  }}
-                >
+                <p style={{ margin: "0 0 12px", fontSize: 13, color: "#6c7689", lineHeight: 1.55, maxWidth: 640 }}>
                   {consultationModeMeta.summary}
                 </p>
               )}
-              {(visitReason || previousVisitId) && (
-                <div
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <span
                   style={{
-                    marginTop: 10,
-                    display: "flex",
-                    gap: 8,
-                    flexWrap: "wrap",
+                    display: "inline-flex",
+                    minHeight: 26,
+                    alignItems: "center",
+                    padding: "5px 10px",
+                    borderRadius: 999,
+                    border: "1px dashed #e7e9ed",
+                    color: "#9aa3b2",
+                    fontSize: 11,
+                    fontWeight: 500,
                   }}
                 >
-                  {visitReason && (
-                    <span
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        maxWidth: "100%",
-                        minHeight: 26,
-                        padding: "5px 10px",
-                        borderRadius: 999,
-                        background: "rgba(255,255,255,0.12)",
-                        border: "1px solid rgba(255,255,255,0.18)",
-                        color: "rgba(255,255,255,0.86)",
-                        fontSize: 11,
-                        fontWeight: 600,
-                        lineHeight: 1.25,
-                      }}
-                    >
-                      Motivo: {visitReason}
-                    </span>
-                  )}
-                  {previousVisitId && consultationMode !== "NORMAL" && (
-                    <span
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        minHeight: 26,
-                        padding: "5px 10px",
-                        borderRadius: 999,
-                        background: "rgba(255,255,255,0.12)",
-                        border: "1px solid rgba(255,255,255,0.18)",
-                        color: "rgba(255,255,255,0.82)",
-                        fontSize: 11,
-                        fontWeight: 600,
-                        lineHeight: 1.25,
-                      }}
-                    >
-                      Ligado a visita #{previousVisitId}
-                    </span>
-                  )}
-                </div>
-              )}
+                  Motivo: {visitReason || "Sem motivo registado"}
+                </span>
+                {previousVisitId && consultationMode !== "NORMAL" && (
+                  <span
+                    style={{
+                      display: "inline-flex",
+                      minHeight: 26,
+                      alignItems: "center",
+                      padding: "5px 10px",
+                      borderRadius: 999,
+                      border: "1px dashed #e7e9ed",
+                      color: "#9aa3b2",
+                      fontSize: 11,
+                      fontWeight: 500,
+                    }}
+                  >
+                    Ligado a visita #{previousVisitId}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
-          <div
-            style={{
-              marginTop: 16,
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
-              gap: 10,
-            }}
-          >
-            {consultationFlowItems.map((item) => (
+
+          <div style={{ display: "flex", alignItems: "stretch", background: "#f6faf8", borderTop: "1px solid #eef0f3", padding: "14px 22px", flexWrap: "wrap" }}>
+            {flowItems.map(([label, value, icon], index) => (
               <div
-                key={item.label}
+                key={label}
                 style={{
-                  minHeight: 70,
-                  borderRadius: 14,
-                  border: "1px solid rgba(255,255,255,0.16)",
-                  background: "rgba(255,255,255,0.1)",
-                  padding: "11px 12px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  flex: 1,
+                  minWidth: 190,
+                  padding: "2px 18px",
+                  borderLeft: index === 0 ? "none" : "1px solid #eef0f3",
                 }}
               >
-                <div
-                  style={{
-                    fontSize: 10,
-                    fontWeight: 700,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.04em",
-                    color: "rgba(255,255,255,0.55)",
-                    lineHeight: 1.2,
-                  }}
-                >
-                  {item.label}
-                </div>
-                <div
-                  style={{
-                    marginTop: 5,
-                    color: "#fff",
-                    fontSize: 12,
-                    fontWeight: 700,
-                    lineHeight: 1.3,
-                    overflowWrap: "anywhere",
-                  }}
-                >
-                  {item.value}
-                </div>
+                <FactIcon type={icon} />
+                <span>
+                  <span style={{ display: "block", fontSize: 10.5, fontWeight: 700, letterSpacing: "0.04em", color: "#9aa3b2", textTransform: "uppercase" }}>
+                    {label}
+                  </span>
+                  <span style={{ display: "block", marginTop: 2, fontSize: 13, fontWeight: 700, color: "#161a23", lineHeight: 1.3 }}>
+                    {value}
+                  </span>
+                </span>
               </div>
             ))}
           </div>
-        </div>
+        </section>
 
-        <div className="cf-card" style={{ padding: "14px 20px" }}>
-          <div className="flex items-center gap-1 overflow-x-auto">
-            {consultationSteps.map((s, idx) => {
-              const done = idx < activeStepIndex;
-              const active = idx === activeStepIndex;
-              const isLast = idx === consultationSteps.length - 1;
+        <section style={{ ...cardStyle, display: "flex", alignItems: "center", padding: "16px 26px", overflowX: "auto" }}>
+          <div className="flex w-full items-center">
+            {consultationSteps.map((step, index) => {
+              const done = index < activeStepIndex;
+              const active = index === activeStepIndex;
+              const isLast = index === consultationSteps.length - 1;
               return (
-                <div key={s.id} className="flex items-center flex-shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => setConsultFormStep(s.id)}
-                    className="flex items-center gap-2"
-                  >
-                    <div
-                      className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold"
+                <div key={step.id} className="flex min-w-fit flex-1 items-center">
+                  <button type="button" onClick={() => setConsultFormStep(step.id)} className="flex items-center gap-2.5">
+                    <span
+                      className="flex h-[26px] w-[26px] items-center justify-center rounded-full text-[12px] font-bold"
                       style={{
-                        background: done ? "#22c55e" : active ? "#0c3a24" : "#f3f4f6",
-                        color: done || active ? "#fff" : "#9ca3af",
+                        background: done ? "#eaf6f0" : active ? "#0f6e54" : "#eef0f3",
+                        color: done ? "#0c5a44" : active ? "#fff" : "#9aa3b2",
+                        border: done ? "1.5px solid #0f6e54" : "none",
                       }}
                     >
-                      {done ? (
-                        <svg
-                          width="12"
-                          height="12"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="3"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <polyline points="20 6 9 17 4 12" />
-                        </svg>
-                      ) : (
-                        s.id
-                      )}
-                    </div>
-                    <span
-                      className="text-xs font-semibold"
-                      style={{ color: active ? "#0c3a24" : done ? "#22a06b" : "#9ca3af" }}
-                    >
-                      {s.label}
+                      {done ? "✓" : step.id}
+                    </span>
+                    <span style={{ fontSize: 13, fontWeight: active ? 700 : 600, color: active ? "#161a23" : "#9aa3b2", whiteSpace: "nowrap" }}>
+                      {step.label}
                     </span>
                   </button>
-                  {!isLast && (
-                    <div
-                      className="w-8 h-px mx-2 rounded-full"
-                      style={{ background: done ? "#22c55e" : "#e5e7eb" }}
-                    />
-                  )}
+                  {!isLast && <span className="mx-4 h-px min-w-6 flex-1 bg-[#e7e9ed]" />}
                 </div>
               );
             })}
           </div>
-        </div>
+        </section>
 
         {!selectedVisit?.id ? (
-          <div className="cf-card" style={{ textAlign: "center", padding: 48 }}>
-            <p style={{ fontSize: 13, color: "#9ca3af" }}>
-              Selecione um paciente na lista para iniciar a consulta.
-            </p>
+          <div style={{ ...cardStyle, textAlign: "center", padding: 48 }}>
+            <p style={{ fontSize: 13, color: "#9ca3af" }}>Selecione um paciente na lista para iniciar a consulta.</p>
           </div>
         ) : (
-          <div ref={detailsPanelRef} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <div ref={detailsPanelRef} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             {activeStepKey === "overview" && (
               <DoctorConsultationOverviewStep
                 patientDetails={patientDetails}
@@ -451,8 +386,6 @@ export default function DoctorConsultationFormView(props) {
                 updateQuestionAnswer={updateQuestionAnswer}
                 questionnaireExtraNote={questionnaireExtraNote}
                 setQuestionnaireExtraNote={setQuestionnaireExtraNote}
-                retakeVitals={retakeVitals}
-                setRetakeVitals={setRetakeVitals}
               />
             )}
 

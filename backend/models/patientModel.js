@@ -265,7 +265,13 @@ const getPatientHistory = async (patientId) => {
             v.id AS visit_id,
             v.arrival_time,
             v.status,
+            v.visit_type,
+            v.visit_motive,
+            v.visit_motive_other,
+            v.parent_visit_id,
+            v.lab_return_kind,
             v.priority,
+            v.doctor_id,
             v.likely_diagnosis,
             v.clinical_reasoning,
             v.prescription_text,
@@ -274,6 +280,9 @@ const getPatientHistory = async (patientId) => {
             v.finished_at,
             v.consultation_ended_at,
             v.doctor_questionnaire_json,
+            v.follow_up_when,
+            v.follow_up_instructions,
+            v.follow_up_return_if,
             v.return_visit_date,
             v.return_visit_reason,
             v.lab_requested,
@@ -289,9 +298,13 @@ const getPatientHistory = async (patientId) => {
             t.oxygen_saturation,
             t.weight,
             t.chief_complaint,
-            t.clinical_notes
+            t.clinical_notes,
+            d.full_name AS doctor_full_name,
+            d.username AS doctor_username,
+            COALESCE(d.specialization, '') AS doctor_specialization
          FROM visits v
          LEFT JOIN triage t ON t.visit_id = v.id
+         LEFT JOIN users d ON d.id = v.doctor_id
          WHERE v.patient_id = $1
          ORDER BY COALESCE(v.consultation_ended_at, v.finished_at, v.updated_at, v.arrival_time) DESC`,
     [patientId]

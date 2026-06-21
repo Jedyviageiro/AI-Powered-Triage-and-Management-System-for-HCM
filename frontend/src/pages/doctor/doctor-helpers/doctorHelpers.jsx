@@ -58,10 +58,46 @@ export const formatPriorityPt = (priority) => {
 export const getVisitReasonLabel = (visit) => {
   const motive = String(visit?.visit_motive || "").toUpperCase();
   const returnReason = String(visit?.return_visit_reason || "").trim();
+  const parentReturnReason = String(visit?.parent_return_visit_reason || "").trim();
+  const dispositionReason = String(visit?.disposition_reason || "").trim();
+  const followUpInstructions = String(visit?.follow_up_instructions || "").trim();
   const motiveOther = String(visit?.visit_motive_other || "").trim();
   const chief = String(
     visit?.chief_complaint || visit?.triage_chief_complaint || visit?.triage?.chief_complaint || ""
   ).trim();
+  const visitType = String(visit?.visit_type || "").toUpperCase();
+  const isFollowUp =
+    visitType === "FOLLOW_UP" ||
+    !!visit?.is_followup_visit ||
+    !!visit?.parent_visit_id ||
+    !!visit?.parent_visit_id_resolved;
+  const isLabReturn =
+    visitType === "LAB_RETURN" ||
+    !!visit?.is_lab_followup ||
+    motive === "LAB_RESULTS" ||
+    motive === "LAB_SAMPLE_COLLECTION";
+
+  if (isLabReturn) {
+    if (motive === "LAB_RESULTS" || String(visit?.lab_return_kind || "").toUpperCase() === "RESULT_REVIEW") {
+      return returnReason || parentReturnReason || "Retorno para resultado laboratorial";
+    }
+    if (motive === "LAB_SAMPLE_COLLECTION" || String(visit?.lab_return_kind || "").toUpperCase() === "SAMPLE_COLLECTION") {
+      return returnReason || parentReturnReason || "Retorno para colheita de amostra";
+    }
+  }
+
+  if (isFollowUp) {
+    return (
+      returnReason ||
+      parentReturnReason ||
+      dispositionReason ||
+      followUpInstructions ||
+      (visit?.parent_visit_id || visit?.parent_visit_id_resolved
+        ? `Retorno da visita #${visit.parent_visit_id || visit.parent_visit_id_resolved}`
+        : "Retorno agendado")
+    );
+  }
+
   if (chief) return chief;
   if (returnReason) return returnReason;
   if (motive === "LAB_RESULTS") return "Retorno para resultado laboratorial";

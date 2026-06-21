@@ -53,7 +53,7 @@ const Card = ({ children, style = {} }) => (
     style={{
       background: "#fff",
       border: `1px solid ${BORDER}`,
-      borderRadius: 18,
+      borderRadius: 14,
       padding: "20px 22px",
       ...style,
     }}
@@ -253,11 +253,11 @@ export default function PreferencesView({
         style={{
           fontFamily: "'IBM Plex Sans', system-ui, sans-serif",
           width: "100%",
-          maxWidth: 920,
-          margin: "0 auto",
+          maxWidth: "none",
+          margin: 0,
           display: "flex",
           flexDirection: "column",
-          gap: 0,
+          gap: 16,
         }}
       >
         <div
@@ -289,11 +289,11 @@ export default function PreferencesView({
             disabled={loading || saving}
             onClick={save}
             style={{
-              borderRadius: 999,
+              borderRadius: 9,
               border: "none",
               background: G,
               color: "#fff",
-              padding: "9px 22px",
+              padding: "13px 26px",
               fontSize: 13,
               fontWeight: 700,
               cursor: loading || saving ? "not-allowed" : "pointer",
@@ -325,120 +325,14 @@ export default function PreferencesView({
         )}
 
         <div
-          style={{ opacity: loading ? 0.65 : 1, display: "flex", flexDirection: "column", gap: 2 }}
+          style={{
+            opacity: loading ? 0.65 : 1,
+            display: "grid",
+            gridTemplateColumns: "minmax(0, 1fr)",
+            gap: 14,
+          }}
         >
-          <Card style={{ borderRadius: "22px 22px 8px 8px" }}>
-            <Label>Perfil</Label>
-            <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 18 }}>
-              {String(me?.profile_photo_url || "").trim() ? (
-                <img
-                  src={me.profile_photo_url}
-                  alt={me?.full_name || "Utilizador"}
-                  style={{
-                    width: 56,
-                    height: 56,
-                    borderRadius: "50%",
-                    objectFit: "cover",
-                    border: "1px solid rgba(15, 23, 42, 0.08)",
-                    flexShrink: 0,
-                    background: "#fff",
-                  }}
-                />
-              ) : (
-                <div
-                  style={{
-                    width: 56,
-                    height: 56,
-                    borderRadius: "50%",
-                    background: `linear-gradient(135deg,${GDARK},#2d6f4e)`,
-                    color: "#fff",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: 20,
-                    fontWeight: 800,
-                    flexShrink: 0,
-                  }}
-                >
-                  {ini(me?.full_name)}
-                </div>
-              )}
-              <div>
-                <div
-                  style={{
-                    fontSize: 16,
-                    fontWeight: 700,
-                    color: "#111827",
-                    letterSpacing: "-0.01em",
-                  }}
-                >
-                  {me?.full_name || "—"}
-                </div>
-                <div style={{ fontSize: 12, color: "#6B7280", marginTop: 2 }}>{roleLabel}</div>
-              </div>
-            </div>
-
-            {[
-              { label: "Último login", value: lastLogin },
-              { label: "Especialização", value: me?.specialization },
-            ]
-              .filter((r) => r.value)
-              .map((r) => (
-                <div
-                  key={r.label}
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "baseline",
-                    padding: "10px 0",
-                    borderBottom: `1px solid ${BORDER}`,
-                  }}
-                >
-                  <span style={{ fontSize: 13, color: "#6B7280" }}>{r.label}</span>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>{r.value}</span>
-                </div>
-              ))}
-
-            <div style={{ marginTop: 16 }}>
-              <label
-                style={{
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: "#374151",
-                  display: "block",
-                  marginBottom: 7,
-                }}
-              >
-                Contacto de emergência
-              </label>
-              <input
-                value={prefs.emergency_phone}
-                onChange={(e) => set("emergency_phone", e.target.value)}
-                placeholder="+258 84 000 0000"
-                onFocus={(e) => {
-                  e.target.style.borderColor = "#86EFAC";
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = BORDER;
-                }}
-                style={{
-                  width: "100%",
-                  borderRadius: 999,
-                  border: `1.5px solid ${BORDER}`,
-                  padding: "9px 16px",
-                  fontSize: 13,
-                  background: SURF,
-                  color: "#111827",
-                  outline: "none",
-                  fontFamily: "'IBM Plex Mono', ui-monospace, monospace",
-                  boxSizing: "border-box",
-                  transition: "border-color 0.15s",
-                }}
-              />
-            </div>
-          </Card>
-
-          <Card style={{ borderRadius: 8 }}>
+          <Card>
             <Label>Turno atual</Label>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10 }}>
               <StatChip
