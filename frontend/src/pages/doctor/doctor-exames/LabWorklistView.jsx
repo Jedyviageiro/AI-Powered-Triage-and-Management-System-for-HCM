@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import ModalCloseButton from "../../../components/shared/ModalCloseButton";
 
@@ -278,7 +278,42 @@ function PdfIcon() {
   );
 }
 
-function ReadyResultsPage({ rows, loading, onRefresh, onOpenResult }) {
+const matchesVisit = (row, visitId) => {
+  const target = typeof visitId === "object" ? Number(visitId?.visitId) : Number(visitId);
+  const targetPatient = typeof visitId === "object" ? Number(visitId?.patientId) : null;
+  return [
+    row?.id,
+    row?.lab_source_visit_id,
+    row?.parent_visit_id,
+    row?.visit_id,
+    row?.source_visit_id,
+  ].some((value) => target && Number(value) === target) || Boolean(targetPatient && Number(row?.patient_id) === targetPatient);
+};
+
+function ReadyResultsPage({
+  rows,
+  loading,
+  onRefresh,
+  onOpenResult,
+  highlightedVisitId,
+  onClearHighlight,
+  pageSize = 8,
+}) {
+  const [page, setPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const paginatedRows = rows.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  useEffect(() => {
+    setPage(1);
+  }, [rows.length]);
+
+  useEffect(() => {
+    if (!highlightedVisitId) return;
+    const index = rows.findIndex((row) => matchesVisit(row, highlightedVisitId));
+    if (index >= 0) setPage(Math.floor(index / pageSize) + 1);
+  }, [highlightedVisitId, pageSize, rows]);
+
   return (
     <section className="text-[14px] text-[#2b3140]">
       <div className="overflow-hidden rounded-[14px] border border-[#e7e9ed] bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04),0_1px_6px_rgba(16,24,40,0.03)]">
@@ -314,8 +349,13 @@ function ReadyResultsPage({ rows, loading, onRefresh, onOpenResult }) {
               </tr>
             </thead>
             <tbody>
-              {rows.map((row) => (
-                <tr key={`${row.id}-${row.lab_exam_type || row.lab_tests || "exam"}`} className="border-b border-[#eef0f3] last:border-b-0 hover:bg-[#f8faf9]">
+              {paginatedRows.map((row) => {
+                const highlighted = matchesVisit(row, highlightedVisitId);
+                return (
+                <tr
+                  key={`${row.id}-${row.lab_exam_type || row.lab_tests || "exam"}`}
+                  className={`border-b border-[#eef0f3] last:border-b-0 hover:bg-[#f8faf9] ${highlighted ? "bg-[#fff7ed] shadow-[inset_4px_0_0_#f59e0b]" : ""}`}
+                >
                   <td className="px-7 py-3.5">
                     <div className="flex items-center gap-3">
                       <div className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-[#eaf6f0] text-[12.5px] font-bold text-[#0f6e54]">
@@ -346,17 +386,53 @@ function ReadyResultsPage({ rows, loading, onRefresh, onOpenResult }) {
                   <td className="px-7 py-3.5 text-right">
                     <button
                       type="button"
-                      onClick={() => onOpenResult(row)}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-[#dde1e7] bg-white px-3.5 py-2 text-[12.5px] font-semibold text-[#3a4150] hover:border-[#cfd4dc] hover:bg-[#fafbfc]"
+                      onClick={() => {
+                        onClearHighlight?.();
+                        onOpenResult(row);
+                      }}
+                      className={`inline-flex items-center gap-1.5 rounded-lg border px-3.5 py-2 text-[12.5px] font-semibold hover:border-[#cfd4dc] hover:bg-[#fafbfc] ${
+                        highlighted
+                          ? "border-[#f59e0b] bg-[#fff7ed] text-[#9a5a00] shadow-[0_0_0_3px_rgba(245,158,11,0.16)]"
+                          : "border-[#dde1e7] bg-white text-[#3a4150]"
+                      }`}
                     >
                       <EyeIcon />
                       Ver resultado
                     </button>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#eef0f3] bg-white px-7 py-4 text-[12.5px] text-[#6c7689]">
+            <span>
+              {rows.length === 0
+                ? "0 pacientes"
+                : `${(currentPage - 1) * pageSize + 1}-${Math.min(currentPage * pageSize, rows.length)} de ${rows.length} pacientes`}
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setPage((value) => Math.max(1, value - 1))}
+                disabled={currentPage <= 1}
+                className="rounded-lg border border-[#dde1e7] bg-white px-3 py-1.5 font-semibold text-[#3a4150] disabled:cursor-not-allowed disabled:opacity-45"
+              >
+                Anterior
+              </button>
+              <span className="rounded-lg bg-[#f4f6f8] px-3 py-1.5 font-semibold text-[#3a4150]">
+                {currentPage} / {totalPages}
+              </span>
+              <button
+                type="button"
+                onClick={() => setPage((value) => Math.min(totalPages, value + 1))}
+                disabled={currentPage >= totalPages}
+                className="rounded-lg border border-[#dde1e7] bg-white px-3 py-1.5 font-semibold text-[#3a4150] disabled:cursor-not-allowed disabled:opacity-45"
+              >
+                Proximo
+              </button>
+            </div>
+          </div>
         </div>
 
         {!loading && rows.length === 0 && (
@@ -579,6 +655,8 @@ export default function LabWorklistView({
   loading = false,
   onRefresh,
   onOpenLabTracking,
+  highlightedVisitId,
+  onClearHighlight,
 }) {
   const readyForReviewRows = useMemo(
     () => readyRows.filter((row) => isReadyResult(row) && !isDeliveredResult(row)),
@@ -597,6 +675,8 @@ export default function LabWorklistView({
         rows={readyForReviewRows}
         loading={loading}
         onRefresh={onRefresh}
+        highlightedVisitId={highlightedVisitId}
+        onClearHighlight={onClearHighlight}
         onOpenResult={(row) => {
           setSelectedVisitId(Number(row?.id) || null);
           setResultModalOpen(true);

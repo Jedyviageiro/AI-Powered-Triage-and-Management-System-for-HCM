@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import DoctorPage from "../DoctorPage";
 
 const priorityInfo = (value) => {
@@ -131,16 +131,30 @@ function ArrowIcon() {
   );
 }
 
+function EyeIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
 export function DoctorWaitingQueueView({
   queue = [],
   loading = false,
   onRefresh,
   onOpenVisit,
   onAttendVisit,
+  onOpenLabResult,
   selectedVisitId,
+  title = "Fila de Espera",
+  subtitle = "Fila de espera do departamento",
+  pageSize = 8,
 }) {
   const [selectedId, setSelectedId] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(1);
   const todayLabel = new Date().toLocaleDateString("pt-PT", { day: "2-digit", month: "long" });
 
   const rows = useMemo(() => {
@@ -176,6 +190,13 @@ export function DoctorWaitingQueueView({
 
   const waitingCount = rows.filter((visit) => visit.status === "WAITING_DOCTOR").length;
   const inConsultCount = rows.filter((visit) => visit.status === "IN_CONSULTATION").length;
+  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const paginatedRows = rows.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, queue.length]);
 
   const groups = useMemo(
     () =>
@@ -184,7 +205,7 @@ export function DoctorWaitingQueueView({
           key: "lab",
           name: "Resultados de Exames",
           desc: "Pacientes aguardando entrega de resultados de laboratorio",
-          rows: rows.filter(isLabVisit),
+          rows: paginatedRows.filter(isLabVisit),
           bg: "#eaf1fd",
           color: "#1e40af",
           border: "#cddff8",
@@ -193,7 +214,7 @@ export function DoctorWaitingQueueView({
           key: "followup",
           name: "Consultas de Retorno",
           desc: "Pacientes em seguimento ou retorno de tratamento",
-          rows: rows.filter(isFollowupVisit),
+          rows: paginatedRows.filter(isFollowupVisit),
           bg: "#f4eefb",
           color: "#6b21a8",
           border: "#e3d2f3",
@@ -202,21 +223,21 @@ export function DoctorWaitingQueueView({
           key: "normal",
           name: "Novas Consultas",
           desc: "Pacientes a espera da primeira consulta",
-          rows: rows.filter((visit) => !isLabVisit(visit) && !isFollowupVisit(visit)),
+          rows: paginatedRows.filter((visit) => !isLabVisit(visit) && !isFollowupVisit(visit)),
           bg: "#eaf6f0",
           color: "#0c5a44",
           border: "#cfe9dc",
         },
       ].filter((group) => group.rows.length > 0),
-    [rows]
+    [paginatedRows]
   );
 
   return (
     <div className="overflow-hidden rounded-[14px] border border-[#e7e9ed] bg-white text-[14px] text-[#2b3140] shadow-[0_1px_2px_rgba(16,24,40,0.04),0_1px_6px_rgba(16,24,40,0.03)]">
       <header className="flex flex-wrap items-start justify-between gap-5 px-7 py-6">
         <div>
-          <h2 className="m-0 text-[19px] font-extrabold tracking-[-0.01em] text-[#161a23]">Fila de Espera</h2>
-          <p className="mt-1 text-[12.5px] text-[#9aa3b2]">Fila de espera do departamento - {todayLabel}</p>
+          <h2 className="m-0 text-[19px] font-extrabold tracking-[-0.01em] text-[#161a23]">{title}</h2>
+          <p className="mt-1 text-[12.5px] text-[#9aa3b2]">{subtitle} - {todayLabel}</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
@@ -356,14 +377,24 @@ export function DoctorWaitingQueueView({
                             onClick={(event) => {
                               event.stopPropagation();
                               setSelectedId(row.id);
+                              if (isLabVisit(row)) {
+                                onOpenLabResult?.(row);
+                                return;
+                              }
                               if (canAttend(row)) onAttendVisit?.(row.id, row);
                             }}
-                            disabled={!canAttend(row)}
+                            disabled={!isLabVisit(row) && !canAttend(row)}
                             className="inline-flex items-center gap-2 rounded-[7px] border-0 px-4 py-2 text-[12.5px] font-bold text-white transition disabled:cursor-not-allowed disabled:bg-[#f1f2f4] disabled:text-[#9aa3b2]"
-                            style={{ background: canAttend(row) ? "#0f6e54" : undefined }}
+                            style={{ background: isLabVisit(row) || canAttend(row) ? "#0f6e54" : undefined }}
                           >
-                            {row.status === "IN_CONSULTATION" ? "Continuar" : canAttend(row) ? "Atender" : "Aguardando"}
-                            <ArrowIcon />
+                            {isLabVisit(row)
+                              ? "Ver resultado"
+                              : row.status === "IN_CONSULTATION"
+                                ? "Continuar"
+                                : canAttend(row)
+                                  ? "Atender"
+                                  : "Aguardando"}
+                            {isLabVisit(row) ? <EyeIcon /> : <ArrowIcon />}
                           </button>
                         </td>
                       </tr>
@@ -373,6 +404,34 @@ export function DoctorWaitingQueueView({
               ))}
             </tbody>
           </table>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#eef0f3] bg-white px-7 py-4 text-[12.5px] text-[#6c7689]">
+            <span>
+              {rows.length === 0
+                ? "0 pacientes"
+                : `${(currentPage - 1) * pageSize + 1}-${Math.min(currentPage * pageSize, rows.length)} de ${rows.length} pacientes`}
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setPage((value) => Math.max(1, value - 1))}
+                disabled={currentPage <= 1}
+                className="rounded-lg border border-[#dde1e7] bg-white px-3 py-1.5 font-semibold text-[#3a4150] disabled:cursor-not-allowed disabled:opacity-45"
+              >
+                Anterior
+              </button>
+              <span className="rounded-lg bg-[#f4f6f8] px-3 py-1.5 font-semibold text-[#3a4150]">
+                {currentPage} / {totalPages}
+              </span>
+              <button
+                type="button"
+                onClick={() => setPage((value) => Math.min(totalPages, value + 1))}
+                disabled={currentPage >= totalPages}
+                className="rounded-lg border border-[#dde1e7] bg-white px-3 py-1.5 font-semibold text-[#3a4150] disabled:cursor-not-allowed disabled:opacity-45"
+              >
+                Proximo
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -421,8 +480,18 @@ export function DoctorWaitingQueueView({
             <button type="button" onClick={() => setSelectedId(null)} className="rounded-full border border-[#e7e9ed] bg-white px-5 py-2 text-xs font-semibold text-[#6b7280]">
               Fechar
             </button>
-            <button type="button" onClick={() => onOpenVisit?.(selectedRow.id, selectedRow)} className="rounded-full bg-[#0f6e54] px-5 py-2 text-xs font-bold text-white">
-              Abrir Consulta
+            <button
+              type="button"
+              onClick={() => {
+                if (isLabVisit(selectedRow)) {
+                  onOpenLabResult?.(selectedRow);
+                  return;
+                }
+                onOpenVisit?.(selectedRow.id, selectedRow);
+              }}
+              className="rounded-full bg-[#0f6e54] px-5 py-2 text-xs font-bold text-white"
+            >
+              {isLabVisit(selectedRow) ? "Ver resultado" : "Abrir Consulta"}
             </button>
           </div>
         </div>

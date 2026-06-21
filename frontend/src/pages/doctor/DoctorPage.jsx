@@ -59,6 +59,7 @@ export default function DoctorPage({ forcedView = "dashboard" }) {
   const me = getUser();
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const [logoutBusy, setLogoutBusy] = useState(false);
+  const [highlightedLabResultVisitId, setHighlightedLabResultVisitId] = useState(null);
   const resolvedView =
     Object.entries(DOCTOR_VIEW_ROUTES).find(([, path]) => path === location.pathname)?.[0] ||
     forcedView;
@@ -585,6 +586,22 @@ export default function DoctorPage({ forcedView = "dashboard" }) {
     [markAllNotificationsRead, notificationsUnread, openView]
   );
 
+  const openLabResultFromQueue = useCallback(
+    (visit) => {
+      const resultVisitId =
+        Number(visit?.lab_source_visit_id) ||
+        Number(visit?.parent_visit_id) ||
+        Number(visit?.id) ||
+        null;
+      setHighlightedLabResultVisitId({
+        visitId: resultVisitId,
+        patientId: Number(visit?.patient_id) || null,
+      });
+      openView("labOrdered");
+    },
+    [openView]
+  );
+
   const performLogout = async () => {
     await logoutDoctorSession({ intervalRef, heartbeatRef });
   };
@@ -689,6 +706,9 @@ export default function DoctorPage({ forcedView = "dashboard" }) {
         openLabTrackingFlow={openLabTrackingFlow}
         notifyPatientExamReady={notifyPatientExamReady}
         markPatientResultDelivered={markPatientResultDelivered}
+        highlightedLabResultVisitId={highlightedLabResultVisitId}
+        setHighlightedLabResultVisitId={setHighlightedLabResultVisitId}
+        openLabResultFromQueue={openLabResultFromQueue}
         filteredQueue={filteredQueue}
         activeAlertRows={activeAlertRows}
         formatPriorityPt={formatPriorityPt}

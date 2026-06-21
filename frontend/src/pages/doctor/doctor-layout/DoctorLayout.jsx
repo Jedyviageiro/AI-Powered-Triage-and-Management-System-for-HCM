@@ -62,6 +62,9 @@ export default function DoctorLayout(props) {
     openLabTrackingFlow,
     notifyPatientExamReady,
     markPatientResultDelivered,
+    highlightedLabResultVisitId,
+    setHighlightedLabResultVisitId,
+    openLabResultFromQueue,
     filteredQueue,
     activeAlertRows,
     formatPriorityPt,
@@ -438,6 +441,8 @@ export default function DoctorLayout(props) {
                   onOpenLabTracking={openLabTrackingFlow}
                   onNotifyPatient={notifyPatientExamReady}
                   onMarkDelivered={markPatientResultDelivered}
+                  highlightedVisitId={highlightedLabResultVisitId}
+                  onClearHighlight={() => setHighlightedLabResultVisitId(null)}
                 />
               </div>
             )}
@@ -498,6 +503,7 @@ export default function DoctorLayout(props) {
                     attendPatientFromQueue(visitId, preview);
                   }}
                   onAttendVisit={attendPatientFromQueue}
+                  onOpenLabResult={openLabResultFromQueue}
                   onCreateNewConsultation={createNewConsultationFromFollowup}
                   me={me}
                   selectedVisitId={selectedVisit?.id}
@@ -520,6 +526,7 @@ export default function DoctorLayout(props) {
                     attendPatientFromQueue(visitId, preview);
                   }}
                   onAttendVisit={attendPatientFromQueue}
+                  onOpenLabResult={openLabResultFromQueue}
                   onCreateNewConsultation={createNewConsultationFromFollowup}
                   me={me}
                   selectedVisitId={selectedVisit?.id}

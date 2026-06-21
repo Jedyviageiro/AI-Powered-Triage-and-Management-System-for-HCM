@@ -1,404 +1,181 @@
+import { useMemo } from "react";
+import DataTable from "../../../components/shared/ui/DataTable";
 import NursePage from "../NursePage";
 
+const getInitials = (name) =>
+  String(name || "?")
+    .split(" ")
+    .slice(0, 2)
+    .map((word) => word[0])
+    .join("")
+    .toUpperCase();
+
+const formatDate = (value) => {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return date.toLocaleDateString("pt-PT", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+};
+
+const hospitalPillStyle = (visit, hospitalStatus) => {
+  const status = String(visit.hospital_status || visit.disposition_plan || "").toUpperCase();
+  if (
+    status === "DISCHARGED" ||
+    status === "HOME" ||
+    hospitalStatus === "Alta" ||
+    hospitalStatus === "Alta com Retorno"
+  ) {
+    return "bg-[#eaf6f0] text-[#0f6e54]";
+  }
+  if (status === "IN_HOSPITAL") return "bg-[#eaf1fd] text-[#1d54c0]";
+  if (status === "REFER_SPECIALIST") return "bg-[#eef2ff] text-[#3730a3]";
+  if (status === "BED_REST") return "bg-[#fdf3e3] text-[#b45309]";
+  if (status === "TRANSFERRED") return "bg-[#f4eefb] text-[#6b21a8]";
+  if (status === "DECEASED") return "bg-[#fdeceb] text-[#b91c1c]";
+  return "bg-[#f1f2f4] text-[#6c7689]";
+};
+
 export function NursePatientsView({
-  pastVisits,
+  pastVisits = [],
   loadingPastVisits,
   loadPastVisits,
   inferHospitalStatus,
   inferVitalStatus,
   openPastVisitModal,
 }) {
+  const columns = useMemo(
+    () => [
+      {
+        key: "visit",
+        label: "Visita",
+        render: (visit) => (
+          <span className="font-semibold tabular-nums text-[#6c7689]">#{visit.id}</span>
+        ),
+      },
+      {
+        key: "patient",
+        label: "Paciente",
+        render: (visit) => (
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-[#eaf6f0] text-[12.5px] font-bold text-[#0f6e54]">
+              {getInitials(visit.full_name)}
+            </div>
+            <div className="min-w-0">
+              <div className="truncate font-bold text-[#161a23]">{visit.full_name || "-"}</div>
+              <div className="mt-0.5 text-[11.5px] text-[#9aa3b2]">{visit.clinical_code || "-"}</div>
+            </div>
+          </div>
+        ),
+      },
+      {
+        key: "chief_complaint",
+        label: "Queixa principal",
+        render: (visit) => (
+          <span className="block max-w-[220px] truncate" title={visit.chief_complaint || visit.triage_chief_complaint || "-"}>
+            {visit.chief_complaint || visit.triage_chief_complaint || "-"}
+          </span>
+        ),
+      },
+      {
+        key: "diagnosis",
+        label: "Diagnostico / resumo",
+        render: (visit) => (
+          <div className="max-w-[260px]">
+            <div className="truncate font-semibold text-[#161a23]" title={visit.likely_diagnosis || "-"}>
+              {visit.likely_diagnosis || "-"}
+            </div>
+            {(visit.clinical_reasoning || visit.prescription_text) && (
+              <div className="mt-0.5 truncate text-[11.5px] text-[#6c7689]">
+                {visit.clinical_reasoning || visit.prescription_text}
+              </div>
+            )}
+          </div>
+        ),
+      },
+      {
+        key: "doctor",
+        label: "Medico",
+        render: (visit) => (
+          <div>
+            <div className="truncate text-[#2b3140]">
+              {visit.doctor_full_name || visit.doctor_username || "-"}
+            </div>
+            {visit.doctor_specialization && (
+              <div className="mt-0.5 text-[11.5px] text-[#9aa3b2]">{visit.doctor_specialization}</div>
+            )}
+          </div>
+        ),
+      },
+      {
+        key: "destination",
+        label: "Destino",
+        render: (visit) => {
+          const status = inferHospitalStatus(visit);
+          return (
+            <span className={`inline-flex rounded-full px-2.5 py-1 text-[11.5px] font-semibold ${hospitalPillStyle(visit, status)}`}>
+              {status}
+            </span>
+          );
+        },
+      },
+      {
+        key: "vital",
+        label: "Vital",
+        render: (visit) => {
+          const vital = inferVitalStatus(visit);
+          const normalizedVital = String(vital || "")
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .toUpperCase();
+          const isObit = normalizedVital === "OBITO";
+          return (
+            <span className={`font-semibold ${isObit ? "text-[#b91c1c]" : "text-[#0f6e54]"}`}>
+              {vital}
+            </span>
+          );
+        },
+      },
+      {
+        key: "date",
+        label: "Data",
+        render: (visit) => formatDate(visit.consultation_ended_at || visit.arrival_time),
+      },
+    ],
+    [inferHospitalStatus, inferVitalStatus]
+  );
+
   return (
     <div className="dash-animate dash-animate-delay-1">
-      <div
-        style={{
-          display: "flex",
-          alignItems: "flex-end",
-          justifyContent: "space-between",
-          marginBottom: "28px",
-          gap: "16px",
-          flexWrap: "wrap",
-        }}
-      >
+      <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1
-            style={{
-              fontSize: "24px",
-              fontWeight: "600",
-              color: "#0f172a",
-              letterSpacing: "-0.4px",
-              margin: 0,
-            }}
-          >
+          <h1 className="m-0 text-[24px] font-semibold tracking-[-0.4px] text-[#0f172a]">
             Pacientes antigos
           </h1>
-          <p style={{ fontSize: "13px", color: "#6b7280", marginTop: "3px", marginBottom: 0 }}>
-            {pastVisits.length} {pastVisits.length === 1 ? "visita" : "visitas"} · histórico clínico
-            completo
+          <p className="mb-0 mt-1 text-[13px] text-[#6b7280]">
+            {pastVisits.length} {pastVisits.length === 1 ? "visita" : "visitas"} - historico clinico completo
           </p>
         </div>
         <button
+          type="button"
           onClick={loadPastVisits}
           disabled={loadingPastVisits}
-          style={{
-            minHeight: "40px",
-            fontSize: "13px",
-            padding: "0 16px",
-            borderRadius: "999px",
-            border: "1px solid #165034",
-            background: "#165034",
-            color: "white",
-            cursor: loadingPastVisits ? "not-allowed" : "pointer",
-            fontWeight: "700",
-            fontFamily: "inherit",
-            opacity: loadingPastVisits ? 0.6 : 1,
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            lineHeight: 1.1,
-            boxShadow: "none",
-          }}
+          className="inline-flex min-h-10 items-center justify-center rounded-[9px] border border-[#0f6e54] bg-[#0f6e54] px-4 text-[13px] font-bold text-white disabled:cursor-not-allowed disabled:opacity-60"
         >
           {loadingPastVisits ? "Atualizando..." : "Atualizar"}
         </button>
       </div>
 
-      {loadingPastVisits && pastVisits.length === 0 ? (
-        <div
-          style={{
-            background: "white",
-            border: "0.5px solid #e5e7eb",
-            borderRadius: "14px",
-            padding: "24px",
-            display: "grid",
-            gap: "12px",
-          }}
-        >
-          {Array.from({ length: 7 }).map((_, i) => (
-            <div
-              key={i}
-              className="skeleton-line"
-              style={{ height: "16px", width: i % 2 === 0 ? "100%" : "82%" }}
-            />
-          ))}
-        </div>
-      ) : pastVisits.length === 0 ? (
-        <div
-          style={{
-            background: "white",
-            border: "0.5px solid #e5e7eb",
-            borderRadius: "14px",
-            textAlign: "center",
-            padding: "72px 40px",
-          }}
-        >
-          <svg
-            width="36"
-            height="36"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="#d1d5db"
-            strokeWidth="1.2"
-            style={{ margin: "0 auto 12px", display: "block" }}
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-            />
-          </svg>
-          <p style={{ fontSize: "14px", color: "#9ca3af", fontWeight: "500", margin: 0 }}>
-            Nenhum histórico encontrado
-          </p>
-        </div>
-      ) : (
-        <div
-          style={{
-            background: "white",
-            border: "0.5px solid #e5e7eb",
-            borderRadius: "14px",
-            overflow: "hidden",
-          }}
-        >
-          <div style={{ overflowX: "auto" }}>
-            <table
-              style={{
-                width: "100%",
-                borderCollapse: "collapse",
-                tableLayout: "fixed",
-                minWidth: "1100px",
-              }}
-            >
-              <colgroup>
-                <col style={{ width: "60px" }} />
-                <col style={{ width: "160px" }} />
-                <col style={{ width: "180px" }} />
-                <col style={{ width: "220px" }} />
-                <col style={{ width: "150px" }} />
-                <col style={{ width: "110px" }} />
-                <col style={{ width: "80px" }} />
-                <col style={{ width: "120px" }} />
-              </colgroup>
-              <thead style={{ background: "#f9fafb" }}>
-                <tr>
-                  {[
-                    "Visita",
-                    "Paciente",
-                    "Queixa principal",
-                    "Diagnóstico / resumo",
-                    "Médico",
-                    "Destino",
-                    "Vital",
-                    "Data",
-                  ].map((h) => (
-                    <th
-                      key={h}
-                      style={{
-                        fontSize: "11px",
-                        fontWeight: "600",
-                        color: "#6b7280",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.07em",
-                        padding: "11px 16px",
-                        textAlign: "left",
-                        borderBottom: "0.5px solid #e5e7eb",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {pastVisits.map((v, idx) => {
-                  const hospitalStatus = inferHospitalStatus(v);
-                  const vitalStatus = inferVitalStatus(v);
-                  const isObit = vitalStatus === "Óbito";
-                  const initials = (v.full_name || "?")
-                    .split(" ")
-                    .slice(0, 2)
-                    .map((w) => w[0])
-                    .join("")
-                    .toUpperCase();
-                  const hospitalPillStyle = (() => {
-                    const s = String(v.hospital_status || v.disposition_plan || "").toUpperCase();
-                    if (
-                      s === "DISCHARGED" ||
-                      s === "HOME" ||
-                      hospitalStatus === "Alta" ||
-                      hospitalStatus === "Alta com Retorno"
-                    ) {
-                      return { background: "#e9f8ed", color: "#1a7a3c" };
-                    }
-                    if (s === "IN_HOSPITAL") {
-                      return { background: "#e6f1fb", color: "#0c447c" };
-                    }
-                    if (s === "REFER_SPECIALIST") return { background: "#eef2ff", color: "#3730a3" };
-                    if (s === "BED_REST") return { background: "#faeeda", color: "#633806" };
-                    if (s === "TRANSFERRED") return { background: "#f1effd", color: "#3c3489" };
-                    if (s === "DECEASED") return { background: "#fde8e8", color: "#791f1f" };
-                    return { background: "#f3f4f6", color: "#6b7280" };
-                  })();
-                  const rowBg = idx % 2 === 0 ? "white" : "#fafafa";
-
-                  return (
-                    <tr
-                      key={v.id}
-                      onClick={() => openPastVisitModal(v)}
-                      style={{
-                        borderBottom: "0.5px solid #f0f0f0",
-                        background: rowBg,
-                        cursor: "pointer",
-                        transition: "background 0.1s",
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = "#f3f4f6";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = rowBg;
-                      }}
-                    >
-                      <td style={{ padding: "13px 16px" }}>
-                        <span
-                          style={{
-                            fontSize: "12px",
-                            fontWeight: "600",
-                            color: "#6b7280",
-                            fontVariantNumeric: "tabular-nums",
-                          }}
-                        >
-                          #{v.id}
-                        </span>
-                      </td>
-
-                      <td style={{ padding: "13px 16px" }}>
-                        <div
-                          style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}
-                        >
-                          <div
-                            style={{
-                              width: "28px",
-                              height: "28px",
-                              borderRadius: "50%",
-                              background: "#f3f4f6",
-                              display: "inline-flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              fontSize: "11px",
-                              fontWeight: "600",
-                              color: "#374151",
-                              flexShrink: 0,
-                            }}
-                          >
-                            {initials}
-                          </div>
-                          <div style={{ minWidth: 0 }}>
-                            <div
-                              style={{
-                                fontSize: "13px",
-                                fontWeight: "600",
-                                color: "#0f172a",
-                                whiteSpace: "nowrap",
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                              }}
-                            >
-                              {v.full_name || "-"}
-                            </div>
-                            <div
-                              style={{
-                                fontSize: "11px",
-                                color: "#9ca3af",
-                                marginTop: "1px",
-                                fontVariantNumeric: "tabular-nums",
-                              }}
-                            >
-                              {v.clinical_code || "-"}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-
-                      <td style={{ padding: "13px 16px" }}>
-                        <div
-                          style={{
-                            fontSize: "12px",
-                            color: "#374151",
-                            whiteSpace: "nowrap",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                          }}
-                          title={v.chief_complaint || v.triage_chief_complaint || "-"}
-                        >
-                          {v.chief_complaint || v.triage_chief_complaint || (
-                            <span style={{ color: "#d1d5db" }}>-</span>
-                          )}
-                        </div>
-                      </td>
-
-                      <td style={{ padding: "13px 16px" }}>
-                        <div
-                          style={{
-                            fontSize: "12px",
-                            fontWeight: "600",
-                            color: "#0f172a",
-                            whiteSpace: "nowrap",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                          }}
-                          title={v.likely_diagnosis || "-"}
-                        >
-                          {v.likely_diagnosis || (
-                            <span style={{ color: "#d1d5db", fontWeight: "400" }}>-</span>
-                          )}
-                        </div>
-                        {(v.clinical_reasoning || v.prescription_text) && (
-                          <div
-                            style={{
-                              fontSize: "11px",
-                              color: "#6b7280",
-                              marginTop: "2px",
-                              whiteSpace: "nowrap",
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                            }}
-                          >
-                            {v.clinical_reasoning || v.prescription_text}
-                          </div>
-                        )}
-                      </td>
-
-                      <td style={{ padding: "13px 16px" }}>
-                        <div
-                          style={{
-                            fontSize: "12px",
-                            color: "#374151",
-                            whiteSpace: "nowrap",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                          }}
-                        >
-                          {v.doctor_full_name || v.doctor_username || (
-                            <span style={{ color: "#d1d5db" }}>-</span>
-                          )}
-                        </div>
-                        {v.doctor_specialization && (
-                          <div style={{ fontSize: "11px", color: "#9ca3af", marginTop: "2px" }}>
-                            {v.doctor_specialization}
-                          </div>
-                        )}
-                      </td>
-
-                      <td style={{ padding: "13px 16px" }}>
-                        <span
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            fontSize: "11px",
-                            fontWeight: "500",
-                            padding: "3px 9px",
-                            borderRadius: "20px",
-                            ...hospitalPillStyle,
-                          }}
-                        >
-                          {hospitalStatus}
-                        </span>
-                      </td>
-
-                      <td style={{ padding: "13px 16px" }}>
-                        <span
-                          style={{
-                            fontSize: "12px",
-                            fontWeight: "500",
-                            color: isObit ? "#b01c1c" : "#1a7a3c",
-                          }}
-                        >
-                          {isObit ? "Óbito" : "Vivo"}
-                        </span>
-                      </td>
-
-                      <td style={{ padding: "13px 16px" }}>
-                        <span style={{ fontSize: "12px", color: "#6b7280", whiteSpace: "nowrap" }}>
-                          {v.consultation_ended_at || v.arrival_time
-                            ? new Date(
-                                v.consultation_ended_at || v.arrival_time
-                              ).toLocaleDateString("pt-PT", {
-                                day: "2-digit",
-                                month: "short",
-                                year: "numeric",
-                              })
-                            : "-"}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+      <DataTable
+        columns={columns}
+        rows={pastVisits}
+        minWidth={1100}
+        emptyMessage={loadingPastVisits ? "A carregar historico..." : "Nenhum historico encontrado"}
+        onRowClick={openPastVisitModal}
+      />
     </div>
   );
 }
