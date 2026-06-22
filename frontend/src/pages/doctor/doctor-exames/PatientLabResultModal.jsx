@@ -23,15 +23,6 @@ const formatDateTime = (value) => {
   });
 };
 
-const getInitials = (name) =>
-  String(name || "Paciente")
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join("")
-    .toUpperCase() || "P";
-
 const examLabel = (row) => {
   const raw = String(row?.lab_exam_type || row?.lab_tests || "").trim();
   if (!raw) return "Teste Rapido de Malaria";
@@ -93,17 +84,12 @@ function PrintIcon() {
   );
 }
 
-function DownloadIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-      <path d="M7 10l5 5 5-5" />
-      <path d="M12 15V3" />
-    </svg>
-  );
-}
-
-export default function PatientLabResultModal({ modal, onClose }) {
+export default function PatientLabResultModal({
+  modal,
+  onClose,
+  onMarkDelivered,
+  markingDelivered = false,
+}) {
   if (!modal?.open) return null;
   const row = modal.row || {};
   const rows = resultRows(row);
@@ -144,7 +130,7 @@ export default function PatientLabResultModal({ modal, onClose }) {
         </header>
 
         <main className="overflow-y-auto px-6 py-5">
-          <div className="mb-4 grid grid-cols-1 gap-5 lg:grid-cols-[1fr_230px]">
+          <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="flex flex-wrap items-center gap-2">
                 <h3 className="m-0 text-[16px] font-bold text-[#161a23]">Exame: {examName}</h3>
@@ -157,20 +143,36 @@ export default function PatientLabResultModal({ modal, onClose }) {
                 <div>Liberado em: <b className="font-semibold text-[#2b3140]">{formatDateTime(row.lab_result_ready_at || row.updated_at)}</b></div>
               </div>
             </div>
-            <div className="flex justify-end">
+            <div className="flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                disabled={markingDelivered || Boolean(row.lab_patient_notified_at || row.patient_notified)}
+                onClick={async () => {
+                  if (!onMarkDelivered || !row?.id) return;
+                  const ok = await onMarkDelivered(row);
+                  if (ok !== false) onClose?.();
+                }}
+                className="inline-flex items-center gap-2 rounded-[9px] border border-[#0f6e54] bg-[#0f6e54] px-4 py-2 text-[13px] font-semibold text-white transition hover:bg-[#0c5a44] disabled:cursor-not-allowed disabled:border-[#cfe9dc] disabled:bg-[#eaf6f0] disabled:text-[#0f6e54]"
+              >
+                {markingDelivered
+                  ? "A confirmar..."
+                  : row.lab_patient_notified_at || row.patient_notified
+                    ? "Resultado entregue"
+                    : "Confirmar entrega"}
+              </button>
               <button type="button" className="inline-flex items-center gap-2 rounded-[9px] border border-[#dde1e7] bg-white px-4 py-2 text-[13px] font-semibold text-[#3a4150]">
                 <PrintIcon /> Imprimir
               </button>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_230px]">
-            <section>
-              <table className="w-full border-collapse">
+          <div>
+            <section className="overflow-x-auto rounded-xl border border-[#e7e9ed]">
+              <table className="w-full min-w-[760px] border-collapse">
                 <thead>
-                  <tr>
+                  <tr className="bg-[#fafbfc]">
                     {["Parametro", "Resultado", "Interpretacao"].map((header) => (
-                      <th key={header} className="border-b border-[#eef0f3] pb-3 pr-3 text-left text-[11.5px] font-bold text-[#39405a]">
+                      <th key={header} className="border-b border-[#e7e9ed] px-5 py-3.5 text-left text-[11.5px] font-bold uppercase tracking-[0.04em] text-[#39405a]">
                         {header}
                       </th>
                     ))}
@@ -178,17 +180,17 @@ export default function PatientLabResultModal({ modal, onClose }) {
                 </thead>
                 <tbody>
                   <tr>
-                    <td colSpan={3} className="pb-2 pt-3 text-[11px] font-bold uppercase tracking-[0.05em] text-[#0f6e54]">
+                    <td colSpan={3} className="border-b border-[#eef0f3] px-5 py-3 text-[11px] font-bold uppercase tracking-[0.05em] text-[#0f6e54]">
                       Resultado
                     </td>
                   </tr>
                   {rows.map((item, index) => {
                     const altered = /alterado|positivo|reagente/i.test(item.interpretation || item.result);
                     return (
-                      <tr key={`${item.parameter || "row"}-${index}`}>
-                        <td className="border-b border-[#eef0f3] py-3 pr-3 text-[13px] text-[#2b3140]">{item.parameter || item.name || "-"}</td>
-                        <td className="border-b border-[#eef0f3] py-3 pr-3 text-[13px] font-bold text-[#161a23]">{item.result || item.value || "-"}</td>
-                        <td className={`border-b border-[#eef0f3] py-3 pr-3 text-[13px] font-semibold ${altered ? "text-[#c0362c]" : "text-[#0f6e54]"}`}>
+                      <tr key={`${item.parameter || "row"}-${index}`} className="last:[&>td]:border-b-0">
+                        <td className="border-b border-[#eef0f3] px-5 py-3.5 text-[13px] text-[#2b3140]">{item.parameter || item.name || "-"}</td>
+                        <td className="border-b border-[#eef0f3] px-5 py-3.5 text-[13px] font-bold text-[#161a23]">{item.result || item.value || "-"}</td>
+                        <td className={`border-b border-[#eef0f3] px-5 py-3.5 text-[13px] font-semibold ${altered ? "text-[#c0362c]" : "text-[#0f6e54]"}`}>
                           {item.interpretation || (altered ? "Alterado" : "Normal")}
                         </td>
                       </tr>
@@ -196,46 +198,8 @@ export default function PatientLabResultModal({ modal, onClose }) {
                   })}
                 </tbody>
               </table>
-              <div className="mt-4 border-t border-[#eef0f3] pt-3 text-[12px] leading-6 text-[#9aa3b2]">
-                Metodo: Automatizado <span className="mx-1.5 text-[#c7cdd6]">•</span> Material: Sangue total
-                <br />
-                Responsavel tecnico: Laboratorio <span className="mx-1.5 text-[#c7cdd6]">•</span> CRM -
-              </div>
             </section>
 
-            <aside className="flex flex-col gap-4">
-              <div className="rounded-xl border border-[#e7e9ed] p-4">
-                <div className="mb-3 text-[13.5px] font-bold text-[#161a23]">Resumo / Comentario</div>
-                {modal.loading ? (
-                  <p className="text-[12px] leading-5 text-[#6c7689]">Analisando resultado...</p>
-                ) : modal.error ? (
-                  <p className="text-[12px] leading-5 text-[#c0362c]">{modal.error}</p>
-                ) : (
-                  <p className="text-[12px] leading-5 text-[#6c7689] whitespace-pre-wrap">
-                    {modal.explanation || row.lab_result_text || "Resultado dentro dos parametros de referencia. Sem alteracoes significativas."}
-                  </p>
-                )}
-              </div>
-
-              <div className="rounded-xl border border-[#e7e9ed] p-4">
-                <div className="mb-3 text-[13.5px] font-bold text-[#161a23]">Anexos do exame</div>
-                <div className="flex items-center gap-2 rounded-[10px] bg-[#f6f7f9] p-2.5">
-                  <div className="flex h-8 w-7 items-center justify-center rounded border border-[#f6d0cd] bg-white text-[10px] font-bold text-[#c0362c]">PDF</div>
-                  <div className="min-w-0 flex-1">
-                    <div className="break-words text-[11.8px] font-semibold leading-snug text-[#161a23]">{examName.replace(/\s+/g, "_")}_{row.clinical_code || "P0000"}.pdf</div>
-                    <div className="mt-0.5 whitespace-nowrap text-[11px] text-[#9aa3b2]">{formatDateTime(row.lab_result_ready_at)} • gerado</div>
-                  </div>
-                  <button type="button" className="text-[#6c7689]"><DownloadIcon /></button>
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-[#e7e9ed] p-4">
-                <div className="mb-3 text-[13.5px] font-bold text-[#161a23]">Acoes</div>
-                <button type="button" className="w-full rounded-[9px] border border-[#dde1e7] bg-white px-3 py-2.5 text-[13px] font-semibold text-[#3a4150]">
-                  Marcar outra consulta
-                </button>
-              </div>
-            </aside>
           </div>
         </main>
       </div>

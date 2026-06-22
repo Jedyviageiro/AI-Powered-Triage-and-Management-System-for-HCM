@@ -7,6 +7,7 @@ export default function DoctorModernSelect({
   children,
   disabled = false,
   className = "",
+  variant = "pill",
   openModernSelect,
   setOpenModernSelect,
 }) {
@@ -20,6 +21,10 @@ export default function DoctorModernSelect({
     .filter(Boolean);
   const selected = options.find((opt) => String(opt.value) === String(value));
   const isOpen = openModernSelect === selectId;
+  const buttonClass =
+    variant === "box"
+      ? "w-full rounded-[10px] border border-emerald-200 bg-white px-3.5 py-3 text-left text-sm font-semibold text-gray-900 transition-all hover:border-emerald-300 disabled:opacity-50"
+      : "w-full rounded-full border border-emerald-200 bg-white px-3 py-2.5 text-left text-sm font-medium text-gray-800 transition-all hover:border-emerald-300 disabled:opacity-50";
 
   useEffect(() => {
     if (!isOpen) return;
@@ -37,7 +42,7 @@ export default function DoctorModernSelect({
         type="button"
         disabled={disabled}
         onClick={() => setOpenModernSelect((prev) => (prev === selectId ? null : selectId))}
-        className="w-full rounded-full border border-emerald-200 bg-white px-3 py-2.5 text-left text-sm font-medium text-gray-800 transition-all hover:border-emerald-300 disabled:opacity-50"
+        className={buttonClass}
       >
         <span className="block truncate pr-7">{selected?.label || "Selecionar"}</span>
         <svg

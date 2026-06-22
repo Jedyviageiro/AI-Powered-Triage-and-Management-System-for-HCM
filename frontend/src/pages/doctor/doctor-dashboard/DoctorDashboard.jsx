@@ -109,6 +109,10 @@ const statCards = ({
   doctorLabWorklistRows,
   filteredQueue,
 }) => {
+  const malariaResultCount = doctorLabWorklistRows.filter((visit) => {
+    const exam = String(visit?.lab_exam_type || visit?.lab_tests || "").toUpperCase();
+    return !exam || exam.includes("MALARIA") || exam === "MALARIA_RDT";
+  }).length;
   return [
     {
       label: "Urgentes",
@@ -137,7 +141,7 @@ const statCards = ({
     {
       label: "Resultados",
       detail: "para revisar",
-      value: doctorLabWorklistRows.length,
+      value: malariaResultCount,
       icon: ClipboardList,
       color: "#3b82f6",
       bg: "#eff6ff",
@@ -162,6 +166,10 @@ export function DoctorDashboardView({
 }) {
   const queueRows = (dashboardNextPatients.length ? dashboardNextPatients : filteredQueue).slice(0, 5);
   const agendaRows = normalizeAgendaRows(agenda).slice(0, 5);
+  const isMalariaExam = (visit) => {
+    const exam = String(visit?.lab_exam_type || visit?.lab_tests || "").toUpperCase();
+    return !exam || exam.includes("MALARIA") || exam === "MALARIA_RDT";
+  };
   const recentRows = [
     ...queueRows.slice(0, 2).map((visit) => ({
       id: `queue-${visit.id}`,
@@ -171,10 +179,10 @@ export function DoctorDashboardView({
       icon: UserPlus,
       color: "#ef4444",
     })),
-    ...doctorLabWorklistRows.slice(0, 2).map((visit) => ({
+    ...doctorLabWorklistRows.filter(isMalariaExam).slice(0, 2).map((visit) => ({
       id: `lab-${visit.id}`,
       time: formatTime(visit?.updated_at || visit?.lab_ready_at || visit?.created_at || visit?.date),
-      label: `${visit?.lab_exam_type || "Exame"} ${visit?.is_ready ? "pronto" : "em acompanhamento"}`,
+      label: `Teste Rapido de Malaria ${visit?.is_ready ? "pronto" : "em acompanhamento"}`,
       area: "Exames",
       icon: ClipboardList,
       color: "#3b82f6",

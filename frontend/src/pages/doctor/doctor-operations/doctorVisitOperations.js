@@ -36,14 +36,9 @@ export const startDoctorConsultationAction = async (visitId) => {
   return api.startConsultation(visitId);
 };
 
-export const prepareDoctorQueueVisit = async ({ visitId, row, meId, loadQueue }) => {
-  if (row?.doctor_id && Number(row?.doctor_id) !== Number(meId)) {
-    throw new Error("Este paciente ja foi atribuido a outro medico.");
-  }
-  if (row?.status === "WAITING_DOCTOR") {
-    if (row?.doctor_id && Number(row?.doctor_id) !== Number(meId)) {
-      throw new Error("Este paciente já foi atribuído a outro médico.");
-    }
+export const prepareDoctorQueueVisit = async ({ visitId, row, loadQueue }) => {
+  const status = String(row?.status || "").toUpperCase();
+  if (status === "WAITING_DOCTOR" || status === "IN_CONSULTATION") {
     await api.startConsultation(visitId);
     await loadQueue();
   }

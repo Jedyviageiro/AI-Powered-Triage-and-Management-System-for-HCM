@@ -16,10 +16,7 @@ const LAB_MACHINE_PROFILES = {
 
 export const getLabMachineKey = (examType) => {
   const exam = String(examType || "").toUpperCase();
-  if (exam === "MALARIA_RDT" || exam === "GLICEMIA_CAPILAR" || exam === "HIV_RAPIDO") return "POC";
-  if (exam === "LAB_CENTRAL") return "CHEMISTRY";
-  if (exam === "RAIO_X") return "IMAGING";
-  if (exam === "CULTURA_HEMOCULTURA") return "MICROBIOLOGY";
+  if (exam === "MALARIA_RDT") return "POC";
   return "MANUAL";
 };
 
@@ -34,16 +31,9 @@ export const countQueuedExamsOnSameMachine = (examType, rows = []) => {
 export const getExamTurnaroundRange = (examType) => {
   const exam = String(examType || "").toUpperCase();
   const rangeByExam = {
-    MALARIA_RDT: [5, 30],
-    GLICEMIA_CAPILAR: [5, 30],
-    HIV_RAPIDO: [10, 45],
-    LAB_CENTRAL: [90, 300],
-    RAIO_X: [45, 180],
-    PARASITOLOGIA_FEZES: [24 * 60, 48 * 60],
-    CULTURA_HEMOCULTURA: [48 * 60, 72 * 60],
-    OUTRO: [120, 360],
+    MALARIA_RDT: [15, 30],
   };
-  return rangeByExam[exam] || [90, 360];
+  return rangeByExam[exam] || [15, 30];
 };
 
 const isLabBusinessDay = (dateLike) => {

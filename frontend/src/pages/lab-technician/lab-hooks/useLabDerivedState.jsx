@@ -217,7 +217,7 @@ export function useLabDerivedState({
     [allKnownVisits, modalVisitId]
   );
 
-  const modalExamKey = String(modalVisit?.lab_exam_type || "").toUpperCase();
+  const modalExamKey = "MALARIA_RDT";
   const modalProtocol = useMemo(
     () => EXAM_PROTOCOLS[modalExamKey] || EXAM_PROTOCOLS.OUTRO,
     [modalExamKey]

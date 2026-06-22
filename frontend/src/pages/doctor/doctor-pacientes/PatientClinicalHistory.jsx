@@ -1,7 +1,81 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import DoctorPage from "../DoctorPage";
-import PatientHistoryModal from "./PatientHistoryModal";
+import { PastVisitHistoryModal } from "../../nurse/nurse-patients/PastVisitHistoryModal";
+
+const calculateAge = (birthDate) => {
+  if (!birthDate) return "-";
+  const birth = new Date(birthDate);
+  if (Number.isNaN(birth.getTime())) return "-";
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const beforeBirthday =
+    today.getMonth() < birth.getMonth() ||
+    (today.getMonth() === birth.getMonth() && today.getDate() < birth.getDate());
+  if (beforeBirthday) age -= 1;
+  return age >= 0 ? age + " anos" : "-";
+};
+
+function DoctorSharedHistoryModal({ historyModal, onClose }) {
+  const [page, setPage] = useState("history");
+  const patient = historyModal?.patient || {};
+  const timeline = (Array.isArray(historyModal?.visits) ? historyModal.visits : [])
+    .slice()
+    .sort(
+      (a, b) =>
+        new Date(b?.consultation_ended_at || b?.arrival_time || 0) -
+        new Date(a?.consultation_ended_at || a?.arrival_time || 0)
+    );
+  const visit = timeline[0] || {
+    ...patient,
+    id: patient?.latest_visit_id || patient?.id,
+  };
+  const profile = { ...visit, ...patient };
+  const modal = {
+    open: !!historyModal?.open,
+    visit,
+    patientProfile: profile,
+    detailLoading: !!historyModal?.loading,
+    patientLoading: !!historyModal?.loading,
+    patientSaving: false,
+    editingPatient: false,
+    patientForm: {},
+    page,
+  };
+  const updateModal = (updater) => {
+    const next = typeof updater === "function" ? updater(modal) : updater;
+    if (next?.page) setPage(next.page);
+  };
+
+  return (
+    <div className="doctor-shared-history-modal">
+      <style>{`
+        .doctor-shared-history-modal .popup-card .btn-secondary,
+        .doctor-shared-history-modal .popup-card .btn-primary {
+          display: none !important;
+        }
+      `}</style>
+      <PastVisitHistoryModal
+        modal={modal}
+        profileName={profile.full_name || visit.full_name || "Paciente"}
+        profileCode={profile.clinical_code || "-"}
+        profileDob={profile.birth_date || ""}
+        profileAge={calculateAge(profile.birth_date)}
+        profileGuardian={profile.guardian_name || "-"}
+        profilePhone={profile.guardian_phone || profile.phone || "-"}
+        profileAddress={profile.address || "-"}
+        profilePhoto={profile.profile_photo_url || ""}
+        timeline={timeline}
+        doctors={[]}
+        pdfLoadingId={null}
+        setPastVisitModal={updateModal}
+        onStartEdit={() => {}}
+        onSave={() => {}}
+        onClose={onClose}
+      />
+    </div>
+  );
+}
 
 const G = "#165034";
 const BORDER = "#E7ECE8";
@@ -407,7 +481,10 @@ export function PatientClinicalHistoryView({
 
       {historyModal?.open && historyModal?.patient && typeof document !== "undefined"
         ? createPortal(
-            <PatientHistoryModal modal={historyModal} onClose={onCloseHistoryModal} />,
+            <DoctorSharedHistoryModal
+              historyModal={historyModal}
+              onClose={onCloseHistoryModal}
+            />,
             document.body
           )
         : null}

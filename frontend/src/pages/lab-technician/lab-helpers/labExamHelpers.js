@@ -282,8 +282,7 @@ export const EXAM_PROTOCOLS = {
   },
 };
 
-export const examLabel = (value, fallback = "") =>
-  EXAM_LABELS[String(value || "").toUpperCase()] || fallback || value || "-";
+export const examLabel = () => EXAM_LABELS.MALARIA_RDT;
 
 export const buildStructuredMachineResult = (fields, values) =>
   (Array.isArray(fields) ? fields : []).reduce((acc, field) => {
@@ -299,7 +298,7 @@ export const buildStructuredMachineResult = (fields, values) =>
   }, {});
 
 export const getProtocolPresentation = (examKey, protocol) => {
-  const key = String(examKey || "").toUpperCase();
+  const key = "MALARIA_RDT";
   const presets = {
     MALARIA_RDT: {
       tone: "#92400e",

@@ -1,23 +1,19 @@
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import ModalCloseButton from "../../../components/shared/ModalCloseButton";
 
 const EXAM_LABELS = {
   MALARIA_RDT: "Teste Rapido de Malaria",
-  GLICEMIA_CAPILAR: "Glicemia capilar",
-  HIV_RAPIDO: "Teste Rapido de HIV",
-  LAB_CENTRAL: "Hemograma / ionograma / urina",
-  RAIO_X: "Raio-X",
-  PARASITOLOGIA_FEZES: "Parasitologia de fezes",
-  CULTURA_HEMOCULTURA: "Cultura / hemocultura",
-  OUTRO: "Outro exame",
 };
 
 const getExamLabel = (row) =>
   EXAM_LABELS[String(row?.lab_exam_type || "").toUpperCase()] ||
-  row?.lab_tests ||
-  row?.lab_exam_type ||
-  "Exame laboratorial";
+  "Teste Rapido de Malaria";
+
+const isMalariaExam = (row) => {
+  const exam = String(row?.lab_exam_type || row?.lab_tests || "").toUpperCase();
+  return !exam || exam.includes("MALARIA") || exam === "MALARIA_RDT";
+};
 
 const parseJson = (value) => {
   if (!value) return null;
@@ -170,17 +166,6 @@ const normalizeResultRows = (row) => {
   ];
 };
 
-const getResultComment = (row) => {
-  const json = parseJson(row?.lab_result_json);
-  return (
-    json?.technical_notes ||
-    json?.summary ||
-    row?.clinical_reasoning ||
-    row?.lab_result_text ||
-    "Resultado disponivel para revisao clinica."
-  );
-};
-
 const isDeliveredResult = (row) => Boolean(row?.patient_notified || row?.lab_patient_notified_at);
 
 const isReadyResult = (row) =>
@@ -199,14 +184,8 @@ const getInitials = (name) =>
 
 const getExamCategory = (row) => {
   const type = String(row?.lab_exam_type || row?.lab_tests || "").toUpperCase();
-  if (type.includes("RAIO") || type.includes("X") || type.includes("ECO")) return "Imagiologia";
-  return "Analises clinicas";
-};
-
-const getAttachmentName = (row) => {
-  const exam = getExamLabel(row).replace(/[^\w]+/g, "_").replace(/^_+|_+$/g, "") || "Resultado";
-  const code = getPatientCode(row);
-  return `${exam}_${code}.pdf`;
+  if (type && !type.includes("MALARIA")) return "Analises clinicas";
+  return "Teste rapido";
 };
 
 function CheckIcon({ className = "h-3 w-3" }) {
@@ -241,27 +220,6 @@ function UserIcon({ className = "h-7 w-7" }) {
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
       <circle cx="12" cy="7" r="4" />
-    </svg>
-  );
-}
-
-function DownloadIcon({ className = "h-4 w-4" }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-      <path d="M7 10l5 5 5-5" />
-      <path d="M12 15V3" />
-    </svg>
-  );
-}
-
-function CalendarIcon({ className = "h-4 w-4" }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <rect x="3" y="4" width="18" height="18" rx="2" />
-      <path d="M16 2v4" />
-      <path d="M8 2v4" />
-      <path d="M3 10h18" />
     </svg>
   );
 }
@@ -303,16 +261,6 @@ function ReadyResultsPage({
   const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
   const currentPage = Math.min(page, totalPages);
   const paginatedRows = rows.slice((currentPage - 1) * pageSize, currentPage * pageSize);
-
-  useEffect(() => {
-    setPage(1);
-  }, [rows.length]);
-
-  useEffect(() => {
-    if (!highlightedVisitId) return;
-    const index = rows.findIndex((row) => matchesVisit(row, highlightedVisitId));
-    if (index >= 0) setPage(Math.floor(index / pageSize) + 1);
-  }, [highlightedVisitId, pageSize, rows]);
 
   return (
     <section className="text-[14px] text-[#2b3140]">
@@ -454,37 +402,36 @@ function ReadyResultsPage({
 
 function ResultTable({ row }) {
   const rows = normalizeResultRows(row);
-  let currentSection = "";
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-[480px] border-collapse">
+    <div className="overflow-x-auto rounded-xl border border-[#e7e9ed]">
+      <table className="w-full min-w-[760px] border-collapse">
         <thead>
-          <tr>
-            <th className="border-b border-[#eef0f3] pb-3 pr-2.5 text-left text-[11.5px] font-bold text-[#39405a]">Parametro</th>
-            <th className="border-b border-[#eef0f3] pb-3 pr-2.5 text-left text-[11.5px] font-bold text-[#39405a]">Resultado</th>
-            <th className="border-b border-[#eef0f3] pb-3 pr-2.5 text-left text-[11.5px] font-bold text-[#39405a]">Interpretacao</th>
+          <tr className="bg-[#fafbfc]">
+            <th className="border-b border-[#e7e9ed] px-5 py-3.5 text-left text-[11.5px] font-bold uppercase tracking-[0.04em] text-[#39405a]">Parametro</th>
+            <th className="border-b border-[#e7e9ed] px-5 py-3.5 text-left text-[11.5px] font-bold uppercase tracking-[0.04em] text-[#39405a]">Resultado</th>
+            <th className="border-b border-[#e7e9ed] px-5 py-3.5 text-left text-[11.5px] font-bold uppercase tracking-[0.04em] text-[#39405a]">Interpretacao</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((item, index) => {
             const section = item.section || "RESULTADO";
-            const showSection = section !== currentSection;
-            currentSection = section;
+            const previousSection = rows[index - 1]?.section || "RESULTADO";
+            const showSection = index === 0 || section !== previousSection;
 
             return (
               <Fragment key={`${item.parameter}-${index}`}>
                 {showSection && (
                   <tr>
-                    <td colSpan={3} className="border-b-0 pb-2 pt-4 text-[11px] font-bold uppercase tracking-[0.05em] text-[#0f6e54] first:pt-0">
+                    <td colSpan={3} className="border-b border-[#eef0f3] px-5 py-3 text-[11px] font-bold uppercase tracking-[0.05em] text-[#0f6e54]">
                       {section}
                     </td>
                   </tr>
                 )}
                 <tr>
-                  <td className="whitespace-nowrap border-b border-[#eef0f3] py-2.5 pr-2.5 text-[13px] text-[#3a4150]">{item.parameter}</td>
-                  <td className="whitespace-nowrap border-b border-[#eef0f3] py-2.5 pr-2.5 text-[13px] font-bold text-[#161a23]">{item.result}</td>
-                  <td className="whitespace-nowrap border-b border-[#eef0f3] py-2.5 pr-2.5 text-[13px] font-semibold text-[#0f6e54]">{item.interpretation || "-"}</td>
+                  <td className="whitespace-nowrap border-b border-[#eef0f3] px-5 py-3.5 text-[13px] text-[#3a4150]">{item.parameter}</td>
+                  <td className="whitespace-nowrap border-b border-[#eef0f3] px-5 py-3.5 text-[13px] font-bold text-[#161a23]">{item.result}</td>
+                  <td className="whitespace-nowrap border-b border-[#eef0f3] px-5 py-3.5 text-[13px] font-semibold text-[#0f6e54]">{item.interpretation || "-"}</td>
                 </tr>
               </Fragment>
             );
@@ -495,7 +442,7 @@ function ResultTable({ row }) {
   );
 }
 
-function ResultDetailCard({ row, onClose, onOpenLabTracking }) {
+function ResultDetailCard({ row, onClose, onMarkDelivered, markingDelivered = false }) {
   const collectedAt = row?.lab_sample_collected_at || row?.arrival_time;
   const releasedAt = row?.lab_result_ready_at || row?.updated_at || row?.arrival_time;
   const weight = getPatientWeight(row);
@@ -548,7 +495,7 @@ function ResultDetailCard({ row, onClose, onOpenLabTracking }) {
       </header>
 
       <div className="min-h-0 flex-1 overflow-y-auto border-t border-[#eef0f3] px-4 py-3.5">
-        <div className="mb-3.5 grid grid-cols-1 gap-4 md:grid-cols-[1fr_210px]">
+        <div className="mb-3.5 flex flex-wrap items-start justify-between gap-4">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="flex flex-wrap items-center gap-2.5">
               <h3 className="text-[15px] font-bold text-[#161a23]">Exame: {getExamLabel(row)}</h3>
@@ -567,7 +514,19 @@ function ResultDetailCard({ row, onClose, onOpenLabTracking }) {
             </div>
           </div>
 
-          <div className="flex items-start justify-end md:justify-end">
+          <div className="flex flex-wrap items-start justify-end gap-2">
+            <button
+              type="button"
+              disabled={markingDelivered || isDeliveredResult(row)}
+              onClick={async () => {
+                if (!onMarkDelivered || !row?.id) return;
+                const ok = await onMarkDelivered(row);
+                if (ok !== false) onClose?.();
+              }}
+              className="inline-flex items-center gap-2 rounded-[9px] border border-[#0f6e54] bg-[#0f6e54] px-4 py-2.5 text-[13px] font-semibold text-white hover:bg-[#0c5a44] disabled:cursor-not-allowed disabled:border-[#cfe9dc] disabled:bg-[#eaf6f0] disabled:text-[#0f6e54]"
+            >
+              {markingDelivered ? "A confirmar..." : isDeliveredResult(row) ? "Resultado entregue" : "Confirmar entrega"}
+            </button>
             <button
               type="button"
               onClick={() => window.print()}
@@ -579,58 +538,17 @@ function ResultDetailCard({ row, onClose, onOpenLabTracking }) {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-[1fr_210px]">
+        <div>
           <main>
             <ResultTable row={row} />
-            <div className="mt-4 border-t border-[#eef0f3] pt-3.5 text-xs leading-6 text-[#9aa3b2]">
-              <div>
-                Metodo: Automatizado <span className="mx-1.5 text-[#c7cdd6]">-</span> Material: {row?.lab_sample_type || "Conforme protocolo"}
-              </div>
-              <div>
-                Responsavel tecnico: Laboratorio <span className="mx-1.5 text-[#c7cdd6]">-</span> CRM -
-              </div>
-            </div>
           </main>
-
-          <aside className="flex flex-col gap-2.5">
-            <section className="rounded-xl border border-[#e7e9ed] px-3 py-3">
-              <h4 className="mb-2.5 text-[13.5px] font-bold text-[#161a23]">Resumo / Comentario</h4>
-              <p className="text-[12px] leading-5 text-[#6c7689]">{getResultComment(row)}</p>
-            </section>
-
-            <section className="rounded-xl border border-[#e7e9ed] px-3 py-3">
-              <h4 className="mb-2.5 text-[13.5px] font-bold text-[#161a23]">Anexos do exame</h4>
-              <div className="flex items-center gap-2 rounded-[10px] bg-[#f6f7f9] px-2.5 py-2.5">
-                <PdfIcon />
-                <div className="min-w-0 flex-1">
-                  <div className="break-words text-[11.8px] font-semibold leading-4 text-[#161a23]">{getAttachmentName(row)}</div>
-                  <div className="mt-1 whitespace-nowrap text-[11px] text-[#9aa3b2]">{formatDateTime(releasedAt)} - gerado</div>
-                </div>
-                <button type="button" className="flex-none text-[#6c7689]" aria-label="Transferir anexo">
-                  <DownloadIcon />
-                </button>
-              </div>
-            </section>
-
-            <section className="rounded-xl border border-[#e7e9ed] px-3 py-3">
-              <h4 className="mb-2.5 text-[13.5px] font-bold text-[#161a23]">Acoes</h4>
-              <button
-                type="button"
-                onClick={() => onOpenLabTracking?.(row)}
-                className="flex w-full items-center justify-center gap-2 rounded-[9px] border border-[#dde1e7] bg-white p-3 text-[13px] font-semibold text-[#3a4150] hover:bg-[#fafbfc]"
-              >
-                <CalendarIcon />
-                Marcar outra consulta
-              </button>
-            </section>
-          </aside>
         </div>
       </div>
     </div>
   );
 }
 
-function ResultModal({ row, onClose, onOpenLabTracking }) {
+function ResultModal({ row, onClose, onMarkDelivered, markingDelivered = false }) {
   return (
     <div
       className="fixed inset-0 z-[9998] grid place-items-center overflow-hidden bg-[#111827]/55 p-5 backdrop-blur-sm"
@@ -644,7 +562,12 @@ function ResultModal({ row, onClose, onOpenLabTracking }) {
         style={{ animation: "infoModalPopIn 180ms cubic-bezier(0.16,1,0.3,1)" }}
         onClick={(event) => event.stopPropagation()}
       >
-        <ResultDetailCard row={row} onClose={onClose} onOpenLabTracking={onOpenLabTracking} />
+        <ResultDetailCard
+          row={row}
+          onClose={onClose}
+          onMarkDelivered={onMarkDelivered}
+          markingDelivered={markingDelivered}
+        />
       </div>
     </div>
   );
@@ -654,12 +577,13 @@ export default function LabWorklistView({
   readyRows = [],
   loading = false,
   onRefresh,
-  onOpenLabTracking,
+  onMarkDelivered,
+  markingDeliveredVisitId = null,
   highlightedVisitId,
   onClearHighlight,
 }) {
   const readyForReviewRows = useMemo(
-    () => readyRows.filter((row) => isReadyResult(row) && !isDeliveredResult(row)),
+    () => readyRows.filter((row) => isMalariaExam(row) && isReadyResult(row) && !isDeliveredResult(row)),
     [readyRows]
   );
   const [selectedVisitId, setSelectedVisitId] = useState(null);
@@ -688,7 +612,11 @@ export default function LabWorklistView({
             <ResultModal
               row={activeReadyRow}
               onClose={() => setResultModalOpen(false)}
-              onOpenLabTracking={onOpenLabTracking}
+              onMarkDelivered={onMarkDelivered}
+              markingDelivered={
+                Boolean(activeReadyRow?.id) &&
+                Number(markingDeliveredVisitId) === Number(activeReadyRow.id)
+              }
             />,
             document.body
           )

@@ -323,21 +323,24 @@ export const buildReevaluationContext = (meta) => {
 };
 
 export const parseTimeValue = (value) => {
-  const match = String(value || "")
+  const raw = String(value || "").trim();
+  const match = raw
     .trim()
-    .match(/^(\d{2}):(\d{2})$/);
+    .match(/\b(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)?\b/i);
   if (!match) return null;
-  const hours = Number(match[1]);
+  let hours = Number(match[1]);
   const minutes = Number(match[2]);
+  const meridiem = String(match[3] || "").toUpperCase();
+  if (meridiem === "PM" && hours < 12) hours += 12;
+  if (meridiem === "AM" && hours === 12) hours = 0;
   if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
   return { hours, minutes, totalMinutes: hours * 60 + minutes };
 };
 
 export const extractFollowUpTimeValue = (value) => {
   const direct = parseTimeValue(value);
-  if (direct) return value;
-  const embedded = String(value || "").match(/\b(\d{2}:\d{2})\b/);
-  return embedded ? embedded[1] : "";
+  if (!direct) return "";
+  return `${String(direct.hours).padStart(2, "0")}:${String(direct.minutes).padStart(2, "0")}`;
 };
 
 export const formatTimeValueLabel = (value) => {
@@ -417,7 +420,6 @@ export const buildFollowUpInstructionsText = ({
   ruleKey,
   date,
   time,
-  shiftWindow,
   currentInstructions = "",
 }) => {
   const explicit = String(currentInstructions || "").trim();
@@ -430,16 +432,15 @@ export const buildFollowUpInstructionsText = ({
       })
     : "data a confirmar";
   const hourLabel = formatTimeValueLabel(time);
-  const shiftLabel = parseShiftWindow(shiftWindow)?.label || null;
 
   if (ruleKey === "TREATMENT_MONITORING") {
-    return `Comparecer em ${dateLabel} às ${hourLabel} para confirmar resposta ao tratamento, tolerância e necessidade de ajuste terapêutico${shiftLabel ? ` dentro do turno ${shiftLabel}` : ""}.`;
+    return `Comparecer em ${dateLabel} às ${hourLabel} para confirmar resposta ao tratamento, tolerância e necessidade de ajuste terapêutico.`;
   }
   if (ruleKey === "INCOMPLETE_RECOVERY") {
-    return `Comparecer em ${dateLabel} às ${hourLabel} para reavaliação clínica, confirmação de melhoria e despiste precoce de complicações${shiftLabel ? ` dentro do turno ${shiftLabel}` : ""}.`;
+    return `Comparecer em ${dateLabel} às ${hourLabel} para reavaliação clínica, confirmação de melhoria e despiste precoce de complicações.`;
   }
   if (ruleKey === "CHRONIC_RECURRING") {
-    return `Comparecer em ${dateLabel} às ${hourLabel} para seguimento periódico da condição crónica/recorrente, controlo de sintomas e revisão do plano terapêutico${shiftLabel ? ` dentro do turno ${shiftLabel}` : ""}.`;
+    return `Comparecer em ${dateLabel} às ${hourLabel} para seguimento periódico da condição crónica/recorrente, controlo de sintomas e revisão do plano terapêutico.`;
   }
   return explicit;
 };

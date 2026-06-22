@@ -159,30 +159,26 @@ export function useDoctorDashboardState({
     return rows.filter((visit) => {
       const hasResult = !!String(visit?.lab_result_text || "").trim();
       const statusReady = isLabReadyStatus(visit?.lab_result_status);
-      const isMine = Number(visit?.doctor_id) === Number(meId);
-      return !!visit?.lab_requested && !hasResult && !statusReady && isMine;
+      return !!visit?.lab_requested && !hasResult && !statusReady;
     });
-  }, [isLabReadyStatus, labPendingRequests, meId]);
+  }, [isLabReadyStatus, labPendingRequests]);
 
   const doctorLabReadyResults = useMemo(() => {
     const rows = Array.isArray(labReadyResults) ? labReadyResults : [];
     return rows.filter((visit) => {
-      const isMine = Number(visit?.doctor_id) === Number(meId);
       const hasResult = !!String(visit?.lab_result_text || "").trim();
       const statusReady = isLabReadyStatus(visit?.lab_result_status);
-      return isMine && (hasResult || statusReady);
+      return hasResult || statusReady;
     });
-  }, [isLabReadyStatus, labReadyResults, meId]);
+  }, [isLabReadyStatus, labReadyResults]);
 
   const doctorLabFollowupQueueRows = useMemo(
     () =>
       (Array.isArray(queue) ? queue : []).filter((visit) => {
         if (!isLabWorkflowVisit(visit)) return false;
-        const motive = String(visit?.visit_motive || "").toUpperCase();
-        const unassignedLabResult = motive === "LAB_RESULTS" && !visit?.doctor_id;
-        return unassignedLabResult || Number(visit?.doctor_id) === Number(meId);
+        return true;
       }),
-    [isLabWorkflowVisit, meId, queue]
+    [isLabWorkflowVisit, queue]
   );
 
   const doctorLabWorklistRows = useMemo(

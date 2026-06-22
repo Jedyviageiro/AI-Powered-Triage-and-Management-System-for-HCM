@@ -589,9 +589,9 @@ export default function DoctorPage({ forcedView = "dashboard" }) {
   const openLabResultFromQueue = useCallback(
     (visit) => {
       const resultVisitId =
+        Number(visit?.id) ||
         Number(visit?.lab_source_visit_id) ||
         Number(visit?.parent_visit_id) ||
-        Number(visit?.id) ||
         null;
       setHighlightedLabResultVisitId({
         visitId: resultVisitId,

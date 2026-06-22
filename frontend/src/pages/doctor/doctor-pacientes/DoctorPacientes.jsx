@@ -6,7 +6,7 @@ export function DoctorPacientesView(props) {
     <DoctorWaitingQueueView
       {...props}
       title="Meus Pacientes"
-      subtitle="Pacientes atribuidos a si neste turno"
+      subtitle="Pacientes atribuidos a si"
     />
   );
 }

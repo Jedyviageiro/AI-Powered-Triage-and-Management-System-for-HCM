@@ -35,8 +35,6 @@ export default function DoctorConsultationPlanStep(props) {
     setReturnVisitDates,
     setFollowUpRuleKey,
     extractFollowUpTimeValue,
-    parseShiftWindow,
-    followUpShiftWindow,
     setSelectedRoomCode,
     VITAL_STATUS_OPTIONS,
     isClinicalReturnVisit,
@@ -46,20 +44,40 @@ export default function DoctorConsultationPlanStep(props) {
     selectedReturnDate,
     selectedFollowUpTime,
     _updateReturnVisitDateByIndex,
-    followUpTimeWithinShift,
     FOLLOW_UP_RULE_OPTIONS,
-    followUpRuleMeta,
   } = props;
 
   const SelectComponent = ModernSelect;
   const isLabFocusedVisit =
     consultationMode === "LAB_RESULT_REVIEW" || consultationMode === "LAB_SAMPLE_COLLECTION";
+  const hideLegacyBlocks = false;
   const defaultReturnDate = (() => {
     const date = new Date();
     date.setDate(date.getDate() + 1);
     return date.toISOString().slice(0, 10);
   })();
-
+  const labOrderLocked = !!labOrderConfirmed;
+  const nextStepLabelStyle = {
+    display: "block",
+    marginBottom: 9,
+    color: "#9aa3b2",
+    fontSize: 11,
+    fontWeight: 700,
+    letterSpacing: "0.05em",
+    textTransform: "uppercase",
+  };
+  const nextStepInputStyle = {
+    width: "100%",
+    border: "1px solid #e7e9ed",
+    borderRadius: 10,
+    background: "#ffffff",
+    color: "#161a23",
+    font: "inherit",
+    fontSize: 14,
+    fontWeight: 600,
+    outline: "none",
+    padding: "11px 40px 11px 14px",
+  };
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       <div className="cf-card">
@@ -191,6 +209,7 @@ export default function DoctorConsultationPlanStep(props) {
                 <SelectComponent
                   selectId="lab-exam-type"
                   value={planDraft.lab_exam_type || ""}
+                  disabled={labOrderLocked}
                   openModernSelect={openModernSelect}
                   setOpenModernSelect={setOpenModernSelect}
                   onChange={(e) => _updateLabExamType(e.target.value)}
@@ -207,6 +226,7 @@ export default function DoctorConsultationPlanStep(props) {
                 <SelectComponent
                   selectId="lab-order-priority"
                   value={labOrderDraft.priority || ""}
+                  disabled={labOrderLocked}
                   openModernSelect={openModernSelect}
                   setOpenModernSelect={setOpenModernSelect}
                   onChange={(e) => {
@@ -313,6 +333,7 @@ export default function DoctorConsultationPlanStep(props) {
                   className="cf-input"
                   placeholder="Especifique o exame pretendido"
                   value={planDraft.lab_tests || ""}
+                  disabled={labOrderLocked}
                   onChange={(e) => {
                     updatePlanField("lab_tests", e.target.value);
                     setLabOrderConfirmed(false);
@@ -329,6 +350,7 @@ export default function DoctorConsultationPlanStep(props) {
                   style={{ minHeight: 104 }}
                   placeholder="Descreva o que justifica este exame."
                   value={labOrderDraft.clinicalReason || ""}
+                  disabled={labOrderLocked}
                   onChange={(e) => {
                     setLabOrderDraft((prev) => ({ ...prev, clinicalReason: e.target.value }));
                     setLabOrderConfirmed(false);
@@ -343,6 +365,7 @@ export default function DoctorConsultationPlanStep(props) {
                   style={{ minHeight: 104 }}
                   placeholder="Jejum, prioridade de processamento, recolha guiada, etc."
                   value={labOrderDraft.specialInstructions || ""}
+                  disabled={labOrderLocked}
                   onChange={(e) => {
                     setLabOrderDraft((prev) => ({ ...prev, specialInstructions: e.target.value }));
                     setLabOrderConfirmed(false);
@@ -352,7 +375,7 @@ export default function DoctorConsultationPlanStep(props) {
               </div>
             </div>
 
-            {false && (
+            {hideLegacyBlocks && (
             <div
               style={{
                 border: "1px solid #dcebe2",
@@ -437,7 +460,7 @@ export default function DoctorConsultationPlanStep(props) {
             </div>
             )}
 
-            {false && (currentLabEtaPreview || selectedLabCollectionRule) && (
+            {hideLegacyBlocks && (
               <div
                 style={{
                   display: "grid",
@@ -498,7 +521,7 @@ export default function DoctorConsultationPlanStep(props) {
               </div>
             )}
 
-            {false && selectedLabCollectionRule && (
+            {hideLegacyBlocks && (
               <div
                 style={{
                   border: "1px solid #fde68a",
@@ -586,23 +609,30 @@ export default function DoctorConsultationPlanStep(props) {
         )}
       </div>
 
-      <div className="cf-card">
-        <div style={{ marginBottom: 14 }}>
-          <div className="cf-label" style={{ marginBottom: 4 }}>
+      <div
+        style={{
+          background: "#ffffff",
+          border: "1px solid #e7e9ed",
+          borderRadius: 14,
+          boxShadow: "0 1px 2px rgba(16,24,40,0.04), 0 1px 6px rgba(16,24,40,0.03)",
+          padding: "26px 28px 28px",
+        }}
+      >
+        <div style={{ marginBottom: 22 }}>
+          <div style={{ ...nextStepLabelStyle, marginBottom: 7 }}>
             Proximo passo
           </div>
-          <p style={{ margin: 0, color: "#64748b", fontSize: 12, lineHeight: 1.45 }}>
+          <p style={{ margin: 0, color: "#6c7689", fontSize: 13.5, lineHeight: 1.5 }}>
             Escolha para onde o paciente segue depois desta consulta.
           </p>
         </div>
         <div>
-          <div>
-            <label className="cf-label">
-              {isFollowUpConsultation ? "Decisão final da consulta" : "Destino do paciente"}
-            </label>
+          <div style={{ marginBottom: planDraft.disposition_plan === "RETURN_VISIT" ? 26 : 0 }}>
+            <label style={nextStepLabelStyle}>Destino do paciente</label>
             <SelectComponent
               selectId="disposition-plan"
               value={planDraft.disposition_plan}
+              variant="box"
               openModernSelect={openModernSelect}
               setOpenModernSelect={setOpenModernSelect}
               onChange={(e) => {
@@ -614,15 +644,13 @@ export default function DoctorConsultationPlanStep(props) {
                   setFollowUpRuleKey("");
                   updatePlanField("follow_up_when", "");
                 } else {
-                  const suggestedTime = extractFollowUpTimeValue(planDraft.follow_up_when)
-                    ? planDraft.follow_up_when
-                    : parseShiftWindow(followUpShiftWindow)?.start || "";
+                  const suggestedTime = extractFollowUpTimeValue(planDraft.follow_up_when) || "07:30";
                   const suggestedDate = selectedReturnDate || defaultReturnDate;
                   if (!selectedReturnDate) {
                     setReturnVisitDates([suggestedDate]);
                     updatePlanField("return_visit_date", suggestedDate);
                   }
-                  if (suggestedTime) updatePlanField("follow_up_when", suggestedTime);
+                  updatePlanField("follow_up_when", suggestedTime);
                 }
                 if (nextDisposition !== "BED_REST") {
                   setSelectedRoomCode("");
@@ -636,7 +664,7 @@ export default function DoctorConsultationPlanStep(props) {
               ))}
             </SelectComponent>
           </div>
-          {false && (
+          {hideLegacyBlocks && (
           <div>
             <label className="cf-label">Estado hospitalar</label>
             <div
@@ -657,7 +685,7 @@ export default function DoctorConsultationPlanStep(props) {
           )}
         </div>
 
-        {isFollowUpConsultation && (
+        {hideLegacyBlocks && (
           <div
             style={{
               marginTop: 16,
@@ -680,30 +708,57 @@ export default function DoctorConsultationPlanStep(props) {
         {planDraft.disposition_plan === "RETURN_VISIT" && (
           <div
             style={{
-              marginTop: 16,
-              border: "1px solid #dcebe2",
-              borderRadius: 16,
-              background: "#f8faf9",
-              padding: "16px 18px",
+              width: "100%",
+              border: "1px solid #eef0f3",
+              borderLeft: "3px solid #0f6e54",
+              borderRadius: 12,
+              background: "#f7f9f8",
+              padding: "18px 20px 20px",
               display: "grid",
-              gap: 12,
+              gap: 16,
             }}
           >
-            <div>
-              <div className="cf-label" style={{ marginBottom: 4 }}>
-                Retorno agendado
-              </div>
-              <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>
-                Campos obrigatórios: critério clínico, data e hora dentro do turno do médico.
-              </p>
-            </div>
             {isClinicalReturnVisit ? (
-              <div className="cf-grid-2">
+              <div style={{ display: "grid", gap: 16 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 28,
+                      height: 28,
+                      border: "1px solid #cfe9dc",
+                      borderRadius: 7,
+                      background: "#ffffff",
+                      color: "#0c5a44",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flex: "0 0 auto",
+                    }}
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+                      <path d="M21 3v5h-5" />
+                      <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+                      <path d="M3 21v-5h5" />
+                    </svg>
+                  </div>
+                  <div style={{ color: "#161a23", fontSize: 13.5, fontWeight: 700 }}>
+                    Detalhes do retorno agendado
+                  </div>
+                </div>
+
                 <div>
-                  <label className="cf-label">Critério clínico do retorno</label>
+                  <label style={nextStepLabelStyle}>Criterio de retorno</label>
                   <SelectComponent
                     selectId="follow-up-rule"
                     value={resolvedFollowUpRuleKey}
+                    variant="box"
                     openModernSelect={openModernSelect}
                     setOpenModernSelect={setOpenModernSelect}
                     onChange={(e) => {
@@ -721,11 +776,7 @@ export default function DoctorConsultationPlanStep(props) {
                           buildFollowUpInstructionsText({
                             ruleKey: nextRuleKey,
                             date: selectedReturnDate,
-                            time:
-                              selectedFollowUpTime ||
-                              parseShiftWindow(followUpShiftWindow)?.start ||
-                              "",
-                            shiftWindow: followUpShiftWindow,
+                            time: selectedFollowUpTime || "",
                           })
                         );
                       }
@@ -738,68 +789,64 @@ export default function DoctorConsultationPlanStep(props) {
                       </option>
                     ))}
                   </SelectComponent>
-                  {followUpRuleMeta && (
-                    <p
-                      style={{
-                        margin: "8px 0 0",
-                        fontSize: 11,
-                        color: "#6b7280",
-                        lineHeight: 1.45,
-                      }}
-                    >
-                      {followUpRuleMeta.description}
-                    </p>
-                  )}
                 </div>
-                <div style={{ display: "grid", gap: 12 }}>
-                  <div style={{ maxWidth: 240 }}>
-                    <label className="cf-label">Data de retorno</label>
+
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                    gap: 16,
+                    maxWidth: "100%",
+                  }}
+                >
+                  <div>
+                    <label style={nextStepLabelStyle}>Data de retorno</label>
                     <input
                       type="date"
-                      className="cf-input"
                       value={selectedReturnDate}
                       min={new Date().toISOString().slice(0, 10)}
                       onChange={(e) => _updateReturnVisitDateByIndex(0, e.target.value)}
                       required
+                      style={nextStepInputStyle}
                     />
                   </div>
-                  <div style={{ maxWidth: 240 }}>
-                    <label className="cf-label">Hora da consulta</label>
+                  <div>
+                    <label style={nextStepLabelStyle}>Hora da consulta</label>
                     <input
                       type="time"
-                      className="cf-input"
                       value={selectedFollowUpTime}
-                      onChange={(e) => updatePlanField("follow_up_when", e.target.value)}
+                      onChange={(e) =>
+                        updatePlanField(
+                          "follow_up_when",
+                          extractFollowUpTimeValue(e.target.value) || e.target.value
+                        )
+                      }
                       required
+                      style={nextStepInputStyle}
                     />
                   </div>
-                  <p
-                    style={{
-                      margin: 0,
-                      fontSize: 11,
-                      color: followUpTimeWithinShift ? "#6b7280" : "#b91c1c",
-                    }}
-                  >
-                    {followUpShiftWindow
-                      ? `Turno disponível: ${followUpShiftWindow}.${selectedFollowUpTime && !followUpTimeWithinShift ? " Escolha uma hora dentro deste intervalo." : ""}`
-                      : "Turno do médico indisponível. Defina a hora conforme a escala ativa."}
-                  </p>
                 </div>
               </div>
             ) : (
-              <div style={{ display: "grid", gap: 12 }}>
-                <div style={{ maxWidth: 240 }}>
-                  <label className="cf-label">Data de retorno</label>
+              <div style={{ display: "grid", gap: 16, maxWidth: 660 }}>
+                <div>
+                  <div style={nextStepLabelStyle}>Destino</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: "#161a23" }}>
+                    Retorno laboratorial
+                  </div>
+                </div>
+                <div>
+                  <label style={nextStepLabelStyle}>Data de retorno</label>
                   <input
                     type="date"
-                    className="cf-input"
                     value={selectedReturnDate}
                     min={new Date().toISOString().slice(0, 10)}
                     onChange={(e) => _updateReturnVisitDateByIndex(0, e.target.value)}
                     required
+                    style={nextStepInputStyle}
                   />
                 </div>
-                <p style={{ margin: 0, fontSize: 11, color: "#6b7280", lineHeight: 1.45 }}>
+                <p style={{ margin: 0, fontSize: 12, color: "#6c7689", lineHeight: 1.45 }}>
                   Este retorno está ligado ao fluxo laboratorial. O horário segue a janela
                   operacional definida para a colheita ou entrega de resultado.
                 </p>

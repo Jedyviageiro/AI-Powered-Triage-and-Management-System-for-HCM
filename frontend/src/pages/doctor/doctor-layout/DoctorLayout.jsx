@@ -637,6 +637,11 @@ export default function DoctorLayout(props) {
 
       <PatientLabResultModal
         modal={labResultModal}
+        onMarkDelivered={markPatientResultDelivered}
+        markingDelivered={
+          Boolean(labResultModal?.row?.id) &&
+          Number(markingDeliveredVisitId) === Number(labResultModal.row.id)
+        }
         onClose={() =>
           setLabResultModal({ open: false, row: null, loading: false, explanation: "", error: "" })
         }

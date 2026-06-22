@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import DoctorPage from "../DoctorPage";
 
 const priorityInfo = (value) => {
@@ -10,13 +10,6 @@ const priorityInfo = (value) => {
     return { label: "Pouco urgente", bg: "#fdf3e3", color: "#b45309", dot: "#b45309" };
   }
   return { label: "Nao urgente", bg: "#eaf6f0", color: "#0f6e54", dot: "#0f6e54" };
-};
-
-const statusInfo = (value) => {
-  const key = String(value || "").toUpperCase();
-  if (key === "IN_CONSULTATION") return { label: "Em consulta", color: "#1d54c0" };
-  if (key === "WAITING_DOCTOR") return { label: "Aguardando medico", color: "#b45309" };
-  return { label: value || "Aguardando", color: "#6c7689" };
 };
 
 const getInitials = (name) =>
@@ -65,6 +58,16 @@ const isLabVisit = (visit) => {
   const motive = String(visit?.visit_motive || "").toUpperCase();
   return type === "LAB_RETURN" || motive === "LAB_RESULTS" || motive === "LAB_SAMPLE_COLLECTION";
 };
+
+const isDeliveredLabResult = (visit) => Boolean(visit?.patient_notified || visit?.lab_patient_notified_at);
+
+const isLabResultVisit = (visit) => {
+  const motive = String(visit?.visit_motive || "").toUpperCase();
+  const kind = String(visit?.lab_return_kind || "").toUpperCase();
+  return isLabVisit(visit) && motive !== "LAB_SAMPLE_COLLECTION" && kind !== "SAMPLE_COLLECTION";
+};
+
+const isPendingLabResultDelivery = (visit) => isLabResultVisit(visit) && !isDeliveredLabResult(visit);
 
 const isFollowupVisit = (visit) => {
   const type = String(visit?.visit_type || "").toUpperCase();
@@ -194,10 +197,6 @@ export function DoctorWaitingQueueView({
   const currentPage = Math.min(page, totalPages);
   const paginatedRows = rows.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
-  useEffect(() => {
-    setPage(1);
-  }, [searchQuery, queue.length]);
-
   const groups = useMemo(
     () =>
       [
@@ -205,7 +204,7 @@ export function DoctorWaitingQueueView({
           key: "lab",
           name: "Resultados de Exames",
           desc: "Pacientes aguardando entrega de resultados de laboratorio",
-          rows: paginatedRows.filter(isLabVisit),
+          rows: paginatedRows.filter(isPendingLabResultDelivery),
           bg: "#eaf1fd",
           color: "#1e40af",
           border: "#cddff8",
@@ -223,7 +222,9 @@ export function DoctorWaitingQueueView({
           key: "normal",
           name: "Novas Consultas",
           desc: "Pacientes a espera da primeira consulta",
-          rows: paginatedRows.filter((visit) => !isLabVisit(visit) && !isFollowupVisit(visit)),
+          rows: paginatedRows.filter(
+            (visit) => !isPendingLabResultDelivery(visit) && !isLabVisit(visit) && !isFollowupVisit(visit)
+          ),
           bg: "#eaf6f0",
           color: "#0c5a44",
           border: "#cfe9dc",

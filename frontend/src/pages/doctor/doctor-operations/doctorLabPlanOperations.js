@@ -1,5 +1,4 @@
 export const buildDoctorLabExamUpdate = ({
-  examType,
   planDraft,
   pendingLabVisits,
   labPendingRequests,
@@ -10,7 +9,8 @@ export const buildDoctorLabExamUpdate = ({
   countQueuedExamsOnSameMachine,
   findLabExamLabel,
 }) => {
-  const examKey = String(examType || "").toUpperCase();
+  const examKey = "MALARIA_RDT";
+  const normalizedExamType = "MALARIA_RDT";
   const collectionRule = LAB_RETURN_COLLECTION_RULES[examKey] || null;
   const now = new Date();
   const suggestedDate = collectionRule
@@ -21,10 +21,10 @@ export const buildDoctorLabExamUpdate = ({
       })()
     : (() => {
         const { readyAt } = estimateExamReadyMeta({
-          examType,
+          examType: normalizedExamType,
           requestedAt: now.toISOString(),
           pendingCount: Math.max(1, pendingLabVisits.length + 1),
-          sameMachinePendingCount: countQueuedExamsOnSameMachine(examType, labPendingRequests),
+          sameMachinePendingCount: countQueuedExamsOnSameMachine(normalizedExamType, labPendingRequests),
           hospitalTrafficCount: Math.max(
             0,
             (Array.isArray(queue) ? queue.length : 0) +
@@ -37,11 +37,11 @@ export const buildDoctorLabExamUpdate = ({
   return {
     nextPlanDraft: {
       ...planDraft,
-      lab_exam_type: examType,
+      lab_exam_type: normalizedExamType,
       lab_tests: examKey === "OUTRO" ? planDraft.lab_tests : "",
       return_visit_date: suggestedDate || planDraft.return_visit_date || "",
       return_visit_reason: collectionRule
-        ? `Colheita de amostra para ${findLabExamLabel(examType)}`
+        ? `Colheita de amostra para ${findLabExamLabel(normalizedExamType)}`
         : planDraft.return_visit_reason || "",
     },
     nextLabOrderDraft: {
@@ -60,23 +60,17 @@ export const buildDoctorLabExamUpdate = ({
 };
 
 export const validateAndBuildDoctorLabOrder = ({
-  planDraft,
   labOrderDraft,
   labRequestSupport = {},
 }) => {
   const primarySupport = labRequestSupport?.primary || null;
+  const requireClinicalReason = Boolean(labRequestSupport?.requireClinicalReason);
 
   if (!String(labOrderDraft.priority || "").trim()) {
     throw new Error("Defina a prioridade do exame.");
   }
 
-  const isOtherExam = String(planDraft?.lab_exam_type || "").toUpperCase() === "OUTRO";
-  const customExamDetail = String(planDraft?.lab_tests || "").trim();
-  if (isOtherExam && !customExamDetail) {
-    throw new Error("Especifique o exame solicitado.");
-  }
-
-  if (false && !String(labOrderDraft.clinicalReason || "").trim() && !primarySupport) {
+  if (requireClinicalReason && !String(labOrderDraft.clinicalReason || "").trim() && !primarySupport) {
     throw new Error("Descreva o motivo clínico do exame.");
   }
 
@@ -84,7 +78,7 @@ export const validateAndBuildDoctorLabOrder = ({
     String(labOrderDraft.clinicalReason || "").trim() || primarySupport?.reasonTemplate || "";
 
   const summary = [
-    isOtherExam ? `Exame solicitado: ${customExamDetail}` : null,
+    "Exame solicitado: Teste Rapido de Malaria",
     `Prioridade: ${labOrderDraft.priority}`,
     resolvedClinicalReason
       ? `Motivo clínico: ${resolvedClinicalReason}`

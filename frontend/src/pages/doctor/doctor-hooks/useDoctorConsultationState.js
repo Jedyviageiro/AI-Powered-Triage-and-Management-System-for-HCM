@@ -6,7 +6,6 @@ import {
   getCurrentConsultationSnapshot,
   getVisitClinicalSnapshot,
   inferFollowUpRuleKey,
-  isTimeWithinShiftWindow,
 } from "../doctor-helpers/doctorHelpers";
 
 export function useDoctorConsultationState({
@@ -14,13 +13,10 @@ export function useDoctorConsultationState({
   selectedVisit,
   patientHistory,
   retakeVitals,
-  activeView,
   consultFormStep,
   autoOpenSampleCollectionModal,
   selectedLabProtocol,
-  shouldShowSampleCollectionStage,
   safeSet,
-  setSampleCollectionModalOpen,
   setAutoOpenSampleCollectionModal,
   planDraft,
   selectedLabCollectionRule,
@@ -35,7 +31,6 @@ export function useDoctorConsultationState({
   shiftStatus,
   labOrderConfirmed,
   labOrderDraft,
-  sampleCollectionDraft,
   setConsultFormStep,
   setPlanDraft,
   setPlanAccepted,
@@ -164,51 +159,20 @@ export function useDoctorConsultationState({
     if (autoOpenSampleCollectionModal) {
       safeSet(() => setAutoOpenSampleCollectionModal(false));
     }
-    return;
-    if (
-      activeView !== "consultationForm" ||
-      consultFormStep !== 4 ||
-      !autoOpenSampleCollectionModal
-    )
-      return;
-    if (shouldShowSampleCollectionStage) {
-      safeSet(() => {
-        setSampleCollectionModalOpen(true);
-        setAutoOpenSampleCollectionModal(false);
-      });
-      return;
-    }
-    const hasExamConfigured = !!String(planDraft?.lab_exam_type || "").trim();
-    if (
-      !planDraft?.lab_requested ||
-      !hasExamConfigured ||
-      !!selectedLabCollectionRule ||
-      !selectedLabProtocol ||
-      !selectedLabProtocol.sameDayCollection
-    ) {
-      safeSet(() => setAutoOpenSampleCollectionModal(false));
-    }
   }, [
-    activeView,
     autoOpenSampleCollectionModal,
-    consultFormStep,
-    planDraft?.lab_exam_type,
-    planDraft?.lab_requested,
     safeSet,
-    selectedLabCollectionRule,
-    selectedLabProtocol,
     setAutoOpenSampleCollectionModal,
-    setSampleCollectionModalOpen,
-    shouldShowSampleCollectionStage,
   ]);
 
   const selectedReturnDate = String(
     returnVisitDates?.[0] || planDraft.return_visit_date || ""
   ).slice(0, 10);
-  const selectedFollowUpTime = extractFollowUpTimeValue(planDraft.follow_up_when);
   const followUpShiftWindow = shiftStatus?.shift_window || "";
   const isClinicalReturnVisit =
     planDraft.disposition_plan === "RETURN_VISIT" && !selectedLabCollectionRule;
+  const selectedFollowUpTime =
+    extractFollowUpTimeValue(planDraft.follow_up_when) || (isClinicalReturnVisit ? "07:30" : "");
 
   const isFollowUpConsultation = useMemo(
     () => !!(selectedVisit?.is_lab_followup || selectedVisit?.is_followup_visit),
@@ -241,10 +205,7 @@ export function useDoctorConsultationState({
   );
   const resolvedFollowUpRuleKey = followUpRuleKey || inferredFollowUpRuleKey;
   const followUpRuleMeta = findFollowUpRuleMeta(resolvedFollowUpRuleKey);
-  const followUpTimeWithinShift = isTimeWithinShiftWindow(
-    selectedFollowUpTime,
-    followUpShiftWindow
-  );
+  const followUpTimeWithinShift = true;
 
   const canFinish =
     !!selectedVisit?.id &&
@@ -294,9 +255,6 @@ export function useDoctorConsultationState({
       if (!selectedReturnDate) missing.push("data de retorno");
       if (isClinicalReturnVisit) {
         if (!resolvedFollowUpRuleKey) missing.push("critério clínico do retorno");
-        if (!selectedFollowUpTime) missing.push("hora do retorno");
-        if (selectedFollowUpTime && !followUpTimeWithinShift)
-          missing.push("hora do retorno dentro do turno");
       }
     }
     if (!!planDraft.lab_requested && !String(planDraft.lab_exam_type || "").trim()) {
@@ -312,10 +270,6 @@ export function useDoctorConsultationState({
     if (!!planDraft.lab_requested && !labOrderConfirmed) missing.push("confirmar pedido de exame");
     if (!!planDraft.lab_requested && !String(labOrderDraft.priority || "").trim()) {
       missing.push("prioridade do exame");
-    }
-    if (shouldShowSampleCollectionStage) {
-      if (!String(sampleCollectionDraft.collectionTime || "").trim())
-        missing.push("hora da colheita");
     }
     return missing;
   }, [
@@ -334,11 +288,7 @@ export function useDoctorConsultationState({
     questionnaireAnswers,
     questionnaireExtraNote,
     resolvedFollowUpRuleKey,
-    sampleCollectionDraft,
     selectedReturnDate,
-    selectedFollowUpTime,
-    shouldShowSampleCollectionStage,
-    followUpTimeWithinShift,
     useAIQuestionnaire,
   ]);
 
@@ -372,11 +322,6 @@ export function useDoctorConsultationState({
         label: "Escolher o motivo clinico do retorno.",
         step: 4,
       },
-      "hora do retorno": { label: "Escolher a hora do retorno.", step: 4 },
-      "hora do retorno dentro do turno": {
-        label: "Ajustar a hora para dentro do turno disponivel.",
-        step: 4,
-      },
       "tipo de exame laboratorial": {
         label: "Escolher o tipo de exame laboratorial.",
         step: 4,
@@ -387,7 +332,6 @@ export function useDoctorConsultationState({
         step: 4,
       },
       "prioridade do exame": { label: "Escolher a prioridade do exame.", step: 4 },
-      "hora da colheita": { label: "Registar a hora prevista para a colheita.", step: 4 },
     };
     void itemMeta;
     const describeMissingField = (field) => {
@@ -439,15 +383,6 @@ export function useDoctorConsultationState({
       if (normalized.includes("criter") || normalized.includes("crit")) {
         return { label: "Escolher o motivo clinico do retorno.", step: 4, stepKey: "plan" };
       }
-      if (normalized.includes("hora") && normalized.includes("turno")) {
-        return {
-          label: "Ajustar a hora para dentro do turno disponivel.",
-          step: 4,
-          stepKey: "plan",
-        };
-      }
-      if (normalized.includes("hora"))
-        return { label: "Escolher a hora do retorno.", step: 4, stepKey: "plan" };
       if (normalized.includes("tipo") && normalized.includes("exame")) {
         return { label: "Escolher o tipo de exame laboratorial.", step: 4, stepKey: "plan" };
       }

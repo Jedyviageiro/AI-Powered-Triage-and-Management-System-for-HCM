@@ -206,8 +206,21 @@ const getVisitById = async (req, res) => {
     const visit = await visitModel.getVisitById(visitId);
     if (!visit) return res.status(404).json({ error: "Visita nao encontrada" });
 
-    if (req.user?.role === "DOCTOR" && Number(visit.doctor_id) !== Number(req.user.id)) {
-      return res.status(403).json({ error: "Sem permissao para esta visita" });
+    if (req.user?.role === "DOCTOR") {
+      const visitType = normalizeUpper(visit.visit_type);
+      const visitMotive = normalizeUpper(visit.visit_motive);
+      const canAccess =
+        !visit.doctor_id ||
+        Number(visit.doctor_id) === Number(req.user.id) ||
+        visitType === "FOLLOW_UP" ||
+        visitType === "LAB_RETURN" ||
+        visitMotive === "LAB_RESULTS" ||
+        visitMotive === "LAB_SAMPLE_COLLECTION" ||
+        !!visit.parent_visit_id;
+
+      if (!canAccess) {
+        return res.status(403).json({ error: "Sem permissao para esta visita" });
+      }
     }
 
     return res.json(visit);

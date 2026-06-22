@@ -77,7 +77,11 @@ export function DoctorScheduledFollowupsView({
   const rows = useMemo(
     () =>
       (Array.isArray(returnsToday) ? returnsToday : [])
-        .filter((row) => String(row?.status || "").toUpperCase() !== "CANCELLED")
+        .filter((row) => {
+          const status = String(row?.status || "").toUpperCase();
+          const childStatus = String(row?.active_child_status || "").toUpperCase();
+          return status !== "CANCELLED" && childStatus !== "CANCELLED";
+        })
         .slice()
         .sort(
           (a, b) =>

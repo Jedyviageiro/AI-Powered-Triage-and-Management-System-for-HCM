@@ -227,15 +227,21 @@ export function useDoctorNotificationsAndPreferences({
       setMarkingDeliveredVisitId(row.id);
       try {
         const updated = await api.markLabResultDelivered(row.id);
+        const deliveredIds = new Set(
+          [row.id, row.parent_visit_id, updated?.id, updated?.parent_visit_id]
+            .map((value) => Number(value))
+            .filter(Boolean)
+        );
+        const isRelatedDeliveredRow = (item) =>
+          deliveredIds.has(Number(item?.id)) ||
+          deliveredIds.has(Number(item?.parent_visit_id)) ||
+          (Number(item?.id) && Number(row?.parent_visit_id) && Number(item?.id) === Number(row.parent_visit_id)) ||
+          (Number(item?.parent_visit_id) && Number(row?.id) && Number(item.parent_visit_id) === Number(row.id));
         setLabReadyResults((prev) =>
-          (Array.isArray(prev) ? prev : []).map((item) =>
-            Number(item?.id) === Number(row.id) ? { ...item, ...updated } : item
-          )
+          (Array.isArray(prev) ? prev : []).filter((item) => !isRelatedDeliveredRow(item))
         );
         setQueue((prev) =>
-          (Array.isArray(prev) ? prev : []).map((item) =>
-            Number(item?.id) === Number(row.id) ? { ...item, ...updated } : item
-          )
+          (Array.isArray(prev) ? prev : []).filter((item) => !isRelatedDeliveredRow(item))
         );
         if (Number(selectedVisit?.id) === Number(row.id)) {
           setSelectedVisit((prev) => (prev ? { ...prev, ...updated } : prev));
@@ -245,12 +251,14 @@ export function useDoctorNotificationsAndPreferences({
           "Resultado entregue",
           "O sistema registou que o resultado laboratorial ja foi entregue ao paciente."
         );
+        return true;
       } catch (e) {
         showPopup(
           "warning",
           "Atencao",
           e?.message || "Nao foi possivel registar a entrega do resultado."
         );
+        return false;
       } finally {
         setMarkingDeliveredVisitId(null);
       }

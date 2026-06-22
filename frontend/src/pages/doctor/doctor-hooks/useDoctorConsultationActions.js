@@ -206,8 +206,6 @@ export function useDoctorConsultationActions(args) {
     estimateExamReadyMeta,
     countQueuedExamsOnSameMachine,
     findLabExamLabel,
-    selectedLabProtocol,
-    selectedLabCollectionRule,
     getLabSampleTypeByExam,
     setLabResultModal,
     normalizeQuestions,
@@ -372,7 +370,15 @@ export function useDoctorConsultationActions(args) {
           setQuestionnaireExtraNote,
         });
         const outcomeMeta = getDoctorFinishOutcomeMeta({ finishResponse, etaLabel });
-        if (outcomeMeta) showPopup(outcomeMeta.level, outcomeMeta.title, outcomeMeta.message);
+        if (outcomeMeta) {
+          showPopup(outcomeMeta.level, outcomeMeta.title, outcomeMeta.message);
+        } else {
+          showPopup(
+            "success",
+            "Consulta finalizada",
+            "A consulta foi finalizada com sucesso."
+          );
+        }
       });
       await loadQueue();
     } catch (e) {
@@ -754,10 +760,20 @@ export function useDoctorConsultationActions(args) {
         labOrderDraft,
         labRequestSupport,
       });
-      const nextPlanDraft = { ...planDraft, lab_tests: summary, lab_requested: true };
+      const nextPlanDraft = {
+        ...planDraft,
+        lab_exam_type: "MALARIA_RDT",
+        lab_tests: summary,
+        lab_requested: true,
+      };
       setPlanDraft(nextPlanDraft);
       setLabOrderDraft((prev) => ({ ...prev, clinicalReason: resolvedClinicalReason }));
       setLabOrderConfirmed(true);
+      showPopup(
+        "success",
+        "Pedido de teste de malaria confirmado",
+        "O teste rapido de malaria foi enviado ao laboratorio. O resultado ficara pronto em 15 a 30 minutos."
+      );
       if (selectedVisit?.id) {
         api
           .saveVisitMedicalPlan(
@@ -767,6 +783,7 @@ export function useDoctorConsultationActions(args) {
               selectedVisit,
               overrides: {
                 lab_requested: true,
+                lab_exam_type: "MALARIA_RDT",
                 lab_tests: summary,
               },
             })
@@ -792,6 +809,7 @@ export function useDoctorConsultationActions(args) {
     setLabOrderConfirmed,
     setLabOrderDraft,
     setPlanDraft,
+    showPopup,
   ]);
 
   const autoScheduleSampleCollectionReturn = useCallback(() => {

@@ -452,8 +452,6 @@ const createReturnVisitFromSource = async (
   );
   const source = sourceResult.rows[0] || null;
   if (!source) return null;
-  if (!isAdmin && source.doctor_id && Number(source.doctor_id) !== Number(actorId)) return null;
-
   const hasScheduledDate = !!source.return_visit_date;
   const todayResult = await pool.query(`SELECT CURRENT_DATE AS today`);
   const today = String(todayResult.rows[0]?.today || "").slice(0, 10);
@@ -514,7 +512,7 @@ const createReturnVisitFromSource = async (
      RETURNING *`,
     [
       source.patient_id,
-      visitType === "NEW_CONSULTATION" ? null : source.doctor_id || actorId || null,
+      visitType === "NEW_CONSULTATION" ? null : actorId || source.doctor_id || null,
       source.priority,
       source.max_wait_minutes,
       source.return_visit_date,
@@ -656,6 +654,16 @@ const listActiveVisits = async () => {
      LEFT JOIN users d ON d.id = v.doctor_id
      LEFT JOIN visits parent ON parent.id = v.parent_visit_id
      WHERE v.status NOT IN ('FINISHED','CANCELLED')
+       AND NOT (
+         UPPER(COALESCE(v.visit_type, '')) = 'LAB_RETURN'
+         AND (
+           v.lab_patient_notified_at IS NOT NULL
+           OR (
+             parent.lab_patient_notified_at IS NOT NULL
+             AND COALESCE(v.lab_requested, FALSE) = FALSE
+           )
+         )
+       )
      ORDER BY
        CASE v.priority
          WHEN 'URGENT' THEN 1
@@ -779,7 +787,23 @@ const listActiveVisitsByDoctor = async (doctorId) => {
      LEFT JOIN users d ON d.id = v.doctor_id
      LEFT JOIN visits parent ON parent.id = v.parent_visit_id
      WHERE v.status NOT IN ('FINISHED','CANCELLED')
-       AND v.doctor_id = $1
+       AND NOT (
+         UPPER(COALESCE(v.visit_type, '')) = 'LAB_RETURN'
+         AND (
+           v.lab_patient_notified_at IS NOT NULL
+           OR (
+             parent.lab_patient_notified_at IS NOT NULL
+             AND COALESCE(v.lab_requested, FALSE) = FALSE
+           )
+         )
+       )
+       AND (
+         v.doctor_id = $1
+         OR v.doctor_id IS NULL
+         OR UPPER(COALESCE(v.visit_type, '')) IN ('FOLLOW_UP', 'LAB_RETURN')
+         OR UPPER(COALESCE(v.visit_motive, '')) IN ('LAB_RESULTS', 'LAB_SAMPLE_COLLECTION')
+         OR v.parent_visit_id IS NOT NULL
+       )
      ORDER BY
        CASE v.priority
          WHEN 'URGENT' THEN 1
@@ -914,7 +938,6 @@ const listDoctorAgenda = async (doctorId) => {
        SELECT c.id, c.status
        FROM visits c
        WHERE c.parent_visit_id = v.id
-         AND c.status NOT IN ('FINISHED','CANCELLED')
        ORDER BY c.arrival_time DESC
        LIMIT 1
      ) child ON TRUE
@@ -1185,6 +1208,13 @@ const assignDoctor = async (visitId, doctorId) => {
 // ========================
 const startConsultation = async (visitId, doctorId) => {
   await ensureVisitMotiveColumns();
+  let targetVisitId = visitId;
+  const requestedVisit = await getVisitById(visitId);
+  if (requestedVisit && ["FINISHED", "CANCELLED"].includes(String(requestedVisit.status || "").toUpperCase())) {
+    const activeChild = await findActiveChildVisit(visitId);
+    if (activeChild?.id) targetVisitId = activeChild.id;
+  }
+
   const result = await pool.query(
     `
     UPDATE visits v
@@ -1194,16 +1224,17 @@ const startConsultation = async (visitId, doctorId) => {
         consultation_ended_at = NULL,
         updated_at = NOW()
     WHERE v.id = $2
-      AND v.status = 'WAITING_DOCTOR'
-      AND (v.doctor_id = $1 OR v.doctor_id IS NULL)
+      AND v.status IN ('WAITING_DOCTOR', 'IN_CONSULTATION')
       AND (
-        EXISTS (SELECT 1 FROM triage t WHERE t.visit_id = v.id)
+        v.doctor_id = $1
+        OR v.doctor_id IS NULL
         OR UPPER(COALESCE(v.visit_type, '')) IN ('FOLLOW_UP', 'LAB_RETURN')
         OR UPPER(COALESCE(v.visit_motive, '')) IN ('LAB_RESULTS', 'LAB_SAMPLE_COLLECTION')
+        OR v.parent_visit_id IS NOT NULL
       )
     RETURNING v.*;
     `,
-    [doctorId, visitId]
+    [doctorId, targetVisitId]
   );
 
   return result.rows[0];
@@ -1224,7 +1255,26 @@ const cancelVisit = async (id, reason, cancelledBy = null) => {
     [id, reason || null, cancelledBy]
   );
 
-  return result.rows[0];
+  if (result.rows[0]) return result.rows[0];
+
+  const cancelledReturn = await pool.query(
+    `UPDATE visits
+     SET return_visit_date = NULL,
+         return_visit_reason = NULL,
+         follow_up_when = NULL,
+         follow_up_instructions = NULL,
+         cancel_reason = $2,
+         cancelled_by = $3,
+         cancelled_at = NOW(),
+         updated_at = NOW()
+     WHERE id = $1
+       AND status = 'FINISHED'
+       AND return_visit_date IS NOT NULL
+     RETURNING *`,
+    [id, reason || 'FOLLOW_UP_CANCELLED', cancelledBy]
+  );
+
+  return cancelledReturn.rows[0];
 };
 
 // EDIT TRIAGE PRIORITY (sem mexer em status se ainda não está WAITING_DOCTOR)
@@ -1383,13 +1433,20 @@ const saveMedicalPlan = async (id, payload, { actorId = null, isAdmin = false } 
           inpatient_unit = $25,
           inpatient_bed = $26,
           discharged_at = $27,
-           doctor_questionnaire_json = $28,
+          doctor_questionnaire_json = $28,
            plan_accepted_at = $29,
            plan_accepted_by = $30,
+           doctor_id = $32,
            updated_at = NOW()
       WHERE id = $31
         AND status NOT IN ('FINISHED','CANCELLED')
-        AND doctor_id = $32
+        AND (
+          doctor_id = $32
+          OR doctor_id IS NULL
+          OR UPPER(COALESCE(visit_type, '')) IN ('FOLLOW_UP', 'LAB_RETURN')
+          OR UPPER(COALESCE(visit_motive, '')) IN ('LAB_RESULTS', 'LAB_SAMPLE_COLLECTION')
+          OR parent_visit_id IS NOT NULL
+        )
       RETURNING *`,
     params
   );
@@ -1450,9 +1507,8 @@ const scheduleReturn = async (
          updated_at = NOW()
      WHERE id = $3
        AND status NOT IN ('FINISHED','CANCELLED')
-       AND doctor_id = $4
      RETURNING *`,
-    params
+    params.slice(0, 3)
   );
   return result.rows[0];
 };
@@ -1621,19 +1677,64 @@ const markLabPatientNotified = async (id, { actorId = null, note = null } = {}) 
   await ensureLabPatientNotificationColumns();
   const normalizedNote = typeof note === "string" && note.trim() ? note.trim() : null;
   const result = await pool.query(
-    `UPDATE visits
-     SET lab_patient_notified_at = NOW(),
-         lab_patient_notified_by = $1,
-         lab_patient_notification_note = $2,
-         updated_at = NOW()
-     WHERE id = $3
-       AND lab_requested = TRUE
-       AND (
-         COALESCE(TRIM(lab_result_text), '') <> ''
-         OR UPPER(COALESCE(TRIM(lab_result_status), '')) IN ('READY', 'RESULTED', 'VERIFIED')
-       )
-       AND status NOT IN ('CANCELLED')
-     RETURNING *`,
+    `
+    WITH target AS (
+      SELECT *
+      FROM visits
+      WHERE id = $3
+    ),
+    related AS (
+      SELECT v.id
+      FROM visits v
+      CROSS JOIN target t
+      WHERE v.id = t.id
+         OR v.parent_visit_id = t.id
+         OR (t.parent_visit_id IS NOT NULL AND v.id = t.parent_visit_id)
+         OR (t.parent_visit_id IS NOT NULL AND v.parent_visit_id = t.parent_visit_id)
+    ),
+    ready AS (
+      SELECT 1
+      FROM visits v
+      WHERE v.id IN (SELECT id FROM related)
+        AND (
+          COALESCE(TRIM(v.lab_result_text), '') <> ''
+          OR UPPER(COALESCE(TRIM(v.lab_result_status), '')) IN ('READY', 'RESULTED', 'VERIFIED')
+        )
+      LIMIT 1
+    ),
+    updated AS (
+      UPDATE visits v
+      SET lab_patient_notified_at = NOW(),
+          lab_patient_notified_by = $1,
+          lab_patient_notification_note = $2,
+          status = CASE
+            WHEN UPPER(COALESCE(v.visit_type, '')) = 'LAB_RETURN'
+             AND (
+               UPPER(COALESCE(v.visit_motive, '')) = 'LAB_RESULTS'
+               OR UPPER(COALESCE(v.lab_return_kind, '')) = 'RESULT_REVIEW'
+             )
+            THEN 'FINISHED'
+            ELSE v.status
+          END,
+          consultation_ended_at = CASE
+            WHEN UPPER(COALESCE(v.visit_type, '')) = 'LAB_RETURN'
+             AND (
+               UPPER(COALESCE(v.visit_motive, '')) = 'LAB_RESULTS'
+               OR UPPER(COALESCE(v.lab_return_kind, '')) = 'RESULT_REVIEW'
+             )
+            THEN COALESCE(v.consultation_ended_at, NOW())
+            ELSE v.consultation_ended_at
+          END,
+          updated_at = NOW()
+      WHERE v.id IN (SELECT id FROM related)
+        AND EXISTS (SELECT 1 FROM ready)
+        AND v.status NOT IN ('CANCELLED')
+      RETURNING v.*
+    )
+    SELECT *
+    FROM updated
+    ORDER BY CASE WHEN id = $3 THEN 0 ELSE 1 END
+    LIMIT 1`,
     [actorId, normalizedNote, id]
   );
   return result.rows[0] || null;
